@@ -15,7 +15,8 @@
         
         body {
             font-family: 'Comic Neue', cursive;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="%23ff00ff"/></svg>'), auto;
         }
         
@@ -24,8 +25,8 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: url('assets/noise.png') repeat;
             pointer-events: none;
             z-index: 99999;
@@ -36,9 +37,9 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #030303;
+            width: 100%;
+            height: 100%;
+            background: #000000;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -152,11 +153,12 @@
         }
         
         #main-site {
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            min-height: 100vh;
             background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 100%);
             display: none;
             flex-direction: column;
+            overflow-x: hidden;
         }
         
         #main-site.active {
@@ -202,6 +204,7 @@
             transition: background 0.1s;
             position: absolute;
             user-select: none;
+            white-space: nowrap;
         }
         
         .nav-btn:hover {
@@ -442,6 +445,97 @@
             .imagination-title {
                 font-size: 60px;
             }
+            
+            h1 {
+                font-size: 32px;
+                letter-spacing: 2px;
+            }
+            
+            header {
+                padding: 15px 10px;
+            }
+            
+            nav {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+                padding: 10px;
+                min-height: auto;
+            }
+            
+            .nav-btn {
+                position: relative !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100%;
+                font-size: 16px;
+                padding: 12px 15px;
+                text-align: center;
+            }
+            
+            .marquee {
+                font-size: 16px;
+                padding: 8px;
+            }
+            
+            .gallery-title {
+                font-size: 32px;
+            }
+            
+            .form-container {
+                margin: 20px auto;
+                padding: 20px;
+                max-width: calc(100% - 20px);
+            }
+            
+            .form-title {
+                font-size: 28px;
+            }
+            
+            .form-group label {
+                font-size: 18px;
+            }
+            
+            .form-group input {
+                font-size: 16px;
+            }
+            
+            .submit-btn {
+                font-size: 20px;
+                padding: 12px;
+            }
+            
+            .page {
+                padding: 15px 10px;
+            }
+            
+            .locked-text {
+                font-size: 32px;
+            }
+            
+            .locked-subtext {
+                font-size: 18px;
+            }
+            
+            .gallery-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+                padding: 15px 10px;
+            }
+            
+            .gallery-item {
+                transform: rotate(-1deg);
+            }
+            
+            .floating-emoji {
+                font-size: 40px;
+            }
+            
+            #enter-btn {
+                font-size: 20px;
+                padding: 12px 30px;
+                bottom: 60px;
+            }
         }
         
         @keyframes bounce {
@@ -524,6 +618,7 @@
             z-index: 9999;
             pointer-events: none;
             opacity: 0;
+            display: none;
             transition: none;
         }
         
@@ -677,7 +772,7 @@
     
     <!-- Popup Gremlin -->
     <div id="popup-gremlin" class="popup-gremlin">
-        <img src="assets/character/savant-dopey.png" alt="surprise!" id="gremlin-img">
+        <img alt="surprise!" id="gremlin-img">
     </div>
     
     
@@ -801,106 +896,105 @@
             gremlinImg.style.width = size + 'px';
             gremlinImg.style.height = 'auto';
             
-            // Reset all positioning
+            const stayTime = 1000 + Math.random() * 2000; // 1-3 seconds
+            
+            // Reset all styles
+            gremlin.style.display = 'block';
+            gremlin.style.opacity = '1';
+            gremlin.style.transition = 'none';
             gremlin.style.top = '';
             gremlin.style.bottom = '';
             gremlin.style.left = '';
             gremlin.style.right = '';
             gremlin.style.transform = '';
-            gremlin.style.transformOrigin = '';
             
-            // Show 97% of image (hide 3%)
-            const hidePercent = 3;
-            const stayTime = 1000 + Math.random() * 2000; // 1-3 seconds
+            // Wait for image to load
+            gremlinImg.onload = () => {
+                const imgHeight = gremlinImg.offsetHeight;
+                const imgWidth = gremlinImg.offsetWidth;
+                
+                if (edge === 'bottom') {
+                    // Bottom edge - pop up from below, no rotation
+                    const xPos = 10 + Math.random() * 80;
+                    gremlin.style.bottom = '0';
+                    gremlin.style.left = xPos + '%';
+                    gremlin.style.transform = `translateY(${imgHeight}px)`; // Start outside viewport (below)
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-out';
+                        gremlin.style.transform = 'translateY(0)'; // Pop in
+                    }, 10);
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-in';
+                        gremlin.style.transform = `translateY(${imgHeight}px)`; // Pop out
+                    }, stayTime);
+                    
+                } else if (edge === 'top') {
+                    // Top edge - pop down from above, rotate 180deg (flipped)
+                    const xPos = 10 + Math.random() * 80;
+                    gremlin.style.top = '0';
+                    gremlin.style.left = xPos + '%';
+                    gremlin.style.transform = `rotate(180deg) translateY(${imgHeight}px)`; // Start outside viewport (above)
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-out';
+                        gremlin.style.transform = 'rotate(180deg) translateY(0)'; // Pop in
+                    }, 10);
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-in';
+                        gremlin.style.transform = `rotate(180deg) translateY(${imgHeight}px)`; // Pop out
+                    }, stayTime);
+                    
+                } else if (edge === 'right') {
+                    // Right edge - rotate CCW 90deg (-90deg), slide in from right
+                    const yPos = 20 + Math.random() * 60;
+                    gremlin.style.right = '0';
+                    gremlin.style.top = yPos + '%';
+                    gremlin.style.transform = `rotate(-90deg) translateY(${imgWidth}px)`; // Start outside viewport (right)
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-out';
+                        gremlin.style.transform = 'rotate(-90deg) translateY(0)'; // Slide in
+                    }, 10);
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-in';
+                        gremlin.style.transform = `rotate(-90deg) translateY(${imgWidth}px)`; // Slide out
+                    }, stayTime);
+                    
+                } else if (edge === 'left') {
+                    // Left edge - rotate CW 90deg (90deg), slide in from left
+                    const yPos = 20 + Math.random() * 60;
+                    gremlin.style.left = '0';
+                    gremlin.style.top = yPos + '%';
+                    gremlin.style.transform = `rotate(90deg) translateY(-${imgWidth}px)`; // Start outside viewport (left)
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-out';
+                        gremlin.style.transform = 'rotate(90deg) translateY(0)'; // Slide in
+                    }, 10);
+                    
+                    setTimeout(() => {
+                        gremlin.style.transition = 'transform 0.3s ease-in';
+                        gremlin.style.transform = `rotate(90deg) translateY(-${imgWidth}px)`; // Slide out
+                    }, stayTime);
+                }
+                
+                // Cleanup after animation completes
+                setTimeout(() => {
+                    gremlin.style.display = 'none';
+                    gremlin.style.opacity = '0';
+                    gremlin.style.transform = '';
+                    gremlin.style.transition = '';
+                    savantAnimating = false;
+                }, stayTime + 400);
+            };
             
-            // BOTTOM of image ALWAYS locked to viewport edge
-            // Bottom stays at edge, only slides in/out
-            
-            if (edge === 'bottom') {
-                // 0° rotation, normal orientation - BOTTOM TOUCHES BOTTOM EDGE
-                const xPos = 10 + Math.random() * 80;
-                gremlin.style.bottom = '0'; // Bottom edge of image at bottom of viewport
-                gremlin.style.left = xPos + '%';
-                gremlin.style.transformOrigin = 'bottom center';
-                // Hidden: translateY moves it DOWN (off screen)
-                gremlin.style.transform = `translateY(100%)`;
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-out';
-                    // Show: translateY moves it UP to reveal 97% (only 3% hidden)
-                    gremlin.style.transform = `translateY(${hidePercent}%)`;
-                    gremlin.classList.add('visible');
-                }, 10);
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-in';
-                    gremlin.style.transform = `translateY(100%)`;
-                }, stayTime);
-                
-            } else if (edge === 'top') {
-                // 180° rotation, upside down - BOTTOM TOUCHES TOP EDGE
-                const xPos = 10 + Math.random() * 80;
-                gremlin.style.top = '0'; // Top of viewport
-                gremlin.style.left = xPos + '%';
-                gremlin.style.transformOrigin = 'bottom center';
-                // Rotate 180deg so bottom is at top, then translateY moves it UP (off screen)
-                gremlin.style.transform = `rotate(180deg) translateY(-100%)`;
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-out';
-                    // Show: translateY moves it DOWN to reveal 97%
-                    gremlin.style.transform = `rotate(180deg) translateY(-${hidePercent}%)`;
-                    gremlin.classList.add('visible');
-                }, 10);
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-in';
-                    gremlin.style.transform = `rotate(180deg) translateY(-100%)`;
-                }, stayTime);
-                
-            } else if (edge === 'left') {
-                // 90° CW rotation - BOTTOM TOUCHES LEFT EDGE
-                const yPos = 20 + Math.random() * 60;
-                gremlin.style.left = '0'; // Left edge of viewport
-                gremlin.style.bottom = yPos + '%'; // Position bottom at yPos
-                gremlin.style.transformOrigin = 'bottom left'; // Rotate around bottom-left corner
-                // Rotate 90deg CW, then translateY moves horizontally (after rotation, Y is horizontal)
-                // Hidden: translateY negative = left (off screen)
-                gremlin.style.transform = `rotate(90deg) translateY(-100%)`;
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-out';
-                    // Show: translateY less negative = slide right to reveal 97%
-                    gremlin.style.transform = `rotate(90deg) translateY(-${hidePercent}%)`;
-                    gremlin.classList.add('visible');
-                }, 10);
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-in';
-                    gremlin.style.transform = `rotate(90deg) translateY(-100%)`;
-                }, stayTime);
-                
-            } else if (edge === 'right') {
-                // 90° CCW rotation - BOTTOM TOUCHES RIGHT EDGE
-                const yPos = 20 + Math.random() * 60;
-                gremlin.style.right = '0'; // Right edge of viewport
-                gremlin.style.bottom = yPos + '%'; // Position bottom at yPos
-                gremlin.style.transformOrigin = 'bottom right'; // Rotate around bottom-right corner
-                // Rotate -90deg CCW, then translateY moves horizontally
-                // Hidden: translateY positive = right (off screen)
-                gremlin.style.transform = `rotate(-90deg) translateY(100%)`;
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-out';
-                    // Show: translateY less positive = slide left to reveal 97%
-                    gremlin.style.transform = `rotate(-90deg) translateY(${hidePercent}%)`;
-                    gremlin.classList.add('visible');
-                }, 10);
-                
-                setTimeout(() => {
-                    gremlin.style.transition = 'transform 0.4s ease-in';
-                    gremlin.style.transform = `rotate(-90deg) translateY(100%)`;
-                }, stayTime);
+            // If image already loaded, trigger onload
+            if (gremlinImg.complete) {
+                gremlinImg.onload();
             }
             
             // Play sound
@@ -908,13 +1002,6 @@
             gremlinSound.src = sound;
             gremlinSound.volume = 0.5;
             gremlinSound.play().catch(e => console.log('Sound blocked:', e));
-            
-            // Cleanup after animation completes
-            setTimeout(() => {
-                gremlin.classList.remove('visible');
-                gremlin.style.transition = '';
-                savantAnimating = false;
-            }, stayTime + 500); // Wait for slide-out animation
         }
         
         function startGremlinPopups() {
