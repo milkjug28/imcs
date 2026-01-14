@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMCS - Imaginary Magic Crypto Savants</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght:700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Comic Neue', cursive;
+            overflow: hidden;
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="%23ff00ff"/></svg>'), auto;
+        }
+        
+        #splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        #splash.hidden {
+            display: none;
+        }
+        
+        #flashlight {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 40%, transparent 70%);
+            pointer-events: none;
+            transition: transform 0.1s ease-out;
+        }
+        
+        .creepy-eye {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            pointer-events: none;
+        }
+        
+        .eye-white {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(255,255,255,0.8);
+        }
+        
+        .eye-iris {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #ff1493 0%, #8b008b 50%, #000 80%);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.15s ease-out;
+        }
+        
+        .eye-pupil {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: #000;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .eye-shine {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            top: 30%;
+            left: 30%;
+        }
+        
+        #left-eye {
+            left: 35%;
+            top: 45%;
+        }
+        
+        #right-eye {
+            right: 35%;
+            top: 45%;
+        }
+        
+        #enter-btn {
+            font-family: 'Comic Neue', cursive;
+            font-size: 28px;
+            padding: 15px 40px;
+            background: #ffff00;
+            border: 4px solid #fff;
+            cursor: pointer;
+            transform: rotate(-2deg);
+            box-shadow: 0 0 20px rgba(255,255,0,0.8), 5px 5px 0 #fff;
+            transition: all 0.1s;
+            position: absolute;
+            bottom: 80px;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: rotate(-2deg) scale(1); }
+            50% { transform: rotate(2deg) scale(1.05); }
+        }
+        
+        #enter-btn:hover {
+            transform: rotate(2deg) scale(1.15);
+            background: #00ff00;
+            box-shadow: 0 0 30px rgba(0,255,0,0.9), 5px 5px 0 #fff;
+        }
+        
+        #main-site {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 100%);
+            display: none;
+            flex-direction: column;
+        }
+        
+        #main-site.active {
+            display: flex;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #ff6b9d, #ffd700, #00ff00, #00bfff, #ff00ff);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px dashed #000;
+        }
+        
+        h1 {
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+            letter-spacing: 3px;
+            transform: rotate(-1deg);
+        }
+        
+        nav {
+            background: #ff00ff;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            border-bottom: 5px solid #000;
+            position: relative;
+            min-height: 80px;
+        }
+        
+        .nav-btn {
+            font-family: 'Comic Neue', cursive;
+            font-size: 20px;
+            padding: 10px 20px;
+            background: #ffff00;
+            border: 3px solid #000;
+            cursor: move;
+            transform: rotate(-1deg);
+            box-shadow: 3px 3px 0 #000;
+            transition: background 0.1s;
+            position: absolute;
+            user-select: none;
+        }
+        
+        .nav-btn:hover {
+            background: #00ff00;
+        }
+        
+        .nav-btn.active {
+            background: #ff6b9d;
+        }
+        
+        .nav-btn.dragging {
+            opacity: 0.5;
+            z-index: 1000;
+        }
+        
+        #content {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .page {
+            display: none;
+            padding: 20px;
+            height: 100%;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* Gallery page needs to contain its overlay */
+        #gallery {
+            position: relative;
+        }
+        
+        /* Home page has floating emojis */
+        #home {
+            overflow: hidden;
+        }
+        
+        /* List page needs scroll */
+        #list {
+            overflow-y: auto;
+        }
+        
+        /* Imagination page needs flex display and hidden overflow for emojis */
+        #soon {
+            overflow: hidden;
+        }
+        
+        #soon.active {
+            display: flex;
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: float-away 2s ease-out forwards;
+            z-index: 10;
+        }
+        
+        @keyframes float-away {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(2) rotate(360deg);
+            }
+        }
+        
+        .marquee {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: rgba(255, 255, 0, 0.8);
+            border-top: 3px solid #000;
+            padding: 10px;
+            font-size: 24px;
+            overflow: hidden;
+        }
+        
+        .marquee-content {
+            display: inline-block;
+            white-space: nowrap;
+            animation: scroll 15s linear infinite;
+        }
+        
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        /* Gallery Styles */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .gallery-item {
+            background: #fff;
+            border: 5px solid #000;
+            padding: 10px;
+            box-shadow: 5px 5px 0 #000;
+            transform: rotate(-2deg);
+            transition: all 0.2s;
+        }
+        
+        .gallery-item:hover {
+            transform: rotate(2deg) scale(1.05);
+        }
+        
+        .gallery-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border: 3px solid #000;
+        }
+        
+        .gallery-title {
+            text-align: center;
+            font-size: 48px;
+            color: #ff00ff;
+            text-shadow: 3px 3px 0 #000;
+            margin-bottom: 30px;
+            transform: rotate(-1deg);
+        }
+        
+        /* List Form Styles */
+        .form-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: linear-gradient(135deg, #ff6b9d, #ffd700);
+            border: 5px solid #000;
+            padding: 30px;
+            box-shadow: 10px 10px 0 #000;
+            transform: rotate(-1deg);
+            position: relative;
+            z-index: 50;
+        }
+        
+        .form-title {
+            font-size: 36px;
+            color: #fff;
+            text-shadow: 3px 3px 0 #000;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 24px;
+            color: #000;
+            margin-bottom: 8px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            font-family: 'Comic Neue', cursive;
+            font-size: 18px;
+            border: 3px solid #000;
+            background: #fff;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            font-family: 'Comic Neue', cursive;
+            font-size: 28px;
+            padding: 15px;
+            background: #00ff00;
+            border: 4px solid #000;
+            cursor: pointer;
+            box-shadow: 5px 5px 0 #000;
+            transition: all 0.1s;
+        }
+        
+        .submit-btn:hover {
+            transform: scale(1.05);
+            background: #ffff00;
+        }
+        
+        /* Coming Soon Page - don't set display here, let .page handle it */
+        .imagination-page {
+            background: linear-gradient(45deg, #ff6b9d, #ffd700, #00ff00, #00bfff, #ff00ff, #ff6b9d);
+            background-size: 400% 400%;
+            animation: rainbow-bg 5s ease infinite;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        @keyframes rainbow-bg {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .imagination-title {
+            font-size: 120px;
+            color: #fff;
+            text-shadow: 5px 5px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            animation: bounce 2s infinite;
+            margin-bottom: 50px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .imagination-title {
+                font-size: 60px;
+            }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) rotate(-5deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+        }
+        
+        .floating-emoji {
+            position: absolute;
+            font-size: 60px;
+            animation: float-around 10s infinite;
+            opacity: 0.8;
+        }
+        
+        @keyframes float-around {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(0, -200px) rotate(180deg); }
+            75% { transform: translate(-100px, -100px) rotate(270deg); }
+        }
+        
+        /* Splash page floating emojis */
+        .splash-emoji {
+            position: absolute;
+            font-size: 40px;
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        @keyframes drift {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        
+        /* Locked page overlay */
+        .locked-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        #gallery.active .locked-overlay {
+            display: flex;
+        }
+        
+        .locked-text {
+            font-size: 48px;
+            color: #ff00ff;
+            text-shadow: 3px 3px 0 #000;
+            text-align: center;
+            animation: shake 0.5s infinite;
+        }
+        
+        .locked-subtext {
+            font-size: 24px;
+            color: #ffff00;
+            margin-top: 20px;
+            text-shadow: 2px 2px 0 #000;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        
+        /* Custom eye image support */
+        .custom-eye-white {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            pointer-events: none;
+        }
+        
+        .custom-eye-iris {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.15s ease-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="splash">
+        <div id="flashlight"></div>
+        
+        <!-- Floating emojis on splash -->
+        <div id="splash-emojis"></div>
+        
+        <div class="creepy-eye" id="left-eye">
+            <div class="eye-white">
+                <div class="eye-iris">
+                    <div class="eye-pupil">
+                        <div class="eye-shine"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="creepy-eye" id="right-eye">
+            <div class="eye-white">
+                <div class="eye-iris">
+                    <div class="eye-pupil">
+                        <div class="eye-shine"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button id="enter-btn">~* walcum tu savant wurld *~</button>
+    </div>
+    
+    <!-- Audio player (hidden) - will auto-play when entering site -->
+    <audio id="site-audio" loop>
+        <source src="assets/audio/crystalsettings.mp3" type="audio/mpeg">
+        <source src="assets/audio/DJDave-Airglow(Visualizer).mp3" type="audio/mpeg">
+        <source src="assets/audio/NoMana,SUPERDARK-HoldMe.mp3" type="audio/mpeg">
+        <source src="assets/audio/0neo-px.mp3" type="audio/mpeg">
+    </audio>
+    
+    <div id="main-site">
+        <header>
+            <h1>imaginary magic crypto savants</h1>
+        </header>
+        
+        <nav>
+            <button class="nav-btn active" data-page="home" style="left: 50px; top: 15px;">hoem</button>
+            <button class="nav-btn" data-page="gallery" style="left: 150px; top: 15px;">epik savant gallurie</button>
+            <button class="nav-btn" data-page="list" style="left: 380px; top: 15px;">savant lisssst</button>
+            <button class="nav-btn" data-page="soon" style="left: 550px; top: 15px;">idk sumthin nuw hear suun</button>
+        </nav>
+        
+        <div id="content">
+            <!-- Home Page -->
+            <div class="page active" id="home">
+                <div class="floating-emoji" style="top: 10%; left: 15%; animation-delay: 0s;">⭐</div>
+                <div class="floating-emoji" style="top: 25%; right: 20%; animation-delay: 0.5s;">✨</div>
+                <div class="floating-emoji" style="top: 50%; left: 8%; animation-delay: 1s;">💫</div>
+                <div class="floating-emoji" style="top: 15%; right: 10%; animation-delay: 1.5s;">🌟</div>
+                <div class="floating-emoji" style="bottom: 25%; left: 25%; animation-delay: 2s;">⭐</div>
+                <div class="floating-emoji" style="bottom: 35%; right: 15%; animation-delay: 2.5s;">✨</div>
+                <div class="floating-emoji" style="top: 40%; right: 30%; animation-delay: 3s;">💫</div>
+                <div class="floating-emoji" style="bottom: 15%; left: 10%; animation-delay: 3.5s;">🌟</div>
+            </div>
+            
+            <!-- Gallery Page (LOCKED) -->
+            <div class="page" id="gallery">
+                <div class="locked-overlay">
+                    <div class="locked-text">🔒 LOKKED 🔒</div>
+                    <div class="locked-subtext">~ sumthin speshul cummin suun ~</div>
+                    <div class="locked-subtext" style="margin-top: 40px; font-size: 60px;">👀</div>
+                </div>
+                <h2 class="gallery-title">🎨 EPIK SAVANT GALLURIE 🎨</h2>
+                <div class="gallery-grid">
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ff6b9d' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23fff'%3ESAVANT 1%3C/text%3E%3C/svg%3E" alt="Savant 1">
+                    </div>
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%2300bfff' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23fff'%3ESAVANT 2%3C/text%3E%3C/svg%3E" alt="Savant 2">
+                    </div>
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ffd700' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23000'%3ESAVANT 3%3C/text%3E%3C/svg%3E" alt="Savant 3">
+                    </div>
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%2300ff00' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23000'%3ESAVANT 4%3C/text%3E%3C/svg%3E" alt="Savant 4">
+                    </div>
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ff00ff' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23fff'%3ESAVANT 5%3C/text%3E%3C/svg%3E" alt="Savant 5">
+                    </div>
+                    <div class="gallery-item">
+                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23ff6347' width='300' height='200'/%3E%3Ctext x='150' y='100' text-anchor='middle' font-size='30' fill='%23fff'%3ESAVANT 6%3C/text%3E%3C/svg%3E" alt="Savant 6">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- List Page -->
+            <div class="page" id="list">
+                <div class="form-container">
+                    <h2 class="form-title">🌟 SAVANT LISSSST 🌟</h2>
+                    <div class="form-group">
+                        <label>ur naem:</label>
+                        <input type="text" id="name-input" placeholder="wut dey call u?">
+                    </div>
+                    <div class="form-group">
+                        <label>sum info bout u:</label>
+                        <input type="text" id="info-input" placeholder="tel us sumthin kewl">
+                    </div>
+                    <div class="form-group">
+                        <label>puuuut urrrr wallleeeettt:</label>
+                        <input type="text" id="wallet-input" placeholder="ur crypto addresss">
+                    </div>
+                    <button class="submit-btn" onclick="submitSavant()">becum a savant! 🚀</button>
+                </div>
+            </div>
+            
+            <!-- Imagination Page -->
+            <div class="page imagination-page" id="soon">
+                <h1 class="imagination-title">use ur imaginashun, dork</h1>
+                <div style="font-size: 24px; color: #fff; text-shadow: 2px 2px 0 #000; text-align: center; margin-top: -20px;">🌈 itz all in ur hed 🌈</div>
+                <div class="floating-emoji" style="top: 10%; left: 10%; animation-delay: 0s;">🌈</div>
+                <div class="floating-emoji" style="top: 20%; right: 15%; animation-delay: 1s;">⭐</div>
+                <div class="floating-emoji" style="bottom: 20%; left: 20%; animation-delay: 2s;">✨</div>
+                <div class="floating-emoji" style="bottom: 30%; right: 10%; animation-delay: 3s;">🦄</div>
+                <div class="floating-emoji" style="top: 50%; left: 5%; animation-delay: 1.5s;">💫</div>
+                <div class="floating-emoji" style="top: 40%; right: 20%; animation-delay: 2.5s;">🎨</div>
+            </div>
+        </div>
+        
+        <div class="marquee">
+            <div class="marquee-content">
+                ✨ walcum to imcs magic ralm! cliq for surprises anywar! we pramis to onli tek ur mani ✨
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const effects = [
+            { emoji: '🌈' }, { emoji: '⭐' }, { emoji: '✨' }, { emoji: '💫' },
+            { emoji: '🎆' }, { emoji: '🎨' }, { emoji: '🦄' }, { emoji: '🎪' },
+            { emoji: '🎭' }, { emoji: '🌟' }
+        ];
+        
+        const splashEmojis = ['⭐', '✨', '💫', '🌟', '✦', '★', '☆'];
+        
+        // Create floating emojis on splash page
+        function createSplashEmoji() {
+            const container = document.getElementById('splash-emojis');
+            if (!container || document.getElementById('splash').classList.contains('hidden')) return;
+            
+            const emoji = document.createElement('div');
+            emoji.className = 'splash-emoji';
+            emoji.textContent = splashEmojis[Math.floor(Math.random() * splashEmojis.length)];
+            emoji.style.left = Math.random() * 100 + 'vw';
+            emoji.style.fontSize = (Math.random() * 30 + 20) + 'px';
+            emoji.style.animation = `drift ${Math.random() * 8 + 8}s linear forwards`;
+            
+            container.appendChild(emoji);
+            
+            // Remove after animation
+            setTimeout(() => emoji.remove(), 16000);
+        }
+        
+        // Spawn emojis continuously on splash
+        setInterval(createSplashEmoji, 800);
+        // Create initial batch
+        for (let i = 0; i < 10; i++) {
+            setTimeout(createSplashEmoji, i * 200);
+        }
+        
+        // Splash screen
+        const flashlight = document.getElementById('flashlight');
+        const leftEye = document.querySelector('#left-eye .eye-iris');
+        const rightEye = document.querySelector('#right-eye .eye-iris');
+        const splash = document.getElementById('splash');
+        
+        splash.addEventListener('mousemove', (e) => {
+            flashlight.style.left = e.clientX - 150 + 'px';
+            flashlight.style.top = e.clientY - 150 + 'px';
+            
+            const leftEyeRect = document.getElementById('left-eye').getBoundingClientRect();
+            const rightEyeRect = document.getElementById('right-eye').getBoundingClientRect();
+            
+            const leftEyeCenterX = leftEyeRect.left + leftEyeRect.width / 2;
+            const leftEyeCenterY = leftEyeRect.top + leftEyeRect.height / 2;
+            const rightEyeCenterX = rightEyeRect.left + rightEyeRect.width / 2;
+            const rightEyeCenterY = rightEyeRect.top + rightEyeRect.height / 2;
+            
+            const leftAngle = Math.atan2(e.clientY - leftEyeCenterY, e.clientX - leftEyeCenterX);
+            const leftDistance = Math.min(15, Math.hypot(e.clientX - leftEyeCenterX, e.clientY - leftEyeCenterY) / 20);
+            const leftX = Math.cos(leftAngle) * leftDistance;
+            const leftY = Math.sin(leftAngle) * leftDistance;
+            
+            const rightAngle = Math.atan2(e.clientY - rightEyeCenterY, e.clientX - rightEyeCenterX);
+            const rightDistance = Math.min(15, Math.hypot(e.clientX - rightEyeCenterX, e.clientY - rightEyeCenterY) / 20);
+            const rightX = Math.cos(rightAngle) * rightDistance;
+            const rightY = Math.sin(rightAngle) * rightDistance;
+            
+            leftEye.style.transform = `translate(calc(-50% + ${leftX}px), calc(-50% + ${leftY}px))`;
+            rightEye.style.transform = `translate(calc(-50% + ${rightX}px), calc(-50% + ${rightY}px))`;
+        });
+        
+        document.getElementById('enter-btn').addEventListener('click', () => {
+            document.getElementById('splash').classList.add('hidden');
+            document.getElementById('main-site').classList.add('active');
+            
+            // Try to play audio (requires user interaction first)
+            const audio = document.getElementById('site-audio');
+            if (audio.querySelector('source')) {
+                audio.play().catch(e => console.log('Audio play blocked:', e));
+            }
+        });
+        
+        // Navigation with draggable buttons
+        let draggedButton = null;
+        let offsetX, offsetY;
+        let isDragging = false;
+        let startX, startY;
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            // Mouse down - prepare to drag
+            btn.addEventListener('mousedown', (e) => {
+                draggedButton = btn;
+                isDragging = false;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = btn.getBoundingClientRect();
+                const navRect = btn.parentElement.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        
+        // Mouse move - drag button
+        document.addEventListener('mousemove', (e) => {
+            if (draggedButton) {
+                const moveDistance = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+                
+                if (moveDistance > 5) {
+                    isDragging = true;
+                    draggedButton.classList.add('dragging');
+                }
+                
+                if (isDragging) {
+                    const nav = draggedButton.parentElement;
+                    const navRect = nav.getBoundingClientRect();
+                    
+                    let newLeft = e.clientX - navRect.left - offsetX;
+                    let newTop = e.clientY - navRect.top - offsetY;
+                    
+                    newLeft = Math.max(0, Math.min(newLeft, navRect.width - draggedButton.offsetWidth));
+                    newTop = Math.max(0, Math.min(newTop, navRect.height - draggedButton.offsetHeight));
+                    
+                    draggedButton.style.left = newLeft + 'px';
+                    draggedButton.style.top = newTop + 'px';
+                }
+            }
+        });
+        
+        // Mouse up - stop drag or navigate
+        document.addEventListener('mouseup', (e) => {
+            if (draggedButton) {
+                draggedButton.classList.remove('dragging');
+                
+                if (!isDragging) {
+                    // It was a click, not a drag - navigate
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    draggedButton.classList.add('active');
+                    
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    document.getElementById(draggedButton.dataset.page).classList.add('active');
+                }
+                
+                draggedButton = null;
+                isDragging = false;
+            }
+        });
+        
+        // Click effects
+        document.getElementById('content').addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            
+            const effect = effects[Math.floor(Math.random() * effects.length)];
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.textContent = effect.emoji;
+            particle.style.left = e.clientX + 'px';
+            particle.style.top = e.clientY + 'px';
+            particle.style.fontSize = (Math.random() * 40 + 30) + 'px';
+            particle.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+            particle.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+            
+            document.getElementById('content').appendChild(particle);
+            setTimeout(() => particle.remove(), 2000);
+        });
+        
+        // Form submission with Twitter intent
+        function submitSavant() {
+            const name = document.getElementById('name-input').value;
+            const info = document.getElementById('info-input').value;
+            const wallet = document.getElementById('wallet-input').value;
+            
+            if (!name || !info || !wallet) {
+                alert('pls fill out ALL fieldz! 🌟');
+                return;
+            }
+            
+            const tweetText = encodeURIComponent('i ar a savant @imcsnft');
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
+            
+            window.open(twitterUrl, '_blank');
+            
+            document.getElementById('name-input').value = '';
+            document.getElementById('info-input').value = '';
+            document.getElementById('wallet-input').value = '';
+            
+            alert('u ar now a savant! 🎉 pls tweet ur status!');
+        }
+    </script>
+</body>
+</html>
