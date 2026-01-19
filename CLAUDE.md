@@ -12,6 +12,51 @@
 
 ---
 
+## 🚀 Current Progress (Updated: Jan 18, 2026)
+
+### ✅ Completed
+- **Backend Architecture** - Server-side only (no RLS needed for security)
+  - 10 API routes for all data operations
+  - Weighted voting system (wallet=1.0, IP=0.167)
+  - Referral system with bonus scoring
+  - Auto-whitelist functions
+- **Database** - Supabase with simplified schema
+  - Tables: submissions, votes, access_attempts, whitelist, referrals
+  - Views: user_profiles, leaderboard_submissions, leaderboard_voters
+  - Functions: auto-whitelist, referral bonuses, score updates
+- **Google Sheets Sync** - Admin route to migrate data
+  - POST /api/admin/sync-sheets
+  - Compares and syncs data, skips duplicates
+  - Full documentation in scripts/sync-google-sheets.md
+- **React Foundation**
+  - Providers (RainbowKit + React Query)
+  - Root layout with noise overlay
+  - Splash screen with eye tracking (exact port from index.html)
+- **Admin Dashboard** - /admin route
+  - View all submissions and whitelist status
+  - Real-time stats (total, whitelisted, pending)
+  - Sync button for Google Sheets migration
+  - Protected by password
+
+### 🔄 In Progress
+- **Main Site Layout** - Header, draggable nav, footer (NEXT)
+- **Voting Cards** - Texts from last night style voting
+- **Circle Drawing Test** - 80% accuracy gate
+- **Typing Test** - 30+ WPM fallback
+
+### ⏳ To Do
+- Home page with floating emojis
+- Form submission page with gates
+- Wallet connection integration
+- Profile page with scores
+- Leaderboard (top 100 + search)
+- Popup savants and particle effects
+- Music player
+- Mobile optimization
+- Deploy to Vercel
+
+---
+
 ## Core Philosophy
 
 > "i wish i was autistic...in like a super hacker programmer type of way…seeing lines of code like a rainman of the matrix. like an imaginary magic crypto savant"
