@@ -194,13 +194,13 @@ export default function VotePage() {
       {/* Title */}
       <div style={{
         textAlign: 'center',
-        padding: '30px 20px 0',
+        padding: '15px 20px 0',
       }}>
         <h1 style={{
           fontSize: '48px',
           color: '#fff',
           textShadow: '3px 3px 0 #000',
-          marginBottom: '10px'
+          marginBottom: '5px'
         }}>
           aprove r denie
         </h1>
@@ -208,6 +208,7 @@ export default function VotePage() {
           fontSize: '20px',
           color: '#fff',
           textShadow: '2px 2px 0 #000',
+          marginBottom: '10px'
         }}>
           help us find da best savants
         </p>

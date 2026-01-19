@@ -7,7 +7,7 @@ type TypingTestProps = {
   onSuccess: () => void
 }
 
-const TARGET_TEXT = "i wish i was autistic...in like a super hacker programmer type of way…seeing lines of code like a rainman of the matrix. like an imaginary magic crypto savant"
+const TARGET_TEXT = "i wish i was autistic...in like a super hacker programmer type of way...seeing lines of code like a rainman of the matrix. like an imaginary magic crypto savant"
 const TARGET_WPM = 30
 
 export default function TypingTest({ onSuccess }: TypingTestProps) {

@@ -1,41 +1,59 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { calculateCircleAccuracy, getRandomPastelColor, Point } from '@/lib/utils'
+import { calculateCircleAccuracy, Point } from '@/lib/utils'
 
 type CircleDrawingProps = {
-  onSuccess: (score: number, accuracy: number) => void
-  onFailure: (failedAttempts: number) => void
+  onSubmit: (score: number, accuracy: number) => void
+  onGiveUp: () => void
 }
 
-export default function CircleDrawing({ onSuccess, onFailure }: CircleDrawingProps) {
+export default function CircleDrawing({ onSubmit, onGiveUp }: CircleDrawingProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
+  const [hasDrawn, setHasDrawn] = useState(false)
   const [points, setPoints] = useState<Point[]>([])
-  const [drawColor] = useState(getRandomPastelColor())
-  const [message, setMessage] = useState('draw a perfect circle, use ur imaginashun')
-  const [failedAttempts, setFailedAttempts] = useState(0)
+  const [accuracy, setAccuracy] = useState(0)
+  const [score, setScore] = useState(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    // Make canvas full viewport
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
 
-    // Set canvas size
-    canvas.width = Math.min(window.innerWidth - 40, 800)
-    canvas.height = Math.min(window.innerHeight - 200, 600)
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.fillStyle = '#000'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+      }
+    }
 
-    // Clear canvas
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    resizeCanvas()
+    window.addEventListener('resize', resizeCanvas)
+
+    return () => window.removeEventListener('resize', resizeCanvas)
   }, [])
+
+  const getColor = (acc: number): string => {
+    // Green for perfect (100%), red for terrible (0%), gradient in between
+    if (acc >= 0.95) return '#00ff00'
+    if (acc >= 0.85) return '#88ff00'
+    if (acc >= 0.75) return '#ffff00'
+    if (acc >= 0.65) return '#ffaa00'
+    if (acc >= 0.50) return '#ff6600'
+    return '#ff0000'
+  }
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true)
+    setHasDrawn(false)
     setPoints([])
-    setMessage('draw a perfect circle, use ur imaginashun')
+    setAccuracy(0)
+    setScore(0)
 
     const canvas = canvasRef.current
     if (!canvas) return
@@ -47,13 +65,10 @@ export default function CircleDrawing({ onSuccess, onFailure }: CircleDrawingPro
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-    // Start drawing
     ctx.beginPath()
-    ctx.strokeStyle = drawColor
-    ctx.lineWidth = 8
+    ctx.lineWidth = 3
     ctx.lineCap = 'round'
-    ctx.shadowBlur = 15
-    ctx.shadowColor = drawColor
+    ctx.lineJoin = 'round'
   }
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -79,93 +94,61 @@ export default function CircleDrawing({ onSuccess, onFailure }: CircleDrawingPro
     const x = clientX - rect.left
     const y = clientY - rect.top
 
-    if (points.length === 0) {
+    const newPoints = [...points, { x, y }]
+    setPoints(newPoints)
+
+    // Calculate real-time accuracy
+    if (newPoints.length > 10) {
+      const currentAcc = calculateCircleAccuracy(newPoints)
+      setAccuracy(currentAcc)
+
+      // Set line color based on accuracy
+      ctx.strokeStyle = getColor(currentAcc)
+    } else {
+      ctx.strokeStyle = '#ffffff'
+    }
+
+    if (newPoints.length === 1) {
       ctx.moveTo(x, y)
     } else {
       ctx.lineTo(x, y)
       ctx.stroke()
     }
-
-    setPoints(prev => [...prev, { x, y }])
   }
 
-  const stopDrawing = async () => {
+  const stopDrawing = () => {
     if (!isDrawing) return
     setIsDrawing(false)
 
     if (points.length < 30) {
-      setMessage('draw more than that dummie')
+      clearCanvas()
       return
     }
 
-    // Calculate accuracy
-    const accuracy = calculateCircleAccuracy(points)
-    const accuracyPercent = Math.round(accuracy * 100)
+    setHasDrawn(true)
 
-    // Determine if passed and score earned
-    if (accuracyPercent >= 75) {
-      // Calculate score based on accuracy
-      let scoreEarned: number
-      if (accuracyPercent >= 95) {
-        scoreEarned = 3
-      } else if (accuracyPercent >= 90) {
-        scoreEarned = 2.5
-      } else if (accuracyPercent >= 85) {
-        scoreEarned = 2
-      } else if (accuracyPercent >= 80) {
-        scoreEarned = 1.5
-      } else {
-        scoreEarned = 1
-      }
+    // Final accuracy calculation
+    const finalAccuracy = calculateCircleAccuracy(points)
+    const accuracyPercent = Math.round(finalAccuracy * 100)
+    setAccuracy(finalAccuracy)
 
-      setMessage(`🎉 ${accuracyPercent}% - u earned ${scoreEarned} points!`)
-
-      // Record success
-      try {
-        await fetch('/api/access/circle', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ip: await getClientIP(),
-            success: true,
-            score: accuracyPercent
-          })
-        })
-      } catch (e) {
-        console.error('Failed to record attempt:', e)
-      }
-
-      // Call success callback with score and accuracy
-      setTimeout(() => onSuccess(scoreEarned, accuracyPercent), 2000)
+    // Calculate score based on accuracy
+    let scoreEarned: number
+    if (accuracyPercent >= 95) {
+      scoreEarned = 3
+    } else if (accuracyPercent >= 90) {
+      scoreEarned = 2.5
+    } else if (accuracyPercent >= 85) {
+      scoreEarned = 2
+    } else if (accuracyPercent >= 80) {
+      scoreEarned = 1.5
+    } else if (accuracyPercent >= 75) {
+      scoreEarned = 1
     } else {
-      // Failed
-      const newFailedAttempts = failedAttempts + 1
-      setFailedAttempts(newFailedAttempts)
-      setMessage(`${accuracyPercent}% - dat not a circle dummie! try agen (attempt ${newFailedAttempts}/3)`)
-
-      // Record failure
-      try {
-        const response = await fetch('/api/access/circle', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ip: await getClientIP(),
-            success: false,
-            score: accuracyPercent
-          })
-        })
-        const data = await response.json()
-
-        // Check if failed 3 times
-        if (data.failedAttempts >= 3) {
-          setTimeout(() => onFailure(data.failedAttempts), 1500)
-        }
-      } catch (e) {
-        console.error('Failed to record attempt:', e)
-      }
+      scoreEarned = 0
     }
 
-    setPoints([])
+    setScore(scoreEarned)
   }
 
   const clearCanvas = () => {
@@ -178,16 +161,103 @@ export default function CircleDrawing({ onSuccess, onFailure }: CircleDrawingPro
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     setPoints([])
-    setMessage('draw a perfect circle, use ur imaginashun')
+    setHasDrawn(false)
+    setAccuracy(0)
+    setScore(0)
   }
 
-  return (
-    <div className="circle-canvas-container">
-      <div className="circle-instructions">{message}</div>
+  const handleSubmit = async () => {
+    const accuracyPercent = Math.round(accuracy * 100)
 
+    // Record attempt
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json')
+      const { ip } = await ipResponse.json()
+
+      await fetch('/api/access/circle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ip,
+          success: accuracyPercent >= 75,
+          score: accuracyPercent
+        })
+      })
+    } catch (e) {
+      console.error('Failed to record attempt:', e)
+    }
+
+    onSubmit(score, accuracyPercent)
+  }
+
+  const accuracyPercent = Math.round(accuracy * 100)
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      background: '#000',
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {/* Instructions or score display */}
+      {!hasDrawn && !isDrawing && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          fontSize: '48px',
+          color: '#fff',
+          textShadow: '3px 3px 0 #000',
+          textAlign: 'center',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}>
+          draw a perfect circle
+        </div>
+      )}
+
+      {hasDrawn && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          textAlign: 'center',
+          pointerEvents: 'none',
+          zIndex: 1
+        }}>
+          <div style={{
+            fontSize: '120px',
+            color: getColor(accuracy),
+            textShadow: '4px 4px 0 #000',
+            fontWeight: 'bold',
+            marginBottom: '20px'
+          }}>
+            {accuracyPercent}%
+          </div>
+          {score > 0 && (
+            <div style={{
+              fontSize: '36px',
+              color: '#fff',
+              textShadow: '2px 2px 0 #000'
+            }}>
+              {score} points
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Full-screen canvas */}
       <canvas
         ref={canvasRef}
-        className="circle-canvas"
         onMouseDown={startDrawing}
         onMouseMove={draw}
         onMouseUp={stopDrawing}
@@ -195,22 +265,86 @@ export default function CircleDrawing({ onSuccess, onFailure }: CircleDrawingPro
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={stopDrawing}
+        style={{
+          cursor: 'crosshair',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%'
+        }}
       />
 
-      <button className="circle-clear-btn" onClick={clearCanvas}>
-        clear n try agen
-      </button>
+      {/* Buttons (bottom center) */}
+      {hasDrawn && (
+        <div style={{
+          position: 'fixed',
+          bottom: '50px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '20px',
+          zIndex: 10
+        }}>
+          <button
+            onClick={handleSubmit}
+            style={{
+              fontFamily: 'Comic Neue, cursive',
+              fontSize: '24px',
+              padding: '15px 40px',
+              background: score > 0 ? '#00ff00' : '#ffff00',
+              border: '4px solid #fff',
+              cursor: 'pointer',
+              boxShadow: '5px 5px 0 #fff',
+              color: '#000',
+              fontWeight: 'bold'
+            }}
+          >
+            submit
+          </button>
+          <button
+            onClick={onGiveUp}
+            style={{
+              fontFamily: 'Comic Neue, cursive',
+              fontSize: '24px',
+              padding: '15px 40px',
+              background: '#ff6b9d',
+              border: '4px solid #fff',
+              cursor: 'pointer',
+              boxShadow: '5px 5px 0 #fff',
+              color: '#fff',
+              fontWeight: 'bold',
+              textShadow: '2px 2px 0 #000'
+            }}
+          >
+            dis is hard
+          </button>
+        </div>
+      )}
+
+      {!hasDrawn && (
+        <button
+          onClick={clearCanvas}
+          style={{
+            position: 'fixed',
+            bottom: '50px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontFamily: 'Comic Neue, cursive',
+            fontSize: '20px',
+            padding: '12px 30px',
+            background: '#ccc',
+            border: '3px solid #fff',
+            cursor: 'pointer',
+            boxShadow: '3px 3px 0 #fff',
+            color: '#000',
+            zIndex: 10,
+            opacity: points.length > 0 ? 1 : 0.5
+          }}
+        >
+          clear n try agen
+        </button>
+      )}
     </div>
   )
-}
-
-// Helper to get client IP
-async function getClientIP(): Promise<string> {
-  try {
-    const response = await fetch('https://api.ipify.org?format=json')
-    const data = await response.json()
-    return data.ip
-  } catch {
-    return '0.0.0.0'
-  }
 }

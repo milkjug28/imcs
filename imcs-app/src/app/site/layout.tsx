@@ -2,6 +2,7 @@
 
 import { ReactNode, useState, useRef, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import MusicPlayer from '@/components/MusicPlayer'
 
 type NavButton = {
   id: string
@@ -143,6 +144,9 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
           ✨ walcum to imcs magic ralm! cliq for surprises anywar! we pramis to onli tek ur mani ✨
         </div>
       </div>
+
+      {/* Background Music Player */}
+      <MusicPlayer />
     </div>
   )
 }
