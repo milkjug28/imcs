@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import CircleDrawing from '@/components/gates/CircleDrawing'
+import TypingTest from '@/components/gates/TypingTest'
 import { submitForm } from '@/lib/api-client'
 import { isValidAddress } from '@/lib/utils'
 
-type Stage = 'initial' | 'wallet-check' | 'circle-test' | 'choose-action' | 'add-to-wallet' | 'form' | 'success'
+type Stage = 'initial' | 'wallet-check' | 'circle-test' | 'typing-test' | 'choose-action' | 'add-to-wallet' | 'form' | 'success'
 
 export default function SubmitPage() {
   const [stage, setStage] = useState<Stage>('initial')
@@ -119,6 +120,11 @@ export default function SubmitPage() {
       onSuccess={handleCircleSuccess}
       onFailure={handleCircleFailure}
     />
+  )
+
+  // Typing test (fallback after 3 circle failures)
+  const renderTypingTest = () => (
+    <TypingTest onSuccess={handleTypingSuccess} />
   )
 
   // Choose action after circle success
@@ -343,9 +349,15 @@ export default function SubmitPage() {
   }
 
   const handleCircleFailure = (attempts: number) => {
-    // TODO: Switch to typing test after 3 failures
-    alert(`u failed ${attempts} times. typing test coming soon!`)
-    setStage('initial')
+    // Switch to typing test after 3 failures
+    setStage('typing-test')
+  }
+
+  const handleTypingSuccess = () => {
+    // Typing test passed - give minimum points (1 point)
+    setEarnedPoints(1)
+    setEarnedAccuracy(100) // Typing test doesn't have accuracy, but we need a value
+    setStage('choose-action')
   }
 
   const handleAddPoints = async () => {
@@ -460,6 +472,8 @@ export default function SubmitPage() {
       return renderWalletCheck()
     case 'circle-test':
       return renderCircleTest()
+    case 'typing-test':
+      return renderTypingTest()
     case 'choose-action':
       return renderChooseAction()
     case 'add-to-wallet':
