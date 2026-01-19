@@ -12,10 +12,9 @@ type NavButton = {
 
 const navButtons: NavButton[] = [
   { id: 'home', label: 'hoem', path: '/site', defaultPos: { x: 50, y: 15 } },
-  { id: 'vote', label: 'vote on savants', path: '/site/vote', defaultPos: { x: 180, y: 15 } },
-  { id: 'submit', label: 'becum savant', path: '/site/submit', defaultPos: { x: 380, y: 15 } },
-  { id: 'profile', label: 'my profil', path: '/site/profile', defaultPos: { x: 580, y: 15 } },
-  { id: 'leaderboard', label: 'leederboard', path: '/site/leaderboard', defaultPos: { x: 750, y: 15 } },
+  { id: 'submit', label: 'savaant lissst', path: '/site/submit', defaultPos: { x: 180, y: 15 } },
+  { id: 'vote', label: 'aprove r denie', path: '/site/vote', defaultPos: { x: 380, y: 15 } },
+  { id: 'leaderboard', label: 'leederbord', path: '/site/leaderboard', defaultPos: { x: 580, y: 15 } },
 ]
 
 export default function SiteLayout({ children }: { children: ReactNode }) {
