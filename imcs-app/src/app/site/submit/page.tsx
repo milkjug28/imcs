@@ -6,7 +6,7 @@ import TypingTest from '@/components/gates/TypingTest'
 import { submitForm } from '@/lib/api-client'
 import { isValidAddress } from '@/lib/utils'
 
-type Stage = 'initial' | 'wallet-check' | 'circle-test' | 'typing-test' | 'choose-action' | 'add-to-wallet' | 'form' | 'success'
+type Stage = 'initial' | 'wallet-check' | 'circle-test' | 'typing-test' | 'add-to-wallet' | 'form' | 'success'
 
 export default function SubmitPage() {
   const [stage, setStage] = useState<Stage>('initial')
@@ -117,44 +117,14 @@ export default function SubmitPage() {
   // Circle test
   const renderCircleTest = () => (
     <CircleDrawing
-      onSuccess={handleCircleSuccess}
-      onFailure={handleCircleFailure}
+      onSubmit={handleCircleSubmit}
+      onGiveUp={handleCircleGiveUp}
     />
   )
 
-  // Typing test (fallback after 3 circle failures)
+  // Typing test (fallback when user gives up on circle)
   const renderTypingTest = () => (
     <TypingTest onSuccess={handleTypingSuccess} />
-  )
-
-  // Choose action after circle success
-  const renderChooseAction = () => (
-    <div className="page active">
-      <div className="form-container">
-        <h2 className="form-title">🎉 u did it!</h2>
-        <p style={{ fontSize: '24px', textAlign: 'center', margin: '20px 0' }}>
-          u earned <strong>{earnedPoints}</strong> points ({earnedAccuracy}% accuracy)
-        </p>
-        <p style={{ fontSize: '18px', textAlign: 'center', marginBottom: '30px' }}>
-          wut u wanna do now?
-        </p>
-
-        <button
-          className="submit-btn"
-          onClick={() => setStage('add-to-wallet')}
-          style={{ marginBottom: '20px' }}
-        >
-          add scor to mi wallut
-        </button>
-
-        <button
-          className="submit-btn"
-          onClick={() => setStage('form')}
-        >
-          fell owt forhm
-        </button>
-      </div>
-    </div>
   )
 
   // Add points to existing wallet
@@ -342,14 +312,14 @@ export default function SubmitPage() {
     setLoading(false)
   }
 
-  const handleCircleSuccess = (score: number, accuracy: number) => {
+  const handleCircleSubmit = (score: number, accuracy: number) => {
     setEarnedPoints(score)
     setEarnedAccuracy(accuracy)
-    setStage('choose-action')
+    setStage('add-to-wallet')
   }
 
-  const handleCircleFailure = (attempts: number) => {
-    // Switch to typing test after 3 failures
+  const handleCircleGiveUp = () => {
+    // User gave up on circle test, send to typing test
     setStage('typing-test')
   }
 
@@ -357,7 +327,7 @@ export default function SubmitPage() {
     // Typing test passed - give minimum points (1 point)
     setEarnedPoints(1)
     setEarnedAccuracy(100) // Typing test doesn't have accuracy, but we need a value
-    setStage('choose-action')
+    setStage('add-to-wallet')
   }
 
   const handleAddPoints = async () => {
@@ -474,8 +444,6 @@ export default function SubmitPage() {
       return renderCircleTest()
     case 'typing-test':
       return renderTypingTest()
-    case 'choose-action':
-      return renderChooseAction()
     case 'add-to-wallet':
       return renderAddToWallet()
     case 'form':
