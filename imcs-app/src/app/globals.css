@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght:700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
 
 * {
   margin: 0;
@@ -430,23 +430,31 @@ nav {
 
 /* Mobile responsive */
 @media (max-width: 768px) {
+  /* Global mobile text improvements */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   h1 {
-    font-size: 28px;
-    letter-spacing: 1px;
+    font-size: 24px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: #000;
+    text-shadow: none;
   }
 
   header {
     padding: 12px 10px;
   }
 
-  /* Nav bar - stack buttons vertically on mobile */
+  /* Nav bar - VERTICAL stack on mobile */
   nav {
     min-height: auto;
     padding: 10px;
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
   }
 
@@ -456,9 +464,18 @@ nav {
     top: auto !important;
     transform: none !important;
     cursor: pointer;
-    font-size: 16px;
-    padding: 8px 14px;
-    flex-shrink: 0;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 12px 16px;
+    text-align: center;
+    color: #000;
+    background: #ffff00;
+    border: 3px solid #000;
+    box-shadow: 2px 2px 0 #000;
+  }
+
+  .nav-btn.active {
+    background: #00ff00;
   }
 
   .form-container {
@@ -468,43 +485,57 @@ nav {
   }
 
   .form-title {
-    font-size: 26px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #000;
+    text-shadow: none;
   }
 
   .form-group label {
     font-size: 18px;
+    font-weight: 700;
+    color: #000;
   }
 
   .form-group input,
   .form-group textarea {
     font-size: 16px;
-    padding: 10px;
+    padding: 12px;
+    color: #000;
+    background: #fff;
   }
 
   .submit-btn {
-    font-size: 22px;
-    padding: 12px;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 14px;
+    color: #000;
   }
 
   .gallery-title {
-    font-size: 28px;
+    font-size: 26px;
+    font-weight: 700;
   }
 
   .rainbow-text {
-    font-size: 32px;
+    font-size: 28px;
+    font-weight: 700;
   }
 
   .lock-text {
-    font-size: 28px;
+    font-size: 24px;
+    font-weight: 700;
   }
 
   .marquee {
-    font-size: 16px;
+    font-size: 14px;
     padding: 8px;
+    font-weight: 700;
+    color: #000;
   }
 
   .floating-emoji {
-    font-size: 40px;
+    font-size: 32px;
   }
 
   .success-message {
@@ -514,11 +545,16 @@ nav {
   }
 
   .success-message h2 {
-    font-size: 32px;
+    font-size: 28px;
+    font-weight: 700;
+    text-shadow: none;
+    color: #000;
   }
 
   .success-message p {
-    font-size: 18px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
   }
 
   /* Typing test mobile */
@@ -527,18 +563,19 @@ nav {
   }
 
   .typing-target-text {
-    font-size: 16px;
-    padding: 15px;
-  }
-
-  .typing-input {
-    font-size: 16px;
-    height: 120px;
+    font-size: 14px;
     padding: 12px;
   }
 
+  .typing-input {
+    font-size: 14px;
+    height: 100px;
+    padding: 10px;
+  }
+
   .typing-wpm {
-    font-size: 36px;
+    font-size: 32px;
+    font-weight: 700;
   }
 
   /* Leaderboard mobile */
@@ -548,39 +585,44 @@ nav {
   }
 
   .leaderboard-tabs {
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
   }
 
   .leaderboard-tab {
-    font-size: 18px;
-    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 10px 16px;
   }
 
   .leaderboard-entry {
-    padding: 15px;
-    gap: 12px;
+    padding: 12px;
+    gap: 10px;
   }
 
   .leaderboard-rank {
-    font-size: 28px;
-    min-width: 45px;
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 40px;
   }
 
   .leaderboard-score {
-    font-size: 24px;
+    font-size: 20px;
+    font-weight: 700;
   }
 }
 
 /* Extra small screens */
 @media (max-width: 480px) {
   h1 {
-    font-size: 22px;
+    font-size: 18px;
+    font-weight: 700;
   }
 
   .nav-btn {
-    font-size: 14px;
-    padding: 6px 10px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 10px 14px;
   }
 
   .form-container {
@@ -589,15 +631,18 @@ nav {
   }
 
   .form-title {
-    font-size: 22px;
+    font-size: 20px;
+    font-weight: 700;
   }
 
   .submit-btn {
     font-size: 18px;
+    font-weight: 700;
   }
 
   .success-message h2 {
-    font-size: 26px;
+    font-size: 22px;
+    font-weight: 700;
   }
 }
 

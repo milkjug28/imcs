@@ -100,26 +100,31 @@ export default function LeaderboardPage() {
           animate={{ rotate: [0, -1, 1, 0] }}
           transition={{ duration: 2, repeat: Infinity }}
           style={{
-            fontSize: 'clamp(32px, 10vw, 46px)',
+            fontSize: 'clamp(28px, 8vw, 46px)',
             textAlign: 'center',
-            color: '#fff',
-            textShadow: '4px 4px 0 #ff00ff, -2px -2px 0 #00ffff',
+            color: '#000',
+            textShadow: '2px 2px 0 #ff00ff',
             marginBottom: '5px',
-            fontFamily: 'Comic Neue, cursive'
+            fontFamily: 'Comic Neue, cursive',
+            fontWeight: 700
           }}
         >
           leederbord
         </motion.h1>
-        <p style={{
-          fontSize: 'clamp(14px, 4vw, 18px)',
-          textAlign: 'center',
-          color: '#ffff00',
-          marginBottom: '20px',
-          fontFamily: 'Comic Neue, cursive',
-          textShadow: '2px 2px 0 #000'
-        }}>
-          tahp 100 savaants
-        </p>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <span style={{
+            fontSize: 'clamp(16px, 4vw, 18px)',
+            color: '#000',
+            fontFamily: 'Comic Neue, cursive',
+            fontWeight: 700,
+            background: '#ffff00',
+            padding: '4px 12px',
+            display: 'inline-block',
+            border: '2px solid #000'
+          }}>
+            tahp 100 savaants
+          </span>
+        </div>
 
         {/* Search */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '25px', transform: 'rotate(-0.5deg)' }}>

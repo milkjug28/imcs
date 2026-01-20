@@ -208,18 +208,23 @@ export default function VotePage() {
         padding: '15px 15px 0',
       }}>
         <h1 style={{
-          fontSize: 'clamp(32px, 10vw, 48px)',
-          color: '#fff',
-          textShadow: '3px 3px 0 #000',
-          marginBottom: '5px'
+          fontSize: 'clamp(26px, 8vw, 48px)',
+          color: '#000',
+          textShadow: '2px 2px 0 #ff00ff',
+          marginBottom: '8px',
+          fontWeight: 700
         }}>
           aprove r denie
         </h1>
         <p style={{
-          fontSize: 'clamp(16px, 4vw, 20px)',
-          color: '#fff',
-          textShadow: '2px 2px 0 #000',
-          marginBottom: '10px'
+          fontSize: 'clamp(14px, 4vw, 18px)',
+          color: '#000',
+          fontWeight: 700,
+          marginBottom: '10px',
+          background: '#00ff00',
+          padding: '4px 12px',
+          display: 'inline-block',
+          border: '2px solid #000'
         }}>
           help us find da best savants
         </p>

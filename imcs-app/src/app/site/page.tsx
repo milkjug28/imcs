@@ -22,25 +22,20 @@ export default function HomePage() {
         transform: 'translate(-50%, -50%)',
         zIndex: 10,
         textAlign: 'center',
+        padding: '0 10px',
+        width: '100%'
       }}>
         <h1 style={{
           fontFamily: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif',
-          fontSize: 'clamp(60px, 15vw, 140px)',
-          color: '#fff',
+          fontSize: 'clamp(40px, 12vw, 140px)',
+          color: '#ffff00',
           textTransform: 'uppercase',
-          letterSpacing: '4px',
-          textShadow: `
-            -4px -4px 0 #000,
-            4px -4px 0 #000,
-            -4px 4px 0 #000,
-            4px 4px 0 #000,
-            -4px 0 0 #000,
-            4px 0 0 #000,
-            0 -4px 0 #000,
-            0 4px 0 #000
-          `,
+          letterSpacing: '2px',
+          WebkitTextStroke: '3px #000',
+          textShadow: '4px 4px 0 #000',
           margin: 0,
           lineHeight: 1,
+          fontWeight: 700
         }}>
           imaginate
         </h1>
