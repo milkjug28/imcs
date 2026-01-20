@@ -228,6 +228,7 @@ export default function VotingCard({ submission, onVote, onSkip }: VotingCardPro
         {/* Content */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{
+            fontFamily: 'Comic Neue, cursive',
             fontSize: 'clamp(16px, 4.5vw, 22px)',
             color: '#fff',
             WebkitTextStroke: '0.5px #000',

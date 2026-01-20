@@ -135,6 +135,7 @@ export default function LeaderboardPage() {
             placeholder="search wallet..."
             style={{
               flex: 1,
+              fontFamily: 'Comic Neue, cursive',
               fontSize: '15px',
               padding: '10px 14px',
               border: '3px solid #000',
@@ -176,7 +177,7 @@ export default function LeaderboardPage() {
             }}
           >
             <h3 style={{ marginBottom: '8px', fontFamily: 'Comic Neue, cursive' }}>found em!</h3>
-            <div style={{ fontSize: '14px' }}>
+            <div style={{ fontFamily: 'Comic Neue, cursive', fontSize: '14px' }}>
               <div><strong>name:</strong> {searchResult.name}</div>
               <div><strong>score:</strong> {searchResult.submission_score ?? searchResult.score}</div>
               <div><strong>info:</strong> {searchResult.info}</div>
@@ -281,6 +282,7 @@ export default function LeaderboardPage() {
                         </span>
                       </div>
                       <div style={{
+                        fontFamily: 'Comic Neue, cursive',
                         fontSize: '14px',
                         color: '#000',
                         lineHeight: 1.4
