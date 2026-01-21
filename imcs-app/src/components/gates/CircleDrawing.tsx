@@ -221,7 +221,8 @@ export default function CircleDrawing({ onSubmit, onGiveUp }: CircleDrawingProps
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      zIndex: 9999
     }}>
       {/* Instructions or score display */}
       {!hasDrawn && !isDrawing && (
