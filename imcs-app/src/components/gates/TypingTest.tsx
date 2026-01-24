@@ -25,6 +25,9 @@ export default function TypingTest({ onSuccess, attemptsInfo }: TypingTestProps)
   const [wpm, setWpm] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const [message, setMessage] = useState('type da text below 2 proov urself!')
+  const [passed, setPassed] = useState(false)
+  const [finalWpm, setFinalWpm] = useState(0)
+  const [finalPoints, setFinalPoints] = useState(0)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -49,17 +52,16 @@ export default function TypingTest({ onSuccess, attemptsInfo }: TypingTestProps)
       if (currentWpm >= TARGET_WPM) {
         // Success!
         const points = calculatePoints(currentWpm)
+        setFinalWpm(currentWpm)
+        setFinalPoints(points)
+        setPassed(true)
         setMessage(`${getTypingSuccessMessage()} (${currentWpm} WPM - +${points} points!)`)
 
         // Record success
         recordAttempt(true, currentWpm)
-
-        // Call success callback after delay
-        setTimeout(() => {
-          onSuccess(points, currentWpm)
-        }, 2000)
       } else {
         // Failed - too slow
+        setPassed(false)
         setMessage(`${getTypingFailMessage()} u only got ${currentWpm} WPM, need ${TARGET_WPM}+`)
         recordAttempt(false, currentWpm)
       }
@@ -85,9 +87,18 @@ export default function TypingTest({ onSuccess, attemptsInfo }: TypingTestProps)
     setStartTime(null)
     setWpm(0)
     setIsComplete(false)
+    setPassed(false)
+    setFinalWpm(0)
+    setFinalPoints(0)
     setMessage('type da text below 2 proov urself!')
     if (inputRef.current) {
       inputRef.current.focus()
+    }
+  }
+
+  const handleSubmit = () => {
+    if (passed && finalWpm > 0 && finalPoints > 0) {
+      onSuccess(finalPoints, finalWpm)
     }
   }
 
@@ -254,23 +265,65 @@ export default function TypingTest({ onSuccess, attemptsInfo }: TypingTestProps)
         }}
       />
 
-      {/* Reset button */}
+      {/* Action buttons */}
       {isComplete && (
-        <button
-          onClick={handleReset}
-          style={{
-            fontFamily: 'Comic Neue, cursive',
-            fontSize: 'clamp(18px, 4vw, 24px)',
-            padding: '12px 25px',
-            background: '#ffff00',
-            border: '3px solid #000',
-            cursor: 'pointer',
-            boxShadow: '3px 3px 0 #000',
-            marginTop: '15px'
-          }}
-        >
-          try agen
-        </button>
+        <div style={{
+          display: 'flex',
+          gap: '15px',
+          marginTop: '15px',
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {passed ? (
+            <>
+              <button
+                onClick={handleSubmit}
+                style={{
+                  fontFamily: 'Comic Neue, cursive',
+                  fontSize: 'clamp(18px, 4vw, 24px)',
+                  padding: '12px 25px',
+                  background: '#00ff00',
+                  border: '3px solid #000',
+                  cursor: 'pointer',
+                  boxShadow: '3px 3px 0 #000',
+                  color: '#000',
+                  fontWeight: 'bold'
+                }}
+              >
+                submit score ✓
+              </button>
+              <button
+                onClick={handleReset}
+                style={{
+                  fontFamily: 'Comic Neue, cursive',
+                  fontSize: 'clamp(18px, 4vw, 24px)',
+                  padding: '12px 25px',
+                  background: '#ffff00',
+                  border: '3px solid #000',
+                  cursor: 'pointer',
+                  boxShadow: '3px 3px 0 #000'
+                }}
+              >
+                try agen
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleReset}
+              style={{
+                fontFamily: 'Comic Neue, cursive',
+                fontSize: 'clamp(18px, 4vw, 24px)',
+                padding: '12px 25px',
+                background: '#ffff00',
+                border: '3px solid #000',
+                cursor: 'pointer',
+                boxShadow: '3px 3px 0 #000'
+              }}
+            >
+              try agen
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
