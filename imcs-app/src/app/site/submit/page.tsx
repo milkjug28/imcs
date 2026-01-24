@@ -19,6 +19,7 @@ function SubmitPageContent() {
   const [checkingProfile, setCheckingProfile] = useState(true)
   const [hasProfile, setHasProfile] = useState(false)
   const [submittedCode, setSubmittedCode] = useState<string | null>(null)
+  const [justSubmitted, setJustSubmitted] = useState(false)
 
   // Check for referral code in URL params or localStorage
   useEffect(() => {
@@ -38,16 +39,17 @@ function SubmitPageContent() {
   }, [searchParams])
 
   // Check if user already has a profile when wallet connects
+  // BUT don't check if we just submitted (let success screen show)
   useEffect(() => {
-    if (isConnected && address) {
+    if (isConnected && address && !justSubmitted) {
       checkExistingProfile()
     } else {
       setCheckingProfile(false)
     }
-  }, [isConnected, address])
+  }, [isConnected, address, justSubmitted])
 
   const checkExistingProfile = async () => {
-    if (!address) return
+    if (!address || justSubmitted || submittedCode) return
     setCheckingProfile(true)
 
     try {
@@ -94,28 +96,35 @@ function SubmitPageContent() {
 
         // Generate referral code from wallet
         const newCode = address.slice(2, 10).toUpperCase()
+        
+        // Set flag to prevent profile check from redirecting
+        setJustSubmitted(true)
+        
+        // Show success screen
         setSubmittedCode(newCode)
+        
+        // Clear loading state
+        setLoading(false)
 
-        // Mark submit task as complete
-        try {
-          await fetch('/api/tasks/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              wallet_address: address,
-              task_type: 'submit',
-              score: 150,
-            }),
-          })
-        } catch (e) {
+        // Mark submit task as complete (fire and forget)
+        fetch('/api/tasks/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_address: address,
+            task_type: 'submit',
+            score: 150,
+          }),
+        }).catch(e => {
           console.error('Failed to record task completion:', e)
-        }
+        })
+      } else {
+        setLoading(false)
       }
     } catch (error: any) {
       setMessage(error.message || 'submission failed')
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const copyReferralLink = () => {
