@@ -24,7 +24,7 @@ const TASKS: Task[] = [
   {
     id: 'circle',
     name: 'circle drawing',
-    description: 'draw a perfect circle (5x max)',
+    description: 'draw a perfekt circle (5x max 4 points)',
     points: '100-300',
     route: '/site/games/circle',
     icon: '⭕',
@@ -34,7 +34,7 @@ const TASKS: Task[] = [
   {
     id: 'typing',
     name: 'typing test',
-    description: 'type the savant copypasta fast (5x max)',
+    description: 'type da savant copypasta fast (5x max 4 points)',
     points: '100-200',
     route: '/site/games/typing',
     icon: '⌨️',
@@ -44,7 +44,7 @@ const TASKS: Task[] = [
   {
     id: 'bubble',
     name: 'bubble pop',
-    description: 'pop bubbles in 30 sec (5x max)',
+    description: 'pop bubbles in 30 sec (5x max 4 points)',
     points: '1-500+',
     route: '/site/games/bubble-pop',
     icon: '🫧',
@@ -54,7 +54,7 @@ const TASKS: Task[] = [
   {
     id: 'paint',
     name: 'paint savant',
-    description: 'draw ur own savant masterpiece (1x pts)',
+    description: 'draw ur own savant masterpiece (1x pts only)',
     points: '200',
     route: '/site/games/draw-savant',
     icon: '🎨',
@@ -63,7 +63,7 @@ const TASKS: Task[] = [
   {
     id: 'submit',
     name: 'submit info',
-    description: 'tell us about urself',
+    description: 'tel us bout urself',
     points: '150',
     route: '/site/submit',
     icon: '📝',
@@ -72,7 +72,7 @@ const TASKS: Task[] = [
   {
     id: 'vote',
     name: 'vote x10',
-    description: 'vote on 10 submissions (repeatable!)',
+    description: 'vote on 10 submishuns (repeatable 4 evr!)',
     points: '100 per 10 votes',
     route: '/site/vote',
     icon: '👍',
