@@ -63,10 +63,17 @@ export default function LeaderboardPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/leaderboard/submissions')
+      // Request top 1000 to ensure we get all users
+      const response = await fetch('/api/leaderboard/submissions?limit=1000', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      })
       if (response.ok) {
         const data = await response.json()
         setSubmissions(data)
+      } else {
+        const errorData = await response.json()
+        console.error('Leaderboard API error:', errorData)
       }
     } catch (error) {
       console.error('Error loading submissions:', error)
