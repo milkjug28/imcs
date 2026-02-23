@@ -11,21 +11,7 @@ export async function GET(
   try {
     const wallet = params.wallet.toLowerCase()
 
-    // Query the user_profiles view
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('wallet_address', wallet)
-      .single()
-
-    if (error || !profile) {
-      return NextResponse.json(
-        { error: 'ur wallet not savant yet. submit form first, nerd' },
-        { status: 404 }
-      )
-    }
-
-    // Fetch task completions and sum their points
+    // 1. Fetch task completions
     const { data: taskCompletions } = await supabase
       .from('task_completions')
       .select('score')
@@ -35,36 +21,65 @@ export async function GET(
       (sum, t) => sum + (t.score || 0), 0
     )
 
-    // Calculate voting karma - include both wallet-based and IP-based votes
-    let votingKarma = profile.voting_karma || 0
-
-    // Get the user's submission to find their IP address
-    const { data: submission } = await supabase
-      .from('submissions')
-      .select('ip_address')
+    // 2. Query the user_profiles view
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
       .eq('wallet_address', wallet)
       .single()
 
-    if (submission?.ip_address) {
-      // Count votes made from this IP address
-      const { data: ipVotes } = await supabase
-        .from('votes')
-        .select('id')
-        .eq('voter_identifier', submission.ip_address)
+    // Base profile if not found
+    let baseProfile = profile || {
+      wallet_address: wallet,
+      name: 'Unknown Savant',
+      info: 'No info yet',
+      submission_score: 0,
+      voting_karma: 0,
+      referrals_made: 0,
+      whitelist_status: 'pending',
+    }
 
-      if (ipVotes) {
-        votingKarma += ipVotes.length
+    // 3. Calculate voting karma - include both wallet-based and IP-based votes
+    let votingKarma = baseProfile.voting_karma || 0
+    let submissionScore = Number(baseProfile.submission_score) || 0
+
+    if (profile) {
+      // Get the user's submission to find their IP address
+      const { data: submission } = await supabase
+        .from('submissions')
+        .select('ip_address')
+        .eq('wallet_address', wallet)
+        .single()
+
+      if (submission?.ip_address) {
+        // Count votes made from this IP address
+        const { data: ipVotes } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('voter_identifier', submission.ip_address)
+
+        if (ipVotes) {
+          votingKarma += ipVotes.length
+        }
       }
+    } else {
+        // If no profile, they might still have voted based on wallet
+        const { data: walletVotes } = await supabase
+          .from('votes')
+          .select('id')
+          .eq('voter_identifier', wallet)
+        if (walletVotes) {
+            votingKarma += walletVotes.length
+        }
     }
 
     // Calculate total points
-    const submissionScore = Number(profile.submission_score) || 0
     const totalPoints = submissionScore + votingKarma + taskPoints
 
     // Auto-approve whitelist if total points meet threshold
     const MIN_WL_POINTS = 1017
-    let whitelistStatus = profile.whitelist_status
-    let whitelistMethod = profile.whitelist_method
+    let whitelistStatus = baseProfile.whitelist_status
+    let whitelistMethod = baseProfile.whitelist_method
 
     if (totalPoints >= MIN_WL_POINTS && whitelistStatus !== 'approved') {
       // Upsert whitelist entry
@@ -89,8 +104,9 @@ export async function GET(
       whitelistMethod = 'auto_points'
     }
 
+    // Always return a 200 with the calculated points, even if no submission exists yet
     return NextResponse.json({
-      ...profile,
+      ...baseProfile,
       submission_score: submissionScore,
       voting_karma: votingKarma,
       task_points: taskPoints,
