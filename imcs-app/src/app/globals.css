@@ -130,6 +130,20 @@ body {
   50% { transform: rotate(2deg) scale(1.05); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(0,0,0,0.1);
+  border-top: 5px solid #ff00ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+
 #enter-btn:hover {
   transform: rotate(2deg) scale(1.15);
   background: #00ff00;

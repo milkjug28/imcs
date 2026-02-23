@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         voting_karma: votingKarma,
         task_points: taskPoints,
         created_at: sub.created_at,
-        whitelist_status: null // Can add this later if needed
+        whitelist_status: totalPoints >= 1017 ? 'approved' : null
       }
     }).filter((entry): entry is NonNullable<typeof entry> => entry !== null)
 
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
             voting_karma: votingKarma,
             task_points: taskPoints,
             created_at: new Date().toISOString(),
-            whitelist_status: null
+            whitelist_status: totalPoints >= 1017 ? 'approved' : null
           })
         }
       }

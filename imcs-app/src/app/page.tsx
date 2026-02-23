@@ -10,6 +10,7 @@ function SplashScreenContent() {
   const irisLeftRef = useRef<HTMLImageElement>(null)
   const irisRightRef = useRef<HTMLImageElement>(null)
   const eyesWrapperRef = useRef<HTMLDivElement>(null)
+  const [preloadedCount, setPreloadedCount] = useState<number | null>(null)
 
   // Capture referral code from URL and store in localStorage
   useEffect(() => {
@@ -18,6 +19,19 @@ function SplashScreenContent() {
       localStorage.setItem('referralCode', refCode.toUpperCase())
     }
   }, [searchParams])
+
+  // Preload WL count while user is on splash screen
+  useEffect(() => {
+    fetch('/api/leaderboard/submissions?limit=1000', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => {
+        const count = Array.isArray(data) ? data.filter((u: any) => u.whitelist_status === 'approved').length : 0
+        setPreloadedCount(count)
+        // Cache in sessionStorage so home page gets it instantly
+        sessionStorage.setItem('wlCount', String(count))
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

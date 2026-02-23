@@ -150,8 +150,8 @@ export default function ProfilePage() {
     return (
       <div className="page active">
         <div className="form-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div className="loading-spinner" style={{ marginBottom: '20px' }} />
           <h2 className="form-title">loading...</h2>
-          <div style={{ fontSize: '48px' }}>⏳</div>
         </div>
       </div>
     )
@@ -277,9 +277,35 @@ export default function ProfilePage() {
         {/* Whitelist status */}
         <div className="profile-status" style={{ marginBottom: '20px' }}>
           {isWhitelisted ? (
-            <span style={{ color: '#fff' }}>CONGRAAAATS U AR SAVANT! 🎉</span>
+            <span style={{ color: '#fff' }}>CONGRAAAATS U AR SAVANT! ✅🎉</span>
           ) : (
-            <span style={{ color: '#ffff00' }}>not savant yet... keep grinding!</span>
+            <>
+              <span style={{ color: '#ffff00' }}>not savant yet... keep grinding!</span>
+              <div style={{
+                fontSize: '14px',
+                color: '#fff',
+                marginTop: '8px',
+                textShadow: '1px 1px 0 #000',
+              }}>
+                {totalPoints} / 1017 pts needed 4 whitelist
+                <div style={{
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '10px',
+                  height: '16px',
+                  marginTop: '6px',
+                  border: '2px solid #000',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    background: 'linear-gradient(90deg, #ff00ff, #00ff00)',
+                    height: '100%',
+                    width: `${Math.min(100, (totalPoints / 1017) * 100)}%`,
+                    borderRadius: '8px',
+                    transition: 'width 0.5s ease',
+                  }} />
+                </div>
+              </div>
+            </>
           )}
         </div>
 
