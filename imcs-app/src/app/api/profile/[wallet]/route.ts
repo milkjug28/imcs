@@ -61,12 +61,42 @@ export async function GET(
     const submissionScore = Number(profile.submission_score) || 0
     const totalPoints = submissionScore + votingKarma + taskPoints
 
+    // Auto-approve whitelist if total points meet threshold
+    const MIN_WL_POINTS = 1017
+    let whitelistStatus = profile.whitelist_status
+    let whitelistMethod = profile.whitelist_method
+
+    if (totalPoints >= MIN_WL_POINTS && whitelistStatus !== 'approved') {
+      // Upsert whitelist entry
+      const { data: existingWl } = await supabase
+        .from('whitelist')
+        .select('id')
+        .eq('wallet_address', wallet)
+        .single()
+
+      if (existingWl) {
+        await supabase
+          .from('whitelist')
+          .update({ status: 'approved', method: 'auto_points', updated_at: new Date().toISOString() })
+          .eq('wallet_address', wallet)
+      } else {
+        await supabase
+          .from('whitelist')
+          .insert({ wallet_address: wallet, status: 'approved', method: 'auto_points' })
+      }
+
+      whitelistStatus = 'approved'
+      whitelistMethod = 'auto_points'
+    }
+
     return NextResponse.json({
       ...profile,
       submission_score: submissionScore,
       voting_karma: votingKarma,
       task_points: taskPoints,
-      total_points: totalPoints
+      total_points: totalPoints,
+      whitelist_status: whitelistStatus,
+      whitelist_method: whitelistMethod,
     }, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate',

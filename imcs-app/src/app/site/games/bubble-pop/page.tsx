@@ -172,10 +172,16 @@ export default function BubblePopGame() {
         setPointsAdded(0)
       } else if (result.success) {
         setAttemptsLeft(result.attempts_left ?? null)
-        setPointsAdded(result.added || score)
+        // Use the points that were actually added (from API response or fallback to score)
+        setPointsAdded(result.added !== undefined ? result.added : score)
+      } else {
+        // If API failed but we have a score, still show it
+        setPointsAdded(score)
       }
     } catch (e) {
       console.error('Failed to save score:', e)
+      // If save failed, still show the earned score
+      setPointsAdded(score)
     }
   }
 

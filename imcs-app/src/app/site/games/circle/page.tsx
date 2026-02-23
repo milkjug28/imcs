@@ -67,11 +67,20 @@ export default function CircleGamePage() {
           setPointsAdded(0)
         } else if (result.success) {
           setAttemptsLeft(result.attempts_left ?? null)
-          setPointsAdded(result.added || earnedScore)
+          // Use the points that were actually added (from API response or fallback to earnedScore)
+          setPointsAdded(result.added !== undefined ? result.added : earnedScore)
+        } else {
+          // If API failed but we have a score, still show it
+          setPointsAdded(earnedScore)
         }
       } catch (e) {
         console.error('Failed to save score:', e)
+        // If save failed, still show the earned score
+        setPointsAdded(earnedScore)
       }
+    } else {
+      // No wallet but still show score
+      setPointsAdded(earnedScore)
     }
 
     setShowResult(true)
@@ -91,10 +100,12 @@ export default function CircleGamePage() {
   if (showResult) {
     const getScoreLabel = () => {
       if (maxReached) return 'max attempts reached (no more points)'
-      if (pointsAdded > 0) {
+      // Use pointsAdded if available, otherwise use score (which should be the earned points)
+      const displayPoints = pointsAdded > 0 ? pointsAdded : score
+      if (displayPoints > 0) {
         return attemptsLeft !== null && attemptsLeft > 0
-          ? `+${pointsAdded} points! ${attemptsLeft} attempts left`
-          : `+${pointsAdded} points! no more attempts left`
+          ? `+${displayPoints} points! ${attemptsLeft} attempts left`
+          : `+${displayPoints} points! no more attempts left`
       }
       return 'try again 4 points'
     }
