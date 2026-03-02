@@ -107,6 +107,7 @@ export async function GET(
     // Always return a 200 with the calculated points, even if no submission exists yet
     return NextResponse.json({
       ...baseProfile,
+      has_submission: !!profile,
       submission_score: submissionScore,
       voting_karma: votingKarma,
       task_points: taskPoints,

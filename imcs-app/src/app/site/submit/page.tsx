@@ -55,9 +55,15 @@ function SubmitPageContent() {
     try {
       const response = await fetch(`/api/profile/${address}`)
       if (response.ok) {
-        setHasProfile(true)
-        // User already registered - redirect to tasks
-        router.push('/site/tasks')
+        const data = await response.json()
+        // Check if user actually has a submission (not just a base profile)
+        if (data.has_submission) {
+          setHasProfile(true)
+          // User already registered - redirect to tasks
+          router.push('/site/tasks')
+        } else {
+          setHasProfile(false)
+        }
       } else {
         setHasProfile(false)
       }
