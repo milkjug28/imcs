@@ -114,6 +114,21 @@ export async function GET(
       whitelistMethod = 'auto_points'
     }
 
+    // Get Rank using the leaderboard_scores view
+    // A user's rank is 1 + the number of users who have a strictly greater total_points
+    // We only calculate this if they have some points
+    let rank: number | null = null
+    if (totalPoints > 0) {
+        const { count, error: rankError } = await supabase
+          .from('leaderboard_scores')
+          .select('*', { count: 'exact', head: true })
+          .gt('total_points', totalPoints)
+          
+        if (!rankError && count !== null) {
+            rank = count + 1
+        }
+    }
+
     // Always return a 200 with the calculated points, even if no submission exists yet
     return NextResponse.json({
       ...baseProfile,
@@ -122,6 +137,7 @@ export async function GET(
       voting_karma: votingKarma,
       task_points: taskPoints,
       total_points: totalPoints,
+      rank,
       whitelist_status: whitelistStatus,
       whitelist_method: whitelistMethod,
     }, {

@@ -338,6 +338,53 @@ LEFT JOIN (
 -- HELPER QUERIES (run these as needed)
 -- ========================================
 
+-- Drop existing leaderboard view if it’s materialized or regular
+DROP VIEW IF EXISTS leaderboard_scores CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS leaderboard_scores CASCADE;
+
+-- Create materialized view for fast leaderboard ranking
+CREATE MATERIALIZED VIEW leaderboard_scores AS
+WITH task_points AS (
+  SELECT wallet_address, SUM(score) as total_task_points
+  FROM task_completions
+  GROUP BY wallet_address
+),
+wallet_votes AS (
+  SELECT voter_identifier as wallet_address, COUNT(*) as vote_count
+  FROM votes
+  WHERE voter_identifier LIKE '0x%'
+  GROUP BY voter_identifier
+),
+ip_votes AS (
+  SELECT s.wallet_address, COUNT(v.id) as vote_count
+  FROM votes v
+  JOIN submissions s ON v.voter_identifier = s.ip_address
+  WHERE v.voter_identifier NOT LIKE '0x%'
+  GROUP BY s.wallet_address
+),
+total_votes AS (
+  SELECT 
+    COALESCE(w.wallet_address, i.wallet_address) as wallet_address,
+    COALESCE(w.vote_count, 0) + COALESCE(i.vote_count, 0) as total_voting_karma
+  FROM wallet_votes w
+  FULL OUTER JOIN ip_votes i ON w.wallet_address = i.wallet_address
+)
+SELECT 
+  COALESCE(s.wallet_address, tp.wallet_address, tv.wallet_address) as wallet_address,
+  s.name,
+  s.info,
+  COALESCE(s.score, 0) as submission_score,
+  COALESCE(tp.total_task_points, 0) as task_points,
+  COALESCE(tv.total_voting_karma, 0) as voting_karma,
+  COALESCE(s.score, 0) + COALESCE(tp.total_task_points, 0) + COALESCE(tv.total_voting_karma, 0) as total_points,
+  s.created_at
+FROM submissions s
+FULL OUTER JOIN task_points tp ON s.wallet_address = tp.wallet_address
+FULL OUTER JOIN total_votes tv ON COALESCE(s.wallet_address, tp.wallet_address) = tv.wallet_address;
+
+-- Create unique index for the materialized view so it can be refreshed concurrently
+CREATE UNIQUE INDEX idx_leaderboard_wallet ON leaderboard_scores(wallet_address);
+
 -- Get submission count
 -- SELECT COUNT(*) FROM submissions;
 
