@@ -103,8 +103,8 @@ export default function TasksPage() {
     try {
       // Fetch both profile and tasks in parallel
       const [profileRes, tasksRes] = await Promise.all([
-        fetch(`/api/profile/${address}`),
-        fetch(`/api/tasks/${address}`)
+        fetch(`/api/profile/${address}`, { cache: 'no-store' }),
+        fetch(`/api/tasks/${address}`, { cache: 'no-store' })
       ])
 
       // Process profile data - use API's pre-calculated total_points

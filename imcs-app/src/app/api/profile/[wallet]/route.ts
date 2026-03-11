@@ -129,7 +129,6 @@ export async function GET(
         }
     }
 
-    // Always return a 200 with the calculated points, even if no submission exists yet
     return NextResponse.json({
       ...baseProfile,
       has_submission: !!profile,
@@ -140,10 +139,6 @@ export async function GET(
       rank,
       whitelist_status: whitelistStatus,
       whitelist_method: whitelistMethod,
-    }, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
-      }
     })
   } catch (error) {
     console.error('Profile error:', error)
