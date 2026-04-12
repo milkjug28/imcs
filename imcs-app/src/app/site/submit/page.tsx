@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
 import { submitForm } from '@/lib/api-client'
@@ -38,17 +38,7 @@ function SubmitPageContent() {
     }
   }, [searchParams])
 
-  // Check if user already has a profile when wallet connects
-  // BUT don't check if we just submitted (let success screen show)
-  useEffect(() => {
-    if (isConnected && address && !justSubmitted) {
-      checkExistingProfile()
-    } else {
-      setCheckingProfile(false)
-    }
-  }, [isConnected, address, justSubmitted])
-
-  const checkExistingProfile = async () => {
+  const checkExistingProfile = useCallback(async () => {
     if (!address || justSubmitted || submittedCode) return
     setCheckingProfile(true)
 
@@ -72,7 +62,17 @@ function SubmitPageContent() {
     }
 
     setCheckingProfile(false)
-  }
+  }, [address, justSubmitted, submittedCode, router])
+
+  // Check if user already has a profile when wallet connects
+  // BUT don't check if we just submitted (let success screen show)
+  useEffect(() => {
+    if (isConnected && address && !justSubmitted) {
+      checkExistingProfile()
+    } else {
+      setCheckingProfile(false)
+    }
+  }, [isConnected, address, justSubmitted, checkExistingProfile])
 
   const handleSubmit = async () => {
     if (!address) {

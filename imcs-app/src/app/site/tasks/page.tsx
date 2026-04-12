@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
 import ConnectWallet from '@/components/ConnectWallet'
@@ -87,24 +87,14 @@ export default function TasksPage() {
   const [totalPoints, setTotalPoints] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  // Fetch on mount and when address changes
-  useEffect(() => {
-    if (isConnected && address) {
-      fetchAllData()
-    } else {
-      setLoading(false)
-    }
-  }, [isConnected, address])
-
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     if (!address) return
 
     try {
       // Fetch both profile and tasks in parallel
       const [profileRes, tasksRes] = await Promise.all([
-        fetch(`/api/profile/${address}`, { cache: 'no-store' }),
-        fetch(`/api/tasks/${address}`, { cache: 'no-store' })
+        fetch(`/api/profile/${address}`),
+        fetch(`/api/tasks/${address}`)
       ])
 
       // Process profile data - use API's pre-calculated total_points
@@ -137,7 +127,16 @@ export default function TasksPage() {
       console.error('Failed to fetch data:', e)
     }
     setLoading(false)
-  }
+  }, [address])
+
+  // Fetch on mount and when address changes
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchAllData()
+    } else {
+      setLoading(false)
+    }
+  }, [isConnected, address, fetchAllData])
 
   const handleTaskClick = (route: string) => {
     router.push(route)

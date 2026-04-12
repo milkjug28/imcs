@@ -59,7 +59,7 @@ export default function LeaderboardPage() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/leaderboard/submissions?limit=100')
+      const response = await fetch('/api/leaderboard/submissions?limit=100&include=info')
       if (response.ok) {
         const data = await response.json()
         setSubmissions(data)

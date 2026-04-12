@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -10,7 +12,7 @@ export async function GET(request: NextRequest) {
     // Get all submissions the voter hasn't voted on yet
     let query = supabase
       .from('submissions')
-      .select('*')
+      .select('id, wallet_address, name, info, created_at')
 
     // If voter wallet provided, exclude submissions they've already voted on
     if (voterWallet) {

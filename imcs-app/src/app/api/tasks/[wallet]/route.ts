@@ -40,7 +40,11 @@ export async function GET(
       completion_count: t.completion_count || 1
     }))
 
-    return NextResponse.json({ tasks: tasksWithCount })
+    return NextResponse.json({ tasks: tasksWithCount }, {
+      headers: {
+        'Cache-Control': 'public, max-age=0, s-maxage=30, stale-while-revalidate=60'
+      }
+    })
   } catch (error) {
     console.error('Tasks fetch error:', error)
     return NextResponse.json(

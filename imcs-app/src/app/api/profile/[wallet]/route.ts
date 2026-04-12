@@ -34,7 +34,7 @@ export async function GET(
     // 2. Query the user_profiles view
     const { data: profile, error } = await supabase
       .from('user_profiles')
-      .select('*')
+      .select('wallet_address, name, info, submission_score, voting_karma, referrals_made, whitelist_status, whitelist_method')
       .eq('wallet_address', wallet)
       .single()
 
@@ -47,6 +47,7 @@ export async function GET(
       voting_karma: 0,
       referrals_made: 0,
       whitelist_status: 'pending',
+      whitelist_method: null,
     }
 
     // 3. Calculate voting karma - include both wallet-based and IP-based votes
@@ -130,15 +131,22 @@ export async function GET(
     }
 
     return NextResponse.json({
-      ...baseProfile,
+      wallet_address: baseProfile.wallet_address,
+      name: baseProfile.name,
+      info: baseProfile.info,
       has_submission: !!profile,
       submission_score: submissionScore,
       voting_karma: votingKarma,
       task_points: taskPoints,
       total_points: totalPoints,
+      referrals_made: baseProfile.referrals_made || 0,
       rank,
       whitelist_status: whitelistStatus,
       whitelist_method: whitelistMethod,
+    }, {
+      headers: {
+        'Cache-Control': 'public, max-age=0, s-maxage=15, stale-while-revalidate=60'
+      }
     })
   } catch (error) {
     console.error('Profile error:', error)

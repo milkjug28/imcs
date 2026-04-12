@@ -194,8 +194,8 @@ export async function getProfile(walletAddress: string): Promise<UserProfile | n
 /**
  * Get top submissions leaderboard
  */
-export async function getLeaderboardSubmissions(limit = 100): Promise<LeaderboardSubmission[]> {
-  const response = await fetch(`/api/leaderboard/submissions?limit=${limit}`)
+export async function getLeaderboardSubmissions(limit = 100, includeInfo = false): Promise<LeaderboardSubmission[]> {
+  const response = await fetch(`/api/leaderboard/submissions?limit=${limit}${includeInfo ? '&include=info' : ''}`)
 
   if (!response.ok) {
     throw new Error('Failed to fetch leaderboard')

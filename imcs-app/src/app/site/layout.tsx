@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState, useRef, useEffect } from 'react'
+import { ReactNode, useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import MusicPlayer from '@/components/MusicPlayer'
 import PopupSavants from '@/components/PopupSavants'
@@ -18,6 +18,7 @@ const navButtons: NavButton[] = [
   { id: 'tasks', label: 'tu doo', path: '/site/tasks', defaultPos: { x: 140, y: 15 } },
   { id: 'leaderboard', label: 'leederbord', path: '/site/leaderboard', defaultPos: { x: 280, y: 15 } },
   { id: 'profile', label: 'profil', path: '/site/profile', defaultPos: { x: 460, y: 15 } },
+  { id: 'banish', label: 'banisht', path: '/site/banish', defaultPos: { x: 560, y: 15 } },
 ]
 
 export default function SiteLayout({ children }: { children: ReactNode }) {
@@ -63,7 +64,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
     setHasDragged(false)
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!draggedBtn || !isDragging || !navRef.current || isMobile) return
 
     // Check if user moved enough to consider it a drag
@@ -89,12 +90,12 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       ...prev,
       [draggedBtn]: { x: newX, y: newY }
     }))
-  }
+  }, [draggedBtn, isDragging, isMobile, dragOffset])
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setDraggedBtn(null)
     setIsDragging(false)
-  }
+  }, [])
 
   const handleClick = (e: React.MouseEvent, path: string) => {
     // Only navigate if we didn't drag (or on mobile, always navigate)
@@ -113,7 +114,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, draggedBtn, isMobile])
+  }, [isDragging, isMobile, handleMouseMove, handleMouseUp])
 
   return (
     <div id="main-site">

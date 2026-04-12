@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * X OAuth 2.0 PKCE Authorization
  * Redirects user to X to authorize, then X sends them back to our callback.

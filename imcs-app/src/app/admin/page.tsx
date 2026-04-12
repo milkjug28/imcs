@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     setLoading(true)
     try {
       // Get submissions
-      const subsRes = await fetch('/api/leaderboard/submissions?limit=1000')
+      const subsRes = await fetch('/api/leaderboard/submissions?limit=1000&include=info')
       const subsData = await subsRes.json()
       setSubmissions(subsData)
 
