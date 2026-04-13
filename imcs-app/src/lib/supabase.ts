@@ -94,3 +94,13 @@ export type LeaderboardVoter = {
   karma_score: number
   whitelist_status?: string
 }
+
+export type Banishment = {
+  id: string
+  target_x_handle: string
+  target_wallet_address: string | null
+  reason: string
+  submitter_wallet: string
+  ip_address: string | null
+  created_at: string
+}

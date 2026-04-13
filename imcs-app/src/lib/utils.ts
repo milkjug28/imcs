@@ -275,6 +275,22 @@ export function validateSubmissionText(text: string): { valid: boolean; error?: 
   return { valid: true }
 }
 
+// Normalize X/Twitter handle (strip @, lowercase, trim)
+export function normalizeXHandle(handle: string): string {
+  return handle.replace(/^@/, '').trim().toLowerCase()
+}
+
+// Validate X/Twitter handle (after normalization)
+export function validateXHandle(handle: string): { valid: boolean; error?: string } {
+  if (!handle || handle.length === 0) {
+    return { valid: false, error: 'who u banishin dummie?' }
+  }
+  if (!/^[a-z0-9_]{1,15}$/.test(handle)) {
+    return { valid: false, error: 'thats not a real x handle' }
+  }
+  return { valid: true }
+}
+
 // Validate name
 export function validateName(name: string): { valid: boolean; error?: string } {
   if (!name || name.trim().length === 0) {
