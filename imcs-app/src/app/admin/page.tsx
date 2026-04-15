@@ -54,6 +54,13 @@ export default function AdminDashboard() {
       // Get submissions
       const subsRes = await fetch('/api/leaderboard/submissions?limit=1000&include=info')
       const subsData = await subsRes.json()
+      
+      if (!Array.isArray(subsData)) {
+        console.error('Expected array from API, got:', subsData)
+        setSubmissions([])
+        return
+      }
+
       setSubmissions(subsData)
 
       // Calculate stats
@@ -65,6 +72,7 @@ export default function AdminDashboard() {
       })
     } catch (error) {
       console.error('Failed to load data:', error)
+      setSubmissions([])
     }
     setLoading(false)
   }

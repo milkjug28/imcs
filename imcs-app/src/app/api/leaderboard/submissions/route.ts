@@ -19,14 +19,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100')
     const includeInfo = searchParams.get('include') === 'info'
 
-    // Fetch directly from the materialized view.
-    // Always select the same columns (keeps Supabase type inference).
-    // FOT savings come from trimming the response body below, not the DB query,
-    // since Supabase->Function bytes aren't billed as Fast Origin Transfer.
+    // Fetch from leaderboard_submissions as fallback since leaderboard_scores view is missing
     const { data: leaderboardEntries, error: submissionsError } = await supabase
-      .from('leaderboard_scores')
-      .select('wallet_address, name, info, submission_score, task_points, voting_karma, total_points, created_at')
-      .order('total_points', { ascending: false })
+      .from('leaderboard_submissions')
+      .select('wallet_address, name, info, score, created_at, whitelist_status')
+      .order('score', { ascending: false })
       .order('created_at', { ascending: true }) // Tie breaker
       .limit(Math.min(limit, 1000))
 
@@ -45,16 +42,16 @@ export async function GET(request: NextRequest) {
     // Format results to match exactly what the frontend expects.
     // Omit `info` from the response when not requested to cut outgoing FOT.
     const limited = leaderboardEntries.map(entry => {
-      const scoreNum = Number(entry.total_points) || 0
+      const scoreNum = Number(entry.score) || 0
       const base = {
         wallet_address: entry.wallet_address,
         name: entry.name || 'Unknown Savant',
         score: scoreNum, // This is the TOTAL score used for ranking in the UI
-        submission_score: Number(entry.submission_score) || 0,
-        voting_karma: Number(entry.voting_karma) || 0,
-        task_points: Number(entry.task_points) || 0,
+        submission_score: scoreNum,
+        voting_karma: 0, // Fallback if missing leaderboard_scores
+        task_points: 0,   // Fallback if missing leaderboard_scores
         created_at: entry.created_at || new Date().toISOString(),
-        whitelist_status: scoreNum >= 1017 ? 'approved' : null
+        whitelist_status: entry.whitelist_status || (scoreNum >= 1017 ? 'approved' : null)
       }
       return includeInfo ? { ...base, info: entry.info || '' } : base
     })
