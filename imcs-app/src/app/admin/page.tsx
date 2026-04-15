@@ -112,13 +112,23 @@ export default function AdminDashboard() {
   }
 
   const runWhitelistUpdate = async () => {
-    if (!confirm('Run auto-whitelist update? This will whitelist users with score >= 3.')) return
+    if (!confirm('Run auto-whitelist update? This will automatically whitelist users with score >= 1000 and top 30% of voters.')) return
 
     setLoading(true)
     try {
-      // This would need a new API endpoint that calls the Supabase function
-      alert('Auto-whitelist function needs API endpoint - add this next!')
+      const response = await fetch('/api/admin/whitelist/auto', {
+        method: 'POST'
+      })
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`Auto-whitelist complete! Updated ${result.updated_count} users.`)
+        loadData()
+      } else {
+        alert('Failed: ' + (result.error || 'Unknown error'))
+      }
     } catch (error) {
+      console.error('Failed to run whitelist update:', error)
       alert('Failed to run whitelist update')
     }
     setLoading(false)
@@ -245,7 +255,7 @@ export default function AdminDashboard() {
             boxShadow: '5px 5px 0 #000',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#ffd700' }}>
+            <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#ff8c00' }}>
               {stats.pending}
             </div>
             <div style={{ fontSize: '18px' }}>Pending</div>
@@ -351,7 +361,7 @@ export default function AdminDashboard() {
                       border: '1px solid #ccc',
                       textAlign: 'center',
                       fontWeight: 'bold',
-                      color: sub.score >= 3 ? '#00ff00' : sub.score >= 0 ? '#000' : '#ff0000'
+                      color: sub.score >= 1000 ? '#00ff00' : sub.score >= 0 ? '#000' : '#ff0000'
                     }}>
                       {sub.score}
                     </td>

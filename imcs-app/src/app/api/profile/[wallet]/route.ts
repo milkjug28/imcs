@@ -115,16 +115,14 @@ export async function GET(
       whitelistMethod = 'auto_points'
     }
 
-    // Get Rank using the leaderboard_submissions view
-    // A user's rank is 1 + the number of users who have a strictly greater score
-    // We only calculate this if they have some points
+    // Get Rank: count users with a strictly higher total_points in leaderboard_scores
     let rank: number | null = null
     if (totalPoints > 0) {
         const { count, error: rankError } = await supabase
-          .from('leaderboard_submissions')
+          .from('leaderboard_scores')
           .select('*', { count: 'exact', head: true })
-          .gt('score', totalPoints)
-          
+          .gt('total_points', totalPoints)
+
         if (!rankError && count !== null) {
             rank = count + 1
         }
