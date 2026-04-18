@@ -111,6 +111,10 @@ export default function AdminDashboard() {
     setLoading(false)
   }
 
+  const handleExport = (type: 'all' | 'whitelisted') => {
+    window.location.href = `/api/admin/export?type=${type}`
+  }
+
   const runWhitelistUpdate = async () => {
     if (!confirm('Run auto-whitelist update? This will automatically whitelist users with score >= 1000 and top 30% of voters.')) return
 
@@ -320,20 +324,51 @@ export default function AdminDashboard() {
               marginBottom: '20px'
             }}>
               <h2 style={{ fontSize: '28px' }}>All Submissions</h2>
-              <button
-                onClick={runWhitelistUpdate}
-                style={{
-                  fontFamily: 'Comic Neue, cursive',
-                  fontSize: '18px',
-                  padding: '8px 16px',
-                  background: '#00ff00',
-                  border: '3px solid #000',
-                  cursor: 'pointer',
-                  boxShadow: '3px 3px 0 #000'
-                }}
-              >
-                Run Auto-Whitelist
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => handleExport('all')}
+                  style={{
+                    fontFamily: 'Comic Neue, cursive',
+                    fontSize: '18px',
+                    padding: '8px 16px',
+                    background: '#ffff00',
+                    border: '3px solid #000',
+                    cursor: 'pointer',
+                    boxShadow: '3px 3px 0 #000'
+                  }}
+                >
+                  Export All
+                </button>
+                <button
+                  onClick={() => handleExport('whitelisted')}
+                  style={{
+                    fontFamily: 'Comic Neue, cursive',
+                    fontSize: '18px',
+                    padding: '8px 16px',
+                    background: '#ff00ff',
+                    border: '3px solid #000',
+                    cursor: 'pointer',
+                    boxShadow: '3px 3px 0 #000',
+                    color: '#fff'
+                  }}
+                >
+                  Export WL Only
+                </button>
+                <button
+                  onClick={runWhitelistUpdate}
+                  style={{
+                    fontFamily: 'Comic Neue, cursive',
+                    fontSize: '18px',
+                    padding: '8px 16px',
+                    background: '#00ff00',
+                    border: '3px solid #000',
+                    cursor: 'pointer',
+                    boxShadow: '3px 3px 0 #000'
+                  }}
+                >
+                  Run Auto-Whitelist
+                </button>
+              </div>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
