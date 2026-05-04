@@ -42,6 +42,11 @@
     "baseURI": "SET_AFTER_IPFS_UPLOAD",
     "contractURI": "SET_AFTER_IPFS_UPLOAD"
   },
+  "deployment": {
+    "test": "Base mainnet (test OpenSea + website minting with WL phases)",
+    "fallback": "ETH Sepolia (website-only minting if Base+OpenSea combo fails)",
+    "production": "ETH mainnet (final live deployment)"
+  },
   "notes": {
     "phaseStacking": "GTD=1, Community=1, FCFS=1, Public=3. Max 6 per wallet across all phases.",
     "merkleLeafEncoding": "keccak256(abi.encodePacked(address)) - matches SimpleMerkleTree from @openzeppelin/merkle-tree"
