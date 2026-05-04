@@ -37,8 +37,26 @@ startingIQ = 69 + bonusIQ
 | -- | Threshold (1017) | 1017 | 69 |
 | -- | Community/FCFS | 0 | 69 |
 
-## Post-mint IQ earning (TBD)
-- Holding in same wallet: +IQ/week
+## Post-mint IQ rates
+
+### Passive
+- Hold in same wallet: **+10 IQ/week**
+- Floor to cap (69 -> 420) = ~35 weeks pure holding
+
+### Trading penalties/bonuses
+- **Sell: -30 IQ** (3x weekly rate)
+- **Buy: +5 IQ**
+- Floor is always 69 (can't go below)
+
+### Pre-reveal trading analysis
+1. Freeze trading on contract
+2. Query all Transfer events (filter out mints)
+3. Per wallet: count sells (appeared as `from`), count buys (appeared as `to`)
+4. Apply: startingIQ - (30 * sells) + (5 * buys), min 69
+5. Generate metadata with final IQ
+6. Reveal + unfreeze
+
+### Other IQ sources (TBD)
 - Quests and games on site
 - Equipment trait bonuses
 - Social actions (referrals, votes)
