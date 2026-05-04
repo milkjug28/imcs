@@ -63,7 +63,7 @@ function SplashScreenContent() {
   }, [])
 
   const handleEnter = () => {
-    router.push('/site')
+    router.push('/sitee')
   }
 
   return (

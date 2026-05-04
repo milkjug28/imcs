@@ -21,7 +21,7 @@ export default function SharePrompt({
   onClose,
   onPlayAgain,
   showPlayAgain = true,
-  backRoute = '/site/tasks',
+  backRoute = '/sitee/tasks',
 }: SharePromptProps) {
   const router = useRouter()
 

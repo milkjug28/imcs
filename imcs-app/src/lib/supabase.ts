@@ -59,6 +59,10 @@ export type Whitelist = {
   notes?: string
   added_at: string
   updated_at: string
+  gtd: boolean
+  community: boolean
+  fcfs: boolean
+  source?: string
 }
 
 export type UserProfile = {
@@ -103,4 +107,15 @@ export type Banishment = {
   submitter_wallet: string
   ip_address: string | null
   created_at: string
+}
+
+export type CommunityClaim = {
+  id: string
+  holder_wallet: string
+  mint_wallet: string
+  collection_slug: string
+  collection_address: string
+  chain_id: number
+  signature: string
+  claimed_at: string
 }

@@ -17,11 +17,11 @@ export async function GET(request: NextRequest) {
 
     // Validate state
     if (!state || !storedState || state !== storedState) {
-      return NextResponse.redirect(new URL('/site?error=invalid_state', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=invalid_state', request.nextUrl.origin))
     }
 
     if (!code || !codeVerifier) {
-      return NextResponse.redirect(new URL('/site?error=missing_code', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=missing_code', request.nextUrl.origin))
     }
 
     // Decode state to get wallet
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const wallet = stateData.wallet?.toLowerCase()
 
     if (!wallet) {
-      return NextResponse.redirect(new URL('/site?error=no_wallet', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=no_wallet', request.nextUrl.origin))
     }
 
     // Exchange code for access token
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     if (!tokenRes.ok) {
       const errorText = await tokenRes.text()
       console.error('Token exchange failed:', errorText)
-      return NextResponse.redirect(new URL('/site?error=token_failed', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=token_failed', request.nextUrl.origin))
     }
 
     const tokenData = await tokenRes.json()
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (!userRes.ok) {
       console.error('User fetch failed:', await userRes.text())
-      return NextResponse.redirect(new URL('/site?error=user_fetch_failed', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=user_fetch_failed', request.nextUrl.origin))
     }
 
     const userData = await userRes.json()
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     const xUserId = userData.data?.id
 
     if (!xUsername) {
-      return NextResponse.redirect(new URL('/site?error=no_username', request.nextUrl.origin))
+      return NextResponse.redirect(new URL('/sitee?error=no_username', request.nextUrl.origin))
     }
 
     // Store X link in whitelist table
@@ -115,6 +115,6 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('X OAuth callback error:', error)
-    return NextResponse.redirect(new URL('/site?error=callback_failed', request.nextUrl.origin))
+    return NextResponse.redirect(new URL('/sitee?error=callback_failed', request.nextUrl.origin))
   }
 }

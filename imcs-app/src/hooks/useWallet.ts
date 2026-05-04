@@ -21,7 +21,7 @@ export function useWallet() {
   return {
     address,
     truncatedAddress,
-    isConnected,
+    isConnected: isConnected || !!address,
     isConnecting,
     connect,
     disconnect,

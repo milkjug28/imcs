@@ -6,12 +6,14 @@ type ConnectWalletProps = {
   label?: string
   showBalance?: boolean
   compact?: boolean
+  ignoreChain?: boolean
 }
 
 export default function ConnectWallet({
   label = 'connect wallut',
   showBalance = false,
-  compact = false
+  compact = false,
+  ignoreChain = false,
 }: ConnectWalletProps) {
   return (
     <ConnectButton.Custom>
@@ -66,10 +68,10 @@ export default function ConnectWallet({
                 )
               }
 
-              if (chain.unsupported) {
+              if (chain.unsupported && !ignoreChain) {
                 return (
                   <button
-                    onClick={openChainModal}
+                    onClick={() => openChainModal()}
                     type="button"
                     style={{
                       fontFamily: 'Comic Neue, cursive',
