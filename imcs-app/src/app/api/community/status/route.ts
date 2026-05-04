@@ -1,25 +1,24 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { COLLECTIONS } from '@/lib/collections'
+import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 export async function GET() {
   try {
-    const { data: counts } = await supabase
-      .from('community_claims')
-      .select('collection_slug')
+    const results = await Promise.all(
+      COLLECTIONS.map(c =>
+        supabase
+          .from('community_claims')
+          .select('*', { count: 'exact', head: true })
+          .eq('collection_slug', c.slug)
+          .then(({ count }) => ({ slug: c.slug, count: count ?? 0 }))
+      )
+    )
 
     const claimCounts: Record<string, number> = {}
-    if (counts) {
-      for (const row of counts) {
-        claimCounts[row.collection_slug] = (claimCounts[row.collection_slug] || 0) + 1
-      }
+    for (const r of results) {
+      claimCounts[r.slug] = r.count
     }
 
     const collections = COLLECTIONS.map(c => ({

@@ -397,7 +397,7 @@ export default function CommunityPage() {
                             value={c.slug}
                             disabled={isFull}
                           >
-                            {c.displayName} — {isFull ? 'FULL' : `${c.claimed}/${c.cap}`}
+                            {c.displayName} — {isFull ? 'FULL' : `${c.spotsRemaining} left`}
                           </option>
                         )
                       })}
