@@ -14,6 +14,17 @@ const supabase = createClient(
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/
 
+const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY
+
+const RPC_URLS: Record<number, string> = {
+  1: ALCHEMY_KEY
+    ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : 'https://cloudflare-eth.com',
+  8453: ALCHEMY_KEY
+    ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
+    : 'https://mainnet.base.org',
+}
+
 const CHAINS_BY_ID: Record<number, Chain> = {
   1: mainnet,
   8453: base,
@@ -130,9 +141,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const rpcUrl = RPC_URLS[collection.chainId]
     const publicClient = createPublicClient({
       chain,
-      transport: http(),
+      transport: http(rpcUrl, { timeout: 10_000 }),
     })
 
     // Check balanceOf across all contract addresses for this collection
