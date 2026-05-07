@@ -22,13 +22,18 @@ export async function GET() {
             .from('community_claims')
             .select('*', { count: 'exact', head: true })
             .eq('collection_slug', slug)
-            .then(({ count }) => ({ slug, count: count ?? 0 }))
+            .then(({ count, error }) => {
+              if (error) console.error(`Count error for ${slug}:`, error.message)
+              return { slug, count: count ?? 0 }
+            })
         )
       )
       for (const r of results) {
         counts[r.slug] = r.count
       }
     }
+
+    console.log('Community status counts:', JSON.stringify(counts))
 
     const collections = COLLECTIONS.map(c => {
       const claimed = counts[c.slug] ?? 0
@@ -45,8 +50,8 @@ export async function GET() {
     })
 
     return NextResponse.json(
-      { collections },
-      { headers: { 'Cache-Control': 'no-store' } }
+      { collections, _debug: { counts, hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, hasUrl: !!process.env.SUPABASE_URL } },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', Pragma: 'no-cache' } }
     )
   } catch (error) {
     console.error('Community status error:', error)
