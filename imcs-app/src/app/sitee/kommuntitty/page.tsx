@@ -98,6 +98,13 @@ export default function CommunityPage() {
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   const [error, setError] = useState('')
 
+  const refreshCollections = useCallback(() => {
+    fetch('/api/community/status', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => setCollections(data.collections || []))
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetch('/api/community/status', { cache: 'no-store' })
       .then(r => r.json())
@@ -106,12 +113,15 @@ export default function CommunityPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
+
+    const interval = setInterval(refreshCollections, 15000)
+    return () => clearInterval(interval)
+  }, [refreshCollections])
 
   const checkExistingClaim = useCallback(async (wallet: string) => {
     setCheckingClaim(true)
     try {
-      const res = await fetch(`/api/community/check?wallet=${encodeURIComponent(wallet)}`)
+      const res = await fetch(`/api/community/check?wallet=${encodeURIComponent(wallet)}`, { cache: 'no-store' })
       const data = await res.json()
       setExistingClaim(data.claim || null)
     } catch {
@@ -215,9 +225,7 @@ export default function CommunityPage() {
         }
       } else {
         setResult({ success: true, message: data.message })
-        const statusRes = await fetch('/api/community/status')
-        const statusData = await statusRes.json()
-        setCollections(statusData.collections || [])
+        refreshCollections()
         if (address) checkExistingClaim(address)
       }
     } catch (err: unknown) {
