@@ -1,29 +1,37 @@
 import { NextResponse } from 'next/server'
 import { COLLECTIONS } from '@/lib/collections'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   try {
-    const { data: allClaims, error: dbError } = await supabase
-      .from('community_claims')
-      .select('collection_slug')
-      .limit(10000)
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    if (dbError) {
-      console.error('community_claims query error:', dbError)
-    }
+    const activeSlugs = COLLECTIONS.filter(c => !c.closed).map(c => c.slug)
 
-    const claimCounts: Record<string, number> = {}
-    if (allClaims) {
-      for (const row of allClaims) {
-        claimCounts[row.collection_slug] = (claimCounts[row.collection_slug] || 0) + 1
+    const counts: Record<string, number> = {}
+
+    if (activeSlugs.length > 0) {
+      const results = await Promise.all(
+        activeSlugs.map(slug =>
+          supabase
+            .from('community_claims')
+            .select('*', { count: 'exact', head: true })
+            .eq('collection_slug', slug)
+            .then(({ count }) => ({ slug, count: count ?? 0 }))
+        )
+      )
+      for (const r of results) {
+        counts[r.slug] = r.count
       }
     }
 
     const collections = COLLECTIONS.map(c => {
-      const claimed = claimCounts[c.slug] || 0
+      const claimed = counts[c.slug] ?? 0
       return {
         slug: c.slug,
         name: c.name,
