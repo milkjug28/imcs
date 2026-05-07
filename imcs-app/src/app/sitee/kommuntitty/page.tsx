@@ -207,7 +207,12 @@ export default function CommunityPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || 'sumthin went wrong')
+        if (res.status === 409 && data.error?.includes('alredy claimed')) {
+          setError('u cant clame agaayne!! 1 per wallut, no exceptionss 🚫')
+          if (address) checkExistingClaim(address)
+        } else {
+          setError(data.error || 'sumthin went wrong')
+        }
       } else {
         setResult({ success: true, message: data.message })
         const statusRes = await fetch('/api/community/status')
