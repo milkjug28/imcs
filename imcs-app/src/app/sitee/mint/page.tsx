@@ -1,0 +1,405 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useWallet } from '@/hooks/useWallet'
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract, useSwitchChain } from 'wagmi'
+import { useQueryClient } from '@tanstack/react-query'
+import { useChainId } from 'wagmi'
+import {
+  SAVANT_TOKEN_ADDRESS,
+  SEADROP_ADDRESS,
+  FEE_RECIPIENT,
+  MINT_CHAIN,
+  SEADROP_ABI,
+  SAVANT_TOKEN_ABI,
+} from '@/config/contracts'
+
+const PREREVEAL_IMAGE = 'https://maroon-adequate-gazelle-687.mypinata.cloud/ipfs/bafkreibgxwecphn7w6vyyzoc34xrzfhya7dgdy6g7dfbsztrimo7yhtfle'
+
+type ProofData = {
+  eligible: boolean
+  phase: string
+  proof?: string[]
+  mintParams?: {
+    mintPrice: string
+    maxTotalMintableByWallet: string
+    startTime: string
+    endTime: string
+    dropStageIndex: string
+    maxTokenSupplyForStage: string
+    feeBps: string
+    restrictFeeRecipients: boolean
+  }
+}
+
+const SAVANT_MESSAGES = [
+  'ur imaginashun iz strong...',
+  'preparing savant magic...',
+  'consulting the blockchain wizards...',
+  'channeling crypto energy...',
+  'almost there, try not 2 blink...',
+]
+
+export default function MintPage() {
+  const { address, isConnected, connect } = useWallet()
+  const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
+  const queryClient = useQueryClient()
+  const [proofData, setProofData] = useState<ProofData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [savantMsg, setSavantMsg] = useState('')
+
+  const wrongChain = chainId !== MINT_CHAIN.id
+
+  const { data: mintStats, queryKey: mintStatsKey } = useReadContract({
+    address: SAVANT_TOKEN_ADDRESS,
+    abi: SAVANT_TOKEN_ABI,
+    functionName: 'getMintStats',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  })
+
+  const minterNumMinted = mintStats ? Number(mintStats[0]) : 0
+  const totalSupply = mintStats ? Number(mintStats[1]) : 0
+  const maxSupply = mintStats ? Number(mintStats[2]) : 0
+
+  const {
+    writeContract,
+    data: txHash,
+    isPending: isMintPending,
+    error: mintError,
+    reset: resetMint,
+  } = useWriteContract()
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  })
+
+  useEffect(() => {
+    if (isConfirmed) {
+      queryClient.invalidateQueries({ queryKey: mintStatsKey })
+    }
+  }, [isConfirmed, queryClient, mintStatsKey])
+
+  const fetchProof = useCallback(async () => {
+    if (!address) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mint/proof?address=${address}`)
+      const data = await res.json()
+      setProofData(data)
+    } catch {
+      setError('failed 2 check allowlist')
+    } finally {
+      setLoading(false)
+    }
+  }, [address])
+
+  useEffect(() => {
+    if (address) {
+      fetchProof()
+      resetMint()
+    }
+  }, [address, fetchProof, resetMint])
+
+  useEffect(() => {
+    if (isMintPending || isConfirming) {
+      const interval = setInterval(() => {
+        setSavantMsg(SAVANT_MESSAGES[Math.floor(Math.random() * SAVANT_MESSAGES.length)])
+      }, 2000)
+      return () => clearInterval(interval)
+    }
+  }, [isMintPending, isConfirming])
+
+  const handleMint = () => {
+    if (!proofData?.proof || !proofData.mintParams) return
+
+    const mp = proofData.mintParams
+    writeContract({
+      address: SEADROP_ADDRESS,
+      abi: SEADROP_ABI,
+      functionName: 'mintAllowList',
+      args: [
+        SAVANT_TOKEN_ADDRESS,
+        FEE_RECIPIENT,
+        '0x0000000000000000000000000000000000000000' as `0x${string}`,
+        BigInt(1),
+        {
+          mintPrice: BigInt(mp.mintPrice),
+          maxTotalMintableByWallet: BigInt(mp.maxTotalMintableByWallet),
+          startTime: BigInt(mp.startTime),
+          endTime: BigInt(mp.endTime),
+          dropStageIndex: BigInt(mp.dropStageIndex),
+          maxTokenSupplyForStage: BigInt(mp.maxTokenSupplyForStage),
+          feeBps: BigInt(mp.feeBps),
+          restrictFeeRecipients: mp.restrictFeeRecipients,
+        },
+        proofData.proof as `0x${string}`[],
+      ],
+      value: BigInt(mp.mintPrice),
+      chain: MINT_CHAIN,
+    })
+  }
+
+  const alreadyMinted = minterNumMinted > 0
+  const mintInProgress = isMintPending || isConfirming
+
+  const getMintErrorMessage = (err: Error | null): string => {
+    if (!err) return ''
+    const msg = err.message || ''
+    if (msg.includes('MintQuantityExceedsMaxMintedPerWallet')) return 'u already minted ur savant, greedy'
+    if (msg.includes('NotActive')) return 'mint phase not active yet, patience young savant'
+    if (msg.includes('InvalidProof')) return 'ur proof is bad. u not on da list, nerd'
+    if (msg.includes('User rejected') || msg.includes('user rejected')) return 'u rejected it... y?'
+    return 'sumthing went wrong. try agen'
+  }
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
+      <div style={{
+        background: 'linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3)',
+        border: '4px solid #000',
+        borderRadius: '15px',
+        padding: '30px',
+        boxShadow: '8px 8px 0 #000',
+        transform: 'rotate(-1deg)',
+        textAlign: 'center',
+      }}>
+        <h2 style={{
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '2.5em',
+          color: '#000',
+          textShadow: '3px 3px 0 #fff',
+          marginBottom: '10px',
+        }}>
+          MINT UR SAVANT
+        </h2>
+
+        <div style={{
+          background: 'rgba(0,0,0,0.7)',
+          borderRadius: '10px',
+          padding: '15px',
+          margin: '15px 0',
+          color: '#0f0',
+          fontFamily: 'monospace',
+          fontSize: '0.9em',
+        }}>
+          <div>{totalSupply} / {maxSupply || '???'} minted</div>
+          <div style={{
+            background: '#333',
+            borderRadius: '5px',
+            height: '12px',
+            marginTop: '8px',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              background: 'linear-gradient(90deg, #0f0, #0ff)',
+              height: '100%',
+              width: maxSupply ? `${(totalSupply / maxSupply) * 100}%` : '0%',
+              transition: 'width 0.5s',
+            }} />
+          </div>
+        </div>
+
+        {!isConnected ? (
+          <button onClick={connect} style={{
+            background: '#ff00ff',
+            color: '#fff',
+            border: '3px solid #000',
+            borderRadius: '10px',
+            padding: '15px 40px',
+            fontSize: '1.3em',
+            fontFamily: "'Comic Neue', cursive",
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '4px 4px 0 #000',
+          }}>
+            connekt wallet
+          </button>
+        ) : wrongChain ? (
+          <button onClick={() => switchChain({ chainId: MINT_CHAIN.id })} style={{
+            background: '#ff4444',
+            color: '#fff',
+            border: '3px solid #000',
+            borderRadius: '10px',
+            padding: '15px 40px',
+            fontSize: '1.3em',
+            fontFamily: "'Comic Neue', cursive",
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            boxShadow: '4px 4px 0 #000',
+          }}>
+            switch 2 {MINT_CHAIN.name}
+          </button>
+        ) : loading ? (
+          <div style={{
+            color: '#000',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '1.2em',
+            padding: '20px',
+          }}>
+            checkin if u r savant material...
+          </div>
+        ) : isConfirmed ? (
+          <div>
+            <div style={{
+              border: '4px solid #000',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              margin: '15px auto',
+              maxWidth: '280px',
+              boxShadow: '6px 6px 0 #000',
+              animation: 'mintReveal 0.6s ease-out',
+            }}>
+              <img
+                src={PREREVEAL_IMAGE}
+                alt="ur savant"
+                style={{ width: '100%', display: 'block' }}
+              />
+              <div style={{
+                background: '#000',
+                color: '#0f0',
+                fontFamily: 'monospace',
+                padding: '8px',
+                fontSize: '0.8em',
+                textAlign: 'center',
+              }}>
+                savaant #{totalSupply} | IQ: ???
+              </div>
+            </div>
+            <div style={{
+              color: '#000',
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '1.5em',
+              fontWeight: 'bold',
+              marginTop: '10px',
+            }}>
+              CONGRAAAATS U AR SAVANT!!!
+            </div>
+            <div style={{
+              color: '#333',
+              fontFamily: 'monospace',
+              fontSize: '0.7em',
+              marginTop: '8px',
+              wordBreak: 'break-all',
+            }}>
+              tx: {txHash}
+            </div>
+          </div>
+        ) : alreadyMinted ? (
+          <div style={{
+            color: '#000',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '1.3em',
+            padding: '20px',
+          }}>
+            u already minted {minterNumMinted} savant{minterNumMinted > 1 ? 's' : ''}, greedy
+          </div>
+        ) : proofData?.eligible ? (
+          <div>
+            <div style={{
+              border: '3px solid #000',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              margin: '15px auto',
+              maxWidth: '220px',
+              boxShadow: '4px 4px 0 #000',
+              opacity: 0.8,
+            }}>
+              <img
+                src={PREREVEAL_IMAGE}
+                alt="pre-reveal savant"
+                style={{ width: '100%', display: 'block', filter: 'blur(2px)' }}
+              />
+            </div>
+
+            <div style={{
+              background: 'rgba(0,255,0,0.2)',
+              border: '2px solid #0f0',
+              borderRadius: '8px',
+              padding: '10px',
+              marginBottom: '15px',
+              color: '#000',
+              fontFamily: "'Comic Neue', cursive",
+            }}>
+              ✅ u r on da {proofData.phase} list!!
+            </div>
+
+            <button
+              onClick={handleMint}
+              disabled={mintInProgress}
+              style={{
+                background: mintInProgress ? '#888' : '#00ff00',
+                color: '#000',
+                border: '3px solid #000',
+                borderRadius: '10px',
+                padding: '15px 40px',
+                fontSize: '1.5em',
+                fontFamily: "'Comic Neue', cursive",
+                fontWeight: 'bold',
+                cursor: mintInProgress ? 'wait' : 'pointer',
+                boxShadow: mintInProgress ? 'none' : '4px 4px 0 #000',
+                transform: mintInProgress ? 'none' : 'rotate(1deg)',
+                transition: 'all 0.2s',
+              }}
+            >
+              {mintInProgress ? savantMsg || 'minting...' : 'MINT (FREE)'}
+            </button>
+
+            {mintError && (
+              <div style={{
+                background: 'rgba(255,0,0,0.2)',
+                border: '2px solid #f00',
+                borderRadius: '8px',
+                padding: '10px',
+                marginTop: '15px',
+                color: '#000',
+                fontFamily: "'Comic Neue', cursive",
+              }}>
+                {getMintErrorMessage(mintError)}
+              </div>
+            )}
+          </div>
+        ) : proofData && !proofData.eligible ? (
+          <div style={{
+            color: '#000',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '1.2em',
+            padding: '20px',
+          }}>
+            <div style={{ fontSize: '2em', marginBottom: '10px' }}>🚫</div>
+            u not on da {proofData.phase} list, dork
+            <div style={{
+              fontSize: '0.8em',
+              marginTop: '10px',
+              color: '#333',
+            }}>
+              check opensea 4 public mint
+            </div>
+          </div>
+        ) : error ? (
+          <div style={{
+            color: '#f00',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '1.2em',
+            padding: '20px',
+          }}>
+            {error}
+          </div>
+        ) : null}
+
+        <div style={{
+          marginTop: '20px',
+          color: '#333',
+          fontFamily: 'monospace',
+          fontSize: '0.75em',
+        }}>
+          {address && `wallet: ${address.slice(0, 6)}...${address.slice(-4)}`}
+          {minterNumMinted > 0 && ` | minted: ${minterNumMinted}`}
+        </div>
+      </div>
+    </div>
+  )
+}

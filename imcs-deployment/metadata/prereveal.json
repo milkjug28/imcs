@@ -1,0 +1,13 @@
+{
+  "name": "savaant",
+  "description": "i amz savaant",
+  "image": "https://maroon-adequate-gazelle-687.mypinata.cloud/ipfs/bafkreibgxwecphn7w6vyyzoc34xrzfhya7dgdy6g7dfbsztrimo7yhtfle",
+  "attributes": [
+    {
+      "trait_type": "IQ",
+      "value": 0,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ]
+}
