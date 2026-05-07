@@ -50,7 +50,7 @@ export async function GET() {
     })
 
     return NextResponse.json(
-      { collections, _debug: { counts, hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY, hasUrl: !!process.env.SUPABASE_URL } },
+      { collections, _debug: { counts, supabaseUrl: process.env.SUPABASE_URL?.slice(0, 30), hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY } },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', Pragma: 'no-cache' } }
     )
   } catch (error) {
