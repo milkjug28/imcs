@@ -3,6 +3,8 @@ import { COLLECTIONS } from '@/lib/collections'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
 
 export async function GET() {
   try {
@@ -16,24 +18,19 @@ export async function GET() {
     const counts: Record<string, number> = {}
 
     if (activeSlugs.length > 0) {
-      const results = await Promise.all(
-        activeSlugs.map(slug =>
-          supabase
-            .from('community_claims')
-            .select('*', { count: 'exact', head: true })
-            .eq('collection_slug', slug)
-            .then(({ count, error }) => {
-              if (error) console.error(`Count error for ${slug}:`, error.message)
-              return { slug, count: count ?? 0 }
-            })
-        )
-      )
-      for (const r of results) {
-        counts[r.slug] = r.count
+      const { data, error } = await supabase
+        .from('community_claims')
+        .select('collection_slug')
+        .in('collection_slug', activeSlugs)
+
+      if (error) {
+        console.error('Claims query error:', error.message)
+      } else if (data) {
+        for (const row of data) {
+          counts[row.collection_slug] = (counts[row.collection_slug] || 0) + 1
+        }
       }
     }
-
-    console.log('Community status counts:', JSON.stringify(counts))
 
     const collections = COLLECTIONS.map(c => {
       const claimed = counts[c.slug] ?? 0
@@ -50,7 +47,7 @@ export async function GET() {
     })
 
     return NextResponse.json(
-      { collections, _debug: { counts, supabaseUrl: process.env.SUPABASE_URL?.slice(0, 30), hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY } },
+      { collections },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0', Pragma: 'no-cache' } }
     )
   } catch (error) {
