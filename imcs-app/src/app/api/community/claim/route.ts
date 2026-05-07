@@ -14,15 +14,11 @@ const supabase = createClient(
 
 const ETH_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY
+const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 
 const RPC_URLS: Record<number, string> = {
-  1: ALCHEMY_KEY
-    ? `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
-    : 'https://cloudflare-eth.com',
-  8453: ALCHEMY_KEY
-    ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`
-    : 'https://mainnet.base.org',
+  1: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
+  8453: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
   80094: 'https://rpc.berachain.com',
 }
 
