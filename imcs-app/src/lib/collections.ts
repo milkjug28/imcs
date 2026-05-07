@@ -1,12 +1,23 @@
+export type ContractEntry = {
+  address: string
+  chainId: number
+}
+
 export type CollectionConfig = {
   slug: string
   name: string
   displayName: string
   contractAddresses: string[]
   chainId: number
+  contracts?: ContractEntry[]
   cap: number
   logo?: string
   closed?: boolean
+}
+
+export function getContracts(c: CollectionConfig): ContractEntry[] {
+  if (c.contracts) return c.contracts
+  return c.contractAddresses.map(address => ({ address, chainId: c.chainId }))
 }
 
 export const COLLECTIONS: CollectionConfig[] = [
@@ -35,6 +46,10 @@ export const COLLECTIONS: CollectionConfig[] = [
     displayName: 'steddy teddyz',
     contractAddresses: ['0x88888888a9361f15aadbaca355a6b2938c6a674e'],
     chainId: 80094,
+    contracts: [
+      { address: '0x88888888a9361f15aadbaca355a6b2938c6a674e', chainId: 80094 },
+      { address: '0x10a7aca36d27ef3fb63B638B39Ca0d87D15972a0', chainId: 1 },
+    ],
     cap: 75,
   },
   {

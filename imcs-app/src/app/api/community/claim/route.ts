@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createPublicClient, http, getAddress, type Chain, type Hex } from 'viem'
 import { mainnet, base, berachain } from 'viem/chains'
 import { verifyMessage } from 'viem'
-import { getCollectionBySlug } from '@/lib/collections'
+import { getCollectionBySlug, getContracts } from '@/lib/collections'
 
 export const dynamic = 'force-dynamic'
 
@@ -142,34 +142,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const chain = CHAINS_BY_ID[collection.chainId]
-    if (!chain) {
-      return NextResponse.json(
-        { error: 'unsupported chain' },
-        { status: 400 }
-      )
-    }
-
-    const rpcUrl = RPC_URLS[collection.chainId]
-    const publicClient = createPublicClient({
-      chain,
-      transport: http(rpcUrl, { timeout: 10_000 }),
-    })
-
-    // Check balanceOf across all contract addresses for this collection
-    // (e.g. CyberKongz has Genesis + Evolution Babies)
+    const contracts = getContracts(collection)
     let totalBalance = BigInt(0)
-    for (const contractAddr of collection.contractAddresses) {
+
+    for (const contract of contracts) {
+      const chain = CHAINS_BY_ID[contract.chainId]
+      const rpcUrl = RPC_URLS[contract.chainId]
+      if (!chain || !rpcUrl) continue
+
+      const client = createPublicClient({
+        chain,
+        transport: http(rpcUrl, { timeout: 10_000 }),
+      })
+
       try {
-        const balance = await publicClient.readContract({
-          address: getAddress(contractAddr) as `0x${string}`,
+        const balance = await client.readContract({
+          address: getAddress(contract.address) as `0x${string}`,
           abi: ERC721_BALANCE_OF_ABI,
           functionName: 'balanceOf',
           args: [getAddress(holderWallet)],
         })
         totalBalance += balance
       } catch {
-        console.error(`Failed to check balance on ${contractAddr}`)
+        console.error(`Failed to check balance on ${contract.address}`)
       }
     }
 
