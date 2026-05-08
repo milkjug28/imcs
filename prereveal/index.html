@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>???</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    width: 100%;
+    height: 100%;
+    background: #000;
+  }
+
+  body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+  }
+
+  .container {
+    position: relative;
+    width: min(1000px, 100vw);
+    height: min(1000px, 100vh);
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+  }
+
+  .flashlight {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .eyes-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 450px;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.4s ease-in;
+  }
+
+  .eyes-wrapper.loaded {
+    opacity: 1;
+  }
+
+  .eye-layer-base {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .eye-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .eye-white-left, .eye-white-right { z-index: 1; }
+  .eye-iris-left, .eye-iris-right { z-index: 2; transition: transform 0.15s ease-out; }
+  .eye-skin { z-index: 3; }
+  .eye-outline { z-index: 4; }
+
+  .skin-vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse 40% 25% at 50% 45%, transparent 0%, rgba(0,0,0,0.5) 100%);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    transition: opacity 0.4s ease-out;
+  }
+
+  .loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+</style>
+</head>
+<body>
+<div class="container" id="container">
+  <div class="loader" id="loader"><div class="spinner"></div></div>
+  <div class="flashlight" id="flashlight"></div>
+
+  <div class="eyes-wrapper" id="eyesWrapper">
+    <img class="eye-layer-base eye-white-left" src="assets/eyes/eye-white-left.png" alt="">
+    <img class="eye-layer eye-white-right" src="assets/eyes/eye-white-right.png" alt="">
+    <img class="eye-layer eye-iris-left" id="irisLeft" src="assets/eyes/eye-iris-left.png" alt="">
+    <img class="eye-layer eye-iris-right" id="irisRight" src="assets/eyes/eye-iris-right.png" alt="">
+    <img class="eye-layer eye-skin" src="assets/eyes/top-skin-inder-outliine.png" alt="">
+    <img class="eye-layer eye-outline" src="assets/eyes/top-face-outline.png" alt="">
+    <div class="skin-vignette"></div>
+  </div>
+</div>
+
+<script>
+  const container = document.getElementById('container');
+  const flashlight = document.getElementById('flashlight');
+  const eyesWrapper = document.getElementById('eyesWrapper');
+  const irisLeft = document.getElementById('irisLeft');
+  const irisRight = document.getElementById('irisRight');
+
+  const loader = document.getElementById('loader');
+  const images = eyesWrapper.querySelectorAll('img');
+  let loaded = 0;
+
+  function checkAllLoaded() {
+    loaded++;
+    if (loaded >= images.length) {
+      loader.classList.add('hidden');
+      eyesWrapper.classList.add('loaded');
+    }
+  }
+
+  images.forEach(function(img) {
+    if (img.complete) {
+      checkAllLoaded();
+    } else {
+      img.addEventListener('load', checkAllLoaded);
+      img.addEventListener('error', checkAllLoaded);
+    }
+  });
+
+  const MAX_MOVEMENT = 8;
+  const SENSITIVITY = 30;
+
+  container.addEventListener('mousemove', function(e) {
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    flashlight.style.left = (x - 150) + 'px';
+    flashlight.style.top = (y - 150) + 'px';
+
+    const wrapperRect = eyesWrapper.getBoundingClientRect();
+    const centerX = wrapperRect.left + wrapperRect.width / 2 - rect.left;
+    const centerY = wrapperRect.top + wrapperRect.height / 2 - rect.top;
+
+    const angle = Math.atan2(y - centerY, x - centerX);
+    const distance = Math.min(MAX_MOVEMENT, Math.hypot(x - centerX, y - centerY) / SENSITIVITY);
+    const moveX = Math.cos(angle) * distance;
+    const moveY = Math.sin(angle) * distance;
+
+    irisLeft.style.transform = 'translate(' + moveX + 'px, ' + moveY + 'px)';
+    irisRight.style.transform = 'translate(' + moveX + 'px, ' + moveY + 'px)';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+{
+  "token": {
+    "name": "Imaginary Magic Crypto Savants",
+    "symbol": "IMCS",
+    "maxSupply": 3000
+  },
+  "phases": {
+    "phase1_gtd": {
+      "name": "GTD (Guaranteed)",
+      "type": "allowlist",
+      "price": "0",
+      "maxPerWallet": 1,
+      "description": "Leaderboard above threshold (>=1017 pts). Guaranteed mint."
+    },
+    "phase2_community": {
+      "name": "Community",
+      "type": "allowlist",
+      "price": "0",
+      "maxPerWallet": 1,
+      "description": "Partner collection holders who claimed via kommuntitty page."
+    },
+    "phase3_fcfs": {
+      "name": "FCFS",
+      "type": "allowlist",
+      "price": "0",
+      "maxPerWallet": 1,
+      "description": "All leaderboard participants with >0 pts."
+    },
+    "phase4_public": {
+      "name": "Public",
+      "type": "public",
+      "price": "0",
+      "maxPerWallet": 3,
+      "description": "Open to everyone. Also mintable on OpenSea."
+    }
+  },
+  "fees": {
+    "feeRecipient": "SET_BEFORE_DEPLOY",
+    "feeBps": 0
+  },
+  "metadata": {
+    "baseURI": "SET_AFTER_IPFS_UPLOAD",
+    "contractURI": "SET_AFTER_IPFS_UPLOAD"
+  },
+  "deployment": {
+    "test": "Base mainnet (test OpenSea + website minting with WL phases)",
+    "fallback": "ETH Sepolia (website-only minting if Base+OpenSea combo fails)",
+    "production": "ETH mainnet (final live deployment)"
+  },
+  "notes": {
+    "phaseStacking": "GTD=1, Community=1, FCFS=1, Public=3. Max 6 per wallet across all phases.",
+    "merkleLeafEncoding": "keccak256(abi.encodePacked(address)) - matches SimpleMerkleTree from @openzeppelin/merkle-tree"
+  }
+}
