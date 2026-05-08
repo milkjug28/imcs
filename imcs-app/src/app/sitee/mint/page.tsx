@@ -35,6 +35,57 @@ type ProofData = {
   }
 }
 
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      marginBottom: '10px',
+      border: '2px solid #000',
+      borderRadius: '10px',
+      overflow: 'hidden',
+      boxShadow: '3px 3px 0px #000',
+    }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          width: '100%',
+          padding: '14px 18px',
+          background: 'linear-gradient(135deg, #ff69b4, #ff6600)',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '1.1em',
+          fontWeight: 'bold',
+          color: '#000',
+          textAlign: 'left',
+        }}
+      >
+        <span>{q}</span>
+        <span style={{
+          transform: open ? 'rotate(180deg)' : 'rotate(0)',
+          transition: 'transform 0.2s',
+          fontSize: '1.2em',
+        }}>&#9660;</span>
+      </button>
+      {open && (
+        <div style={{
+          padding: '14px 18px',
+          background: 'rgba(255,255,255,0.9)',
+          color: '#000',
+          fontSize: '1em',
+          lineHeight: '1.5',
+          borderTop: '2px solid #000',
+        }}>
+          {a}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const SAVANT_MESSAGES = [
   'ur imaginashun iz strong...',
   'preparing savant magic...',
@@ -555,64 +606,16 @@ export default function MintPage() {
       </h2>
 
       {[
-        {
-          q: 'wutt iz savaantt??',
-          a: 'imaginate it, dork. wee r majik. if u hav 2 ask u prolly dont dezurv 2 noe.',
-        },
-        {
-          q: 'shud i mint savaantt?',
-          a: 'yesssss. mor savaants da bettah. ur wallet iz lonely and sad widout one.',
-        },
-        {
-          q: 'wut iz iq?',
-          a: 'brayne powah ideeott. eech savant haz iq. hiyur iq = mor brayne = mor powah. u prolly hav loe iq tho.',
-        },
-        {
-          q: 'wenn reveehull?',
-          a: 'aftur minttt lyke all kollekshuns lewzer. u want instunt gratuhfikashun? go buy a sandwitch.',
-        },
-        {
-          q: 'iz dis a rug?',
-          a: 'da only rug iz da one undur ur feet wen u slip on ur own stoopidity. we r legit savants hear.',
-        },
-        {
-          q: 'how menny can i mintt?',
-          a: 'dependz on how speshul u r. chek ur elijuhbillitee abuv. if u cant mint, skill issu.',
-        },
-        {
-          q: 'y iz da art not showing?',
-          a: 'reed da previus anser about reveehull u impatient nerd. art cumz wen art iz reddy.',
-        },
-        {
-          q: 'wen moon?',
-          a: 'wen u stop askin wen moon. da moon cumz 2 those hoo r payshunt and also hoo mint.',
-        },
+        { q: 'wutt iz savaantt??', a: 'imaginate it, dork. wee r majik. if u hav 2 ask u prolly dont dezurv 2 noe.' },
+        { q: 'shud i mint savaantt?', a: 'yesssss. mor savaants da bettah. ur wallet iz lonely and sad widout one.' },
+        { q: 'wut iz iq?', a: 'brayne powah ideeott. eech savant haz iq. hiyur iq = mor brayne = mor powah. u prolly hav loe iq tho.' },
+        { q: 'wenn reveehull?', a: 'aftur minttt lyke all kollekshuns lewzer. u want instunt gratuhfikashun? go buy a sandwitch.' },
+        { q: 'iz dis a rug?', a: 'da only rug iz da one undur ur feet wen u slip on ur own stoopidity. we r legit savants hear.' },
+        { q: 'how menny can i mintt?', a: 'dependz on how speshul u r. chek ur elijuhbillitee abuv. if u cant mint, skill issu.' },
+        { q: 'y iz da art not showing?', a: 'reed da previus anser about reveehull u impatient nerd. art cumz wen art iz reddy.' },
+        { q: 'wen moon?', a: 'wen u stop askin wen moon. da moon cumz 2 those hoo r payshunt and also hoo mint.' },
       ].map((faq, i) => (
-        <div key={i} style={{
-          marginBottom: '20px',
-          background: 'linear-gradient(135deg, rgba(255,105,180,0.15), rgba(255,102,0,0.15))',
-          border: '2px solid #000',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          boxShadow: '3px 3px 0px #000',
-          transform: `rotate(${(i % 2 === 0 ? -0.5 : 0.7)}deg)`,
-        }}>
-          <div style={{
-            fontWeight: 'bold',
-            fontSize: '1.1em',
-            marginBottom: '8px',
-            color: '#ff69b4',
-          }}>
-            Q: {faq.q}
-          </div>
-          <div style={{
-            fontSize: '1em',
-            color: '#000',
-            lineHeight: '1.5',
-          }}>
-            A: {faq.a}
-          </div>
-        </div>
+        <FaqItem key={i} q={faq.q} a={faq.a} />
       ))}
     </div>
   </>
