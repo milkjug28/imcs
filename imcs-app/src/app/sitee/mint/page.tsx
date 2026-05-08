@@ -77,13 +77,19 @@ export default function MintPage() {
 
   const wrongChain = chainId !== MINT_CHAIN.id
 
-  const { data: totalSupplyData, queryKey: supplyKey } = useReadContract({
-    address: SAVANT_TOKEN_ADDRESS,
-    abi: SAVANT_TOKEN_ABI,
-    functionName: 'totalSupply',
-    chainId: MINT_CHAIN.id,
-    query: { refetchInterval: 10000 },
-  })
+  const [totalSupplyData, setTotalSupplyData] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchSupply = () => {
+      fetch('/api/mint/supply')
+        .then(r => r.json())
+        .then(d => { if (d.totalSupply) setTotalSupplyData(d.totalSupply) })
+        .catch(() => {})
+    }
+    fetchSupply()
+    const interval = setInterval(fetchSupply, 10000)
+    return () => clearInterval(interval)
+  }, [])
 
   const { data: mintStats, queryKey: mintStatsKey } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
@@ -94,7 +100,7 @@ export default function MintPage() {
   })
 
   const minterNumMinted = mintStats ? Number(mintStats[0]) : 0
-  const totalSupply = totalSupplyData ? Number(totalSupplyData) : 0
+  const totalSupply = totalSupplyData
   const maxSupply = 4269
 
   const {
@@ -112,7 +118,10 @@ export default function MintPage() {
   useEffect(() => {
     if (isConfirmed) {
       queryClient.invalidateQueries({ queryKey: mintStatsKey })
-      queryClient.invalidateQueries({ queryKey: supplyKey })
+      fetch('/api/mint/supply')
+        .then(r => r.json())
+        .then(d => { if (d.totalSupply) setTotalSupplyData(d.totalSupply) })
+        .catch(() => {})
     }
   }, [isConfirmed, queryClient, mintStatsKey])
 
