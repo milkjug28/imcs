@@ -129,7 +129,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h1 style={{ flex: '1', minWidth: '200px' }}>imaginary magic crypto savants</h1>
-        <div style={{ display: isMobile ? 'none' : 'block' }}>
+        <div style={{ display: isMobile ? 'none' : 'block', position: 'relative', zIndex: 100 }}>
           <ConnectWallet compact={true} />
         </div>
       </header>
