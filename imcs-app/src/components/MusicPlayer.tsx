@@ -7,6 +7,13 @@ const TRACKS = [
   '/assets/audio/DJDave-Airglow(Visualizer).mp3',
   '/assets/audio/NoMana,SUPERDARK-HoldMe.mp3',
   '/assets/audio/crystalsettings.mp3',
+  '/assets/audio/boy2000-phoenix(OfficialMusicVideo).mp3',
+  '/assets/audio/Deko-5x.mp3',
+  "/assets/audio/glaive&kurtains–TheTroubles(OfficialVideo).mp3",
+  "/assets/audio/MaybeIt'sLove....mp3",
+  '/assets/audio/MidasTheJagaban-AhYeah(OfficialVideo).mp3',
+  '/assets/audio/Nettspend-beabadoobee[Prod.ok].mp3',
+  '/assets/audio/Twirlanta(SlowedDownVersion).mp3',
 ]
 
 export default function MusicPlayer() {
@@ -16,10 +23,18 @@ export default function MusicPlayer() {
   const [isClient, setIsClient] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
 
-  // Randomize track on client mount only (avoids hydration mismatch)
+  const [shuffledOrder, setShuffledOrder] = useState<number[]>([])
+  const [orderIndex, setOrderIndex] = useState(0)
+
   useEffect(() => {
     setIsClient(true)
-    setCurrentTrackIndex(Math.floor(Math.random() * TRACKS.length))
+    const indices = Array.from({ length: TRACKS.length }, (_, i) => i)
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]]
+    }
+    setShuffledOrder(indices)
+    setCurrentTrackIndex(indices[0])
   }, [])
 
   useEffect(() => {
@@ -54,9 +69,9 @@ export default function MusicPlayer() {
   }, [isClient])
 
   const handleTrackEnd = () => {
-    // Move to next track
-    const nextIndex = (currentTrackIndex + 1) % TRACKS.length
-    setCurrentTrackIndex(nextIndex)
+    const nextOrderIndex = (orderIndex + 1) % shuffledOrder.length
+    setOrderIndex(nextOrderIndex)
+    setCurrentTrackIndex(shuffledOrder[nextOrderIndex])
   }
 
   // Don't render audio until client-side to avoid hydration mismatch

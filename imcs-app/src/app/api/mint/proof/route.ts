@@ -3,13 +3,6 @@ import { getAddress, isAddress } from 'viem'
 
 const PHASES = [
   {
-    id: 'phase0_dev',
-    name: 'Dev Mint',
-    dropStageIndex: 0,
-    startTime: 1778245200,
-    endTime: 1778471940,
-  },
-  {
     id: 'phase1_gtd',
     name: 'GTD (Guaranteed)',
     dropStageIndex: 1,

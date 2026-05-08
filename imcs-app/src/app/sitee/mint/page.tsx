@@ -43,7 +43,7 @@ const SAVANT_MESSAGES = [
 ]
 
 export default function MintPage() {
-  const { address, isConnected, connect } = useWallet()
+  const { address, isConnected, isReconnecting, connect } = useWallet()
   const chainId = useChainId()
   const { switchChain } = useSwitchChain()
   const queryClient = useQueryClient()
@@ -52,6 +52,7 @@ export default function MintPage() {
   const [error, setError] = useState<string | null>(null)
   const [savantMsg, setSavantMsg] = useState('')
   const [countdown, setCountdown] = useState('')
+  const [initialLoad, setInitialLoad] = useState(true)
 
   useEffect(() => {
     if (!proofData?.startTime || proofData.mintOpen) return
@@ -85,7 +86,7 @@ export default function MintPage() {
 
   const minterNumMinted = mintStats ? Number(mintStats[0]) : 0
   const totalSupply = mintStats ? Number(mintStats[1]) : 0
-  const maxSupply = mintStats ? Number(mintStats[2]) : 0
+  const maxSupply = 4269
 
   const {
     writeContract,
@@ -126,6 +127,17 @@ export default function MintPage() {
       resetMint()
     }
   }, [address, fetchProof, resetMint])
+
+  useEffect(() => {
+    if (isReconnecting) return
+    if (!isConnected) {
+      setInitialLoad(false)
+      return
+    }
+    if (proofData !== null || error) {
+      setInitialLoad(false)
+    }
+  }, [isReconnecting, isConnected, proofData, error])
 
   useEffect(() => {
     if (isMintPending || isConfirming) {
@@ -179,6 +191,56 @@ export default function MintPage() {
     return 'sumthing went wrong. try agen'
   }
 
+  if (initialLoad) {
+    return (
+      <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3)',
+          border: '4px solid #000',
+          borderRadius: '15px',
+          padding: '30px',
+          boxShadow: '8px 8px 0 #000',
+          transform: 'rotate(-1deg)',
+          textAlign: 'center',
+        }}>
+          <h2 style={{
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '2.5em',
+            color: '#000',
+            textShadow: '3px 3px 0 #fff',
+            marginBottom: '20px',
+          }}>
+            MINT UR SAVANT
+          </h2>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '15px',
+            padding: '30px 0',
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '4px solid #000',
+              borderTop: '4px solid transparent',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }} />
+            <div style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '1.2em',
+              color: '#000',
+            }}>
+              loading savant magic...
+            </div>
+          </div>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
+  }
+
   return (
     <div style={{ padding: '20px', maxWidth: '500px', margin: '0 auto' }}>
       <div style={{
@@ -209,7 +271,7 @@ export default function MintPage() {
           fontFamily: 'monospace',
           fontSize: '0.9em',
         }}>
-          <div>{totalSupply} / {maxSupply || '???'} minted</div>
+          <div>{totalSupply} / {maxSupply} minted</div>
           <div style={{
             background: '#333',
             borderRadius: '5px',
@@ -220,7 +282,7 @@ export default function MintPage() {
             <div style={{
               background: 'linear-gradient(90deg, #0f0, #0ff)',
               height: '100%',
-              width: maxSupply ? `${(totalSupply / maxSupply) * 100}%` : '0%',
+              width: `${(totalSupply / maxSupply) * 100}%`,
               transition: 'width 0.5s',
             }} />
           </div>

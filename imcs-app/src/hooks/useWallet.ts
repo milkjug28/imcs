@@ -4,7 +4,7 @@ import { useAccount, useDisconnect } from 'wagmi'
 import { useConnectModal } from '@rainbow-me/rainbowkit'
 
 export function useWallet() {
-  const { address, isConnected, isConnecting } = useAccount()
+  const { address, isConnected, isConnecting, isReconnecting } = useAccount()
   const { disconnect } = useDisconnect()
   const { openConnectModal } = useConnectModal()
 
@@ -23,6 +23,7 @@ export function useWallet() {
     truncatedAddress,
     isConnected: isConnected || !!address,
     isConnecting,
+    isReconnecting,
     connect,
     disconnect,
   }
