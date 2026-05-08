@@ -35,29 +35,28 @@ type ProofData = {
   }
 }
 
-function FaqItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
+function FaqItem({ q, a, isOpen, onClick }: { q: string; a: string; isOpen: boolean; onClick: () => void }) {
   return (
     <div style={{
-      marginBottom: '10px',
+      marginBottom: '8px',
       border: '2px solid #000',
       borderRadius: '10px',
       overflow: 'hidden',
-      boxShadow: '3px 3px 0px #000',
+      boxShadow: '2px 2px 0px #000',
     }}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={onClick}
         style={{
           width: '100%',
-          padding: '14px 18px',
-          background: 'linear-gradient(135deg, #ff69b4, #ff6600)',
+          padding: '10px 14px',
+          background: isOpen ? 'linear-gradient(135deg, #ff69b4, #ff6600)' : 'linear-gradient(135deg, #ff69b4aa, #ff6600aa)',
           border: 'none',
           cursor: 'pointer',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           fontFamily: "'Comic Neue', cursive",
-          fontSize: '1.1em',
+          fontSize: '0.95em',
           fontWeight: 'bold',
           color: '#000',
           textAlign: 'left',
@@ -65,23 +64,67 @@ function FaqItem({ q, a }: { q: string; a: string }) {
       >
         <span>{q}</span>
         <span style={{
-          transform: open ? 'rotate(180deg)' : 'rotate(0)',
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0)',
           transition: 'transform 0.2s',
-          fontSize: '1.2em',
+          fontSize: '1em',
+          marginLeft: '8px',
+          flexShrink: 0,
         }}>&#9660;</span>
       </button>
-      {open && (
+      {isOpen && (
         <div style={{
-          padding: '14px 18px',
+          padding: '10px 14px',
           background: 'rgba(255,255,255,0.9)',
           color: '#000',
-          fontSize: '1em',
-          lineHeight: '1.5',
+          fontSize: '0.9em',
+          lineHeight: '1.4',
           borderTop: '2px solid #000',
         }}>
           {a}
         </div>
       )}
+    </div>
+  )
+}
+
+const FAQS = [
+  { q: 'wutt iz savaantt??', a: 'imaginate it, dork. wee r majik. if u hav 2 ask u prolly dont dezurv 2 noe.' },
+  { q: 'shud i mint savaantt?', a: 'yesssss. mor savaants da bettah. ur wallet iz lonely and sad widout one.' },
+  { q: 'wut iz iq?', a: 'brayne powah ideeott. eech savant haz iq. hiyur iq = mor brayne = mor powah. u prolly hav loe iq tho.' },
+  { q: 'wenn reveehull?', a: 'aftur minttt lyke all kollekshuns lewzer. u want instunt gratuhfikashun? go buy a sandwitch.' },
+  { q: 'iz dis a rug?', a: 'da only rug iz da one undur ur feet wen u slip on ur own stoopidity. we r legit savants hear.' },
+  { q: 'how menny can i mintt?', a: 'dependz on how speshul u r. chek ur elijuhbillitee abuv. if u cant mint, skill issu.' },
+  { q: 'y iz da art not showing?', a: 'reed da previus anser about reveehull u impatient nerd. art cumz wen art iz reddy.' },
+  { q: 'wen moon?', a: 'wen u stop askin wen moon. da moon cumz 2 those hoo r payshunt and also hoo mint.' },
+]
+
+function FaqSection() {
+  const [openIdx, setOpenIdx] = useState<number | null>(null)
+  const left = FAQS.slice(0, 4)
+  const right = FAQS.slice(4)
+  return (
+    <div style={{ maxWidth: '900px', margin: '40px auto 60px', padding: '0 20px' }}>
+      <h2 style={{
+        textAlign: 'center',
+        fontSize: '2em',
+        marginBottom: '20px',
+        color: '#000',
+        textShadow: '2px 2px 0px #ff69b4',
+      }}>
+        frequentlee askd kwestshuns
+      </h2>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+        <div>
+          {left.map((faq, i) => (
+            <FaqItem key={i} q={faq.q} a={faq.a} isOpen={openIdx === i} onClick={() => setOpenIdx(openIdx === i ? null : i)} />
+          ))}
+        </div>
+        <div>
+          {right.map((faq, i) => (
+            <FaqItem key={i + 4} q={faq.q} a={faq.a} isOpen={openIdx === i + 4} onClick={() => setOpenIdx(openIdx === i + 4 ? null : i + 4)} />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -590,34 +633,7 @@ export default function MintPage() {
     </div>
 
     {/* FAQ */}
-    <div style={{
-      maxWidth: '600px',
-      margin: '40px auto 60px',
-      padding: '0 20px',
-    }}>
-      <h2 style={{
-        textAlign: 'center',
-        fontSize: '2em',
-        marginBottom: '30px',
-        color: '#000',
-        textShadow: '2px 2px 0px #ff69b4',
-      }}>
-        frequentlee askd kwestshuns
-      </h2>
-
-      {[
-        { q: 'wutt iz savaantt??', a: 'imaginate it, dork. wee r majik. if u hav 2 ask u prolly dont dezurv 2 noe.' },
-        { q: 'shud i mint savaantt?', a: 'yesssss. mor savaants da bettah. ur wallet iz lonely and sad widout one.' },
-        { q: 'wut iz iq?', a: 'brayne powah ideeott. eech savant haz iq. hiyur iq = mor brayne = mor powah. u prolly hav loe iq tho.' },
-        { q: 'wenn reveehull?', a: 'aftur minttt lyke all kollekshuns lewzer. u want instunt gratuhfikashun? go buy a sandwitch.' },
-        { q: 'iz dis a rug?', a: 'da only rug iz da one undur ur feet wen u slip on ur own stoopidity. we r legit savants hear.' },
-        { q: 'how menny can i mintt?', a: 'dependz on how speshul u r. chek ur elijuhbillitee abuv. if u cant mint, skill issu.' },
-        { q: 'y iz da art not showing?', a: 'reed da previus anser about reveehull u impatient nerd. art cumz wen art iz reddy.' },
-        { q: 'wen moon?', a: 'wen u stop askin wen moon. da moon cumz 2 those hoo r payshunt and also hoo mint.' },
-      ].map((faq, i) => (
-        <FaqItem key={i} q={faq.q} a={faq.a} />
-      ))}
-    </div>
+    <FaqSection />
   </>
   )
 }

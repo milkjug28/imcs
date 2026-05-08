@@ -129,8 +129,22 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       {/* Header */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <h1 style={{ flex: '1', minWidth: '200px' }}>imaginary magic crypto savants</h1>
-        <div style={{ display: isMobile ? 'none' : 'block', position: 'relative', zIndex: 100 }}>
-          <ConnectWallet compact={true} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 100 }}>
+          <a href="https://x.com/imcsnft" target="_blank" rel="noopener noreferrer" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '36px', background: '#000', borderRadius: '8px',
+            border: '2px solid #000', boxShadow: '2px 2px 0 #000',
+            textDecoration: 'none', color: '#fff', fontSize: '16px', fontWeight: 'bold',
+          }}>&#120143;</a>
+          <a href="https://opensea.io/collection/imaginary-magic-crypto-savants/overview" target="_blank" rel="noopener noreferrer" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '36px', background: '#2081e2', borderRadius: '8px',
+            border: '2px solid #000', boxShadow: '2px 2px 0 #000',
+            textDecoration: 'none', color: '#fff', fontSize: '14px', fontWeight: 'bold',
+          }}>OS</a>
+          <div style={{ display: isMobile ? 'none' : 'block' }}>
+            <ConnectWallet compact={true} />
+          </div>
         </div>
       </header>
 
