@@ -1,68 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAddress, isAddress } from 'viem'
 
-const MERKLE_DATA: Record<string, {
-  root: string
-  config: { name: string; dropStageIndex: number }
-  proofs: Record<string, {
-    proof: string[]
-    mintParams: {
-      mintPrice: string
-      maxTotalMintableByWallet: string
-      startTime: string
-      endTime: string
-      dropStageIndex: string
-      maxTokenSupplyForStage: string
-      feeBps: string
-      restrictFeeRecipients: boolean
-    }
-  }>
-}> = {
-  phase1_gtd: {
-    root: "0xb7e03fb12d3cb2b841ad1a701667ae6bbe8791f54e29b8683611143b92a17261",
-    config: { name: "GTD (Guaranteed)", dropStageIndex: 1 },
-    proofs: {
-      "0x87a2ECbfA6481dcF91a5e6f1A2dE0B7D4CF5Ba39": {
-        proof: ["0x7e59991cbd9bc7cfd69ab3843c637749c0e46d72ffa336a00c5e9955676e390d"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "1", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      },
-      "0x8978a5536f4388024493E8C62739C697745ac447": {
-        proof: ["0x606a641df08fd6eb40915b837b6d861b7cf9e5405f5a7a7708b38c653f2711aa"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "1", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      }
-    }
+const PHASES = [
+  {
+    id: 'phase0_dev',
+    name: 'Dev Mint',
+    dropStageIndex: 0,
+    startTime: 1778245200,
+    endTime: 1778471940,
   },
-  phase2_community: {
-    root: "0xdb9716ff10e456a1f671ab0434f267d367e1c9ea31795ff89e7a4d9ad3d91d33",
-    config: { name: "Community", dropStageIndex: 2 },
-    proofs: {
-      "0x87a2ECbfA6481dcF91a5e6f1A2dE0B7D4CF5Ba39": {
-        proof: ["0x783f95d340eeaceeea8ed810448dd3fe54526e9fe46b86bec1fcfa20f9134cf9"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "2", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      },
-      "0x8978a5536f4388024493E8C62739C697745ac447": {
-        proof: ["0x17912477d65e58cc43851f22554427b1f8356a393a435f374a128a683cdbe77e"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "2", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      }
-    }
+  {
+    id: 'phase1_gtd',
+    name: 'GTD (Guaranteed)',
+    dropStageIndex: 1,
+    startTime: 1778252400,
+    endTime: 1778471940,
   },
-  phase3_fcfs: {
-    root: "0x8d972d3a9452da398283b7ab9c7c0154acedcc059400d2cec5b903880f2f3af9",
-    config: { name: "FCFS", dropStageIndex: 3 },
-    proofs: {
-      "0x87a2ECbfA6481dcF91a5e6f1A2dE0B7D4CF5Ba39": {
-        proof: ["0x8c87c8ab04eb8cb67655cb9311644105dca0a5f90362806384e7559fc4d34406"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "3", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      },
-      "0x8978a5536f4388024493E8C62739C697745ac447": {
-        proof: ["0xa7461fa721053b3b42a92158a4923dad709b9cb815466fb25edc734cf875d098"],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "1", startTime: "1777948480", endTime: "1780540480", dropStageIndex: "3", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      }
-    }
+  {
+    id: 'phase2_community',
+    name: 'Community',
+    dropStageIndex: 2,
+    startTime: 1778271600,
+    endTime: 1778471940,
+  },
+  {
+    id: 'phase3_fcfs',
+    name: 'FCFS',
+    dropStageIndex: 3,
+    startTime: 1778288400,
+    endTime: 1778471940,
+  },
+]
+
+type ProofEntry = {
+  proof: string[]
+  mintParams: {
+    mintPrice: string
+    maxTotalMintableByWallet: string
+    startTime: string
+    endTime: string
+    dropStageIndex: string
+    maxTokenSupplyForStage: string
+    feeBps: string
+    restrictFeeRecipients: boolean
   }
 }
 
-const ACTIVE_PHASE = 'phase1_gtd'
+const MERKLE_DATA: Record<string, {
+  root: string
+  config: { name: string; dropStageIndex: number }
+  proofs: Record<string, ProofEntry>
+}> = {
+  phase0_dev: {
+    root: "0xfc7988dc89013643b2e8d23628fc30f753e3e23b80fd14fb281474757834eb12",
+    config: { name: "Dev Mint", dropStageIndex: 0 },
+    proofs: {
+      "0x6878144669e7E558737FEB3820410174CEef04e6": {
+        proof: [],
+        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "128", startTime: "1778245200", endTime: "1778471940", dropStageIndex: "0", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
+      }
+    }
+  },
+}
+
+function getActivePhase(): typeof PHASES[number] | null {
+  const now = Math.floor(Date.now() / 1000)
+  for (let i = PHASES.length - 1; i >= 0; i--) {
+    if (now >= PHASES[i].startTime && now <= PHASES[i].endTime) {
+      return PHASES[i]
+    }
+  }
+  return null
+}
+
+function getNextPhase(): typeof PHASES[number] | null {
+  const now = Math.floor(Date.now() / 1000)
+  for (const phase of PHASES) {
+    if (now < phase.startTime) return phase
+  }
+  return null
+}
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get('address')
@@ -72,24 +89,45 @@ export async function GET(req: NextRequest) {
   }
 
   const checksummed = getAddress(address)
-  const phase = MERKLE_DATA[ACTIVE_PHASE]
+  const activePhase = getActivePhase()
 
-  if (!phase) {
-    return NextResponse.json({ error: 'No active phase' }, { status: 404 })
+  if (!activePhase) {
+    const next = getNextPhase()
+    if (next) {
+      return NextResponse.json({
+        eligible: false,
+        phase: next.name,
+        mintOpen: false,
+        startTime: next.startTime,
+      })
+    }
+    return NextResponse.json({ eligible: false, phase: 'Mint Ended', mintOpen: false })
   }
 
-  const entry = phase.proofs[checksummed]
+  const phaseData = MERKLE_DATA[activePhase.id]
+
+  if (!phaseData) {
+    return NextResponse.json({
+      eligible: false,
+      phase: activePhase.name,
+      mintOpen: true,
+    })
+  }
+
+  const entry = phaseData.proofs[checksummed]
 
   if (!entry) {
     return NextResponse.json({
       eligible: false,
-      phase: phase.config.name,
+      phase: activePhase.name,
+      mintOpen: true,
     })
   }
 
   return NextResponse.json({
     eligible: true,
-    phase: phase.config.name,
+    phase: activePhase.name,
+    mintOpen: true,
     proof: entry.proof,
     mintParams: entry.mintParams,
   })

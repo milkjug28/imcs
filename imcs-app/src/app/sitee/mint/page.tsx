@@ -19,6 +19,8 @@ const PREREVEAL_IMAGE = 'https://maroon-adequate-gazelle-687.mypinata.cloud/ipfs
 type ProofData = {
   eligible: boolean
   phase: string
+  mintOpen?: boolean
+  startTime?: number
   proof?: string[]
   mintParams?: {
     mintPrice: string
@@ -49,6 +51,27 @@ export default function MintPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savantMsg, setSavantMsg] = useState('')
+  const [countdown, setCountdown] = useState('')
+
+  useEffect(() => {
+    if (!proofData?.startTime || proofData.mintOpen) return
+    const tick = () => {
+      const now = Math.floor(Date.now() / 1000)
+      const diff = proofData.startTime! - now
+      if (diff <= 0) {
+        setCountdown('')
+        fetchProof()
+        return
+      }
+      const h = Math.floor(diff / 3600)
+      const m = Math.floor((diff % 3600) / 60)
+      const s = diff % 60
+      setCountdown(`${h}h ${m}m ${s}s`)
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [proofData?.startTime, proofData?.mintOpen])
 
   const wrongChain = chainId !== MINT_CHAIN.id
 
@@ -233,6 +256,34 @@ export default function MintPage() {
           }}>
             switch 2 {MINT_CHAIN.name}
           </button>
+        ) : proofData && !proofData.mintOpen ? (
+          <div style={{
+            color: '#000',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '1.2em',
+            padding: '20px',
+          }}>
+            <div style={{ fontSize: '2em', marginBottom: '10px' }}>⏳</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+              {proofData.phase} opens soon
+            </div>
+            {countdown && (
+              <div style={{
+                background: 'rgba(0,0,0,0.7)',
+                color: '#0ff',
+                fontFamily: 'monospace',
+                fontSize: '1.5em',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                display: 'inline-block',
+              }}>
+                {countdown}
+              </div>
+            )}
+            <div style={{ fontSize: '0.8em', marginTop: '12px', color: '#333' }}>
+              patience young savant...
+            </div>
+          </div>
         ) : loading ? (
           <div style={{
             color: '#000',

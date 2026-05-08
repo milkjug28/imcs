@@ -1,9 +1,9 @@
-import { base } from 'wagmi/chains'
+import { mainnet } from 'wagmi/chains'
 
-export const SAVANT_TOKEN_ADDRESS = '0x3F5A780E03a9403a58521Fb04ecbc021ceCa53Ec' as const
+export const SAVANT_TOKEN_ADDRESS = '0x95fa6fc553F5bE3160b191b0133236367A835C63' as const
 export const SEADROP_ADDRESS = '0x00005EA00Ac477B1030CE78506496e8C2dE24bf5' as const
-export const FEE_RECIPIENT = '0x87a2ECbfA6481dcF91a5e6f1A2dE0B7D4CF5Ba39' as const
-export const MINT_CHAIN = base
+export const FEE_RECIPIENT = '0x6878144669e7E558737FEB3820410174CEef04e6' as const
+export const MINT_CHAIN = mainnet
 
 export const SEADROP_ABI = [
   {
