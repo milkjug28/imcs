@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createPublicClient, http, getAddress, type Chain, type Hex } from 'viem'
-import { mainnet, base, berachain } from 'viem/chains'
+import { mainnet, base, berachain, abstract } from 'viem/chains'
 import { verifyMessage } from 'viem'
 import { getCollectionBySlug, getContracts } from '@/lib/collections'
 
@@ -20,12 +20,14 @@ const RPC_URLS: Record<number, string> = {
   1: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
   8453: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`,
   80094: 'https://rpc.berachain.com',
+  2741: 'https://api.abs.xyz',
 }
 
 const CHAINS_BY_ID: Record<number, Chain> = {
   1: mainnet,
   8453: base,
   80094: berachain,
+  2741: abstract,
 }
 
 const ERC721_BALANCE_OF_ABI = [
