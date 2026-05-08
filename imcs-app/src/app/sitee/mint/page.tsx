@@ -503,7 +503,7 @@ export default function MintPage() {
             padding: '20px',
           }}>
             <div style={{ fontSize: '2em', marginBottom: '10px' }}>🚫</div>
-            u not on da {proofData.phase.replace('GTD (Guaranteed)', 'gtd').replace('Community', 'kummuntity').replace('FCFS', 'fcfs')} list, dork
+            u not on da {proofData.phase.replace('GTD (Guaranteed)', 'gtd').replace('Community', 'kommuntity').replace('FCFS', 'fcfs')} list, dork
             <div style={{
               fontSize: '0.8em',
               marginTop: '10px',
