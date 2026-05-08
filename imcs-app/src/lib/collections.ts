@@ -157,6 +157,15 @@ export const COLLECTIONS: CollectionConfig[] = [
     contractAddresses: ['0x3a5051566b2241285BE871f650C445A88A970edd'],
     chainId: 1,
     cap: 25,
+    closed: true,
+  },
+  {
+    slug: 'mega-honey-badgers',
+    name: 'Mega Honey Badgers',
+    displayName: 'mega honey badgerz',
+    contractAddresses: ['0x9aeA7d84fc8d359F09493B75C68E6F2880c3dD7B'],
+    chainId: 1,
+    cap: 20,
   },
   {
     slug: 'ok-degen',

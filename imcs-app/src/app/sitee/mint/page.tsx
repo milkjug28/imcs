@@ -21,6 +21,7 @@ type ProofData = {
   phase: string
   mintOpen?: boolean
   startTime?: number
+  eligiblePhases?: string[]
   proof?: string[]
   mintParams?: {
     mintPrice: string
@@ -503,8 +504,21 @@ export default function MintPage() {
           </div>
         ) : null}
 
+        {proofData?.eligiblePhases && proofData.eligiblePhases.length > 0 && (
+          <div style={{
+            marginTop: '15px',
+            color: '#000',
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '0.9em',
+          }}>
+            elijuhbull: {proofData.eligiblePhases.map(p =>
+              p.replace('GTD (Guaranteed)', 'gtd').replace('Community', 'komuntitty').replace('FCFS', 'fcfs')
+            ).join(', ')}
+          </div>
+        )}
+
         <div style={{
-          marginTop: '20px',
+          marginTop: '10px',
           color: '#333',
           fontFamily: 'monospace',
           fontSize: '0.75em',

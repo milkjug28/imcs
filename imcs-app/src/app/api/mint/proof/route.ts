@@ -84,6 +84,14 @@ export async function GET(req: NextRequest) {
   const checksummed = getAddress(address)
   const activePhase = getActivePhase()
 
+  const eligiblePhases: string[] = []
+  for (const phase of PHASES) {
+    const data = MERKLE_DATA[phase.id]
+    if (data?.proofs[checksummed]) {
+      eligiblePhases.push(phase.name)
+    }
+  }
+
   if (!activePhase) {
     const next = getNextPhase()
     if (next) {
@@ -92,9 +100,10 @@ export async function GET(req: NextRequest) {
         phase: next.name,
         mintOpen: false,
         startTime: next.startTime,
+        eligiblePhases,
       })
     }
-    return NextResponse.json({ eligible: false, phase: 'Mint Ended', mintOpen: false })
+    return NextResponse.json({ eligible: false, phase: 'Mint Ended', mintOpen: false, eligiblePhases })
   }
 
   const phaseData = MERKLE_DATA[activePhase.id]
@@ -104,6 +113,7 @@ export async function GET(req: NextRequest) {
       eligible: false,
       phase: activePhase.name,
       mintOpen: true,
+      eligiblePhases,
     })
   }
 
@@ -114,6 +124,7 @@ export async function GET(req: NextRequest) {
       eligible: false,
       phase: activePhase.name,
       mintOpen: true,
+      eligiblePhases,
     })
   }
 
@@ -123,5 +134,6 @@ export async function GET(req: NextRequest) {
     mintOpen: true,
     proof: entry.proof,
     mintParams: entry.mintParams,
+    eligiblePhases,
   })
 }
