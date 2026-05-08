@@ -14,9 +14,10 @@ async function insertBotResponse(bot: BotPersona, recentMessages: { username: st
     const { text, model } = await geminiRotator.call(prompt, bot.systemPrompt)
     console.log(`[chat-bot] ${bot.name} got response from ${model}: "${text.slice(0, 50)}"`)
 
-    const cleaned = text.trim().replace(/^["']|["']$/g, '')
-    if (!cleaned || cleaned.length > 200) {
-      console.log(`[chat-bot] ${bot.name} response rejected (empty or >200 chars)`)
+    let cleaned = text.trim().replace(/^["']|["']$/g, '').replace(/^.*?:\s*/, '')
+    cleaned = cleaned.split('\n')[0].trim()
+    if (!cleaned || cleaned.length > 200 || cleaned.length < 3) {
+      console.log(`[chat-bot] ${bot.name} response rejected (len=${cleaned?.length})`)
       return
     }
 
