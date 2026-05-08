@@ -14,7 +14,7 @@ import {
   SAVANT_TOKEN_ABI,
 } from '@/config/contracts'
 
-const PREREVEAL_IMAGE = 'https://maroon-adequate-gazelle-687.mypinata.cloud/ipfs/bafkreibgxwecphn7w6vyyzoc34xrzfhya7dgdy6g7dfbsztrimo7yhtfle'
+const PREREVEAL_IMAGE = '/assets/imcs.png'
 
 type ProofData = {
   eligible: boolean
