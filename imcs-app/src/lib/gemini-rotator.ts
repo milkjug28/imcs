@@ -55,8 +55,9 @@ class GeminiRotator {
             system_instruction: { parts: [{ text: systemPrompt }] },
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-              maxOutputTokens: 200,
+              maxOutputTokens: 800,
               temperature: 0.9,
+              thinkingConfig: { thinkingBudget: 0 },
             },
           }),
         })
