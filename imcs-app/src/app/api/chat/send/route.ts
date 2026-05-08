@@ -9,22 +9,31 @@ const recentSenders = new Map<string, number>()
 
 async function insertBotResponse(bot: BotPersona, recentMessages: { username: string; message: string }[]) {
   try {
+    console.log(`[chat-bot] ${bot.name} generating response...`)
     const prompt = buildBotPrompt(bot, recentMessages)
-    const { text } = await geminiRotator.call(prompt, bot.systemPrompt)
+    const { text, model } = await geminiRotator.call(prompt, bot.systemPrompt)
+    console.log(`[chat-bot] ${bot.name} got response from ${model}: "${text.slice(0, 50)}"`)
 
     const cleaned = text.trim().replace(/^["']|["']$/g, '')
-    if (!cleaned || cleaned.length > 200) return
+    if (!cleaned || cleaned.length > 200) {
+      console.log(`[chat-bot] ${bot.name} response rejected (empty or >200 chars)`)
+      return
+    }
 
-    await new Promise(r => setTimeout(r, 2000 + Math.random() * 6000))
+    const delay = 2000 + Math.random() * 6000
+    console.log(`[chat-bot] ${bot.name} waiting ${Math.round(delay)}ms before inserting...`)
+    await new Promise(r => setTimeout(r, delay))
 
-    await supabase.from('chat_messages').insert({
+    const { error } = await supabase.from('chat_messages').insert({
       wallet_address: bot.wallet,
       username: bot.name,
       message: cleaned,
       is_bot: true,
     })
+    if (error) console.error(`[chat-bot] ${bot.name} DB insert failed:`, error)
+    else console.log(`[chat-bot] ${bot.name} inserted: "${cleaned}"`)
   } catch (err) {
-    console.error(`Bot ${bot.name} failed:`, err)
+    console.error(`[chat-bot] ${bot.name} FAILED:`, err)
   }
 }
 

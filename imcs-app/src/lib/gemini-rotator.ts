@@ -62,8 +62,11 @@ class GeminiRotator {
         })
 
         if (res.status === 429) {
-          state.burnedUntil = nextMidnightUTC()
-          lastError = new Error(`429 on ${state.bucket.label}`)
+          const body = await res.text()
+          const retryMatch = body.match(/retryDelay.*?(\d+)s/)
+          const retrySec = retryMatch ? parseInt(retryMatch[1]) : 60
+          state.burnedUntil = Date.now() + retrySec * 1000
+          lastError = new Error(`429 on ${state.bucket.label}, retry in ${retrySec}s`)
           continue
         }
 
@@ -108,9 +111,9 @@ class GeminiRotator {
 }
 
 const FREE_MODELS = [
-  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
 ]
 
 const keys = [

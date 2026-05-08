@@ -102,6 +102,13 @@ export default function ChatWidget() {
     if (isOpen) scrollToBottom()
   }, [messages, isOpen])
 
+  useEffect(() => {
+    const tickInterval = setInterval(() => {
+      fetch('/api/chat/tick').catch(() => {})
+    }, 120000 + Math.random() * 60000)
+    return () => clearInterval(tickInterval)
+  }, [])
+
   const sendMessage = async () => {
     if (!input.trim() || !address || sending) return
     setSending(true)
@@ -150,14 +157,22 @@ export default function ChatWidget() {
   const isOwnMessage = (msg: ChatMessage) =>
     address && msg.wallet_address.toLowerCase() === address.toLowerCase()
 
+  const scrollbarCSS = `
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    .chat-messages::-webkit-scrollbar-thumb:hover { background: #555; }
+  `
+
   return (
     <>
+      <style>{scrollbarCSS}</style>
       {/* Floating toggle button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'fixed',
-          bottom: '20px',
+          bottom: '60px',
           right: '20px',
           width: '56px',
           height: '56px',
@@ -203,7 +218,7 @@ export default function ChatWidget() {
       {isOpen && (
         <div style={{
           position: 'fixed',
-          bottom: '86px',
+          bottom: '126px',
           right: '20px',
           width: '360px',
           maxWidth: 'calc(100vw - 40px)',
@@ -296,7 +311,7 @@ export default function ChatWidget() {
           )}
 
           {/* Messages */}
-          <div style={{
+          <div className="chat-messages" style={{
             flex: 1,
             overflowY: 'auto',
             padding: '10px',
