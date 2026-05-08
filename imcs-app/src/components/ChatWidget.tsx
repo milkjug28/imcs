@@ -12,19 +12,6 @@ type ChatMessage = {
   created_at: string
 }
 
-const BOT_WALLETS = new Set([
-  '0xB07000000000000000000000000000000000000001',
-  '0xB07000000000000000000000000000000000000002',
-  '0xB07000000000000000000000000000000000000003',
-  '0xB07000000000000000000000000000000000000004',
-])
-
-const STYLE_COLORS: Record<string, string> = {
-  CryptoGoblin: '#00ff88',
-  sAvAnTqUeEn: '#ff69b4',
-  wagmi_wizard: '#9b59b6',
-  ape_brain_420: '#ff6600',
-}
 
 export default function ChatWidget() {
   const { address, isConnected } = useAccount()
@@ -326,10 +313,7 @@ export default function ChatWidget() {
             )}
             {messages.map(msg => {
               const own = isOwnMessage(msg)
-              const isBot = BOT_WALLETS.has(msg.wallet_address)
-              const nameColor = isBot
-                ? (STYLE_COLORS[msg.username] || '#ff69b4')
-                : own ? '#ffff00' : '#88ccff'
+              const nameColor = own ? '#ffff00' : '#88ccff'
 
               return (
                 <div key={msg.id} style={{
@@ -349,8 +333,8 @@ export default function ChatWidget() {
                     <span style={{ color: '#555', fontWeight: 'normal' }}>{formatTime(msg.created_at)}</span>
                   </div>
                   <div style={{
-                    background: own ? '#2a1a4e' : isBot ? '#1e2a1e' : '#16213e',
-                    border: `1px solid ${own ? '#9b59b6' : isBot ? '#2ecc71' : '#333'}`,
+                    background: own ? '#2a1a4e' : '#16213e',
+                    border: `1px solid ${own ? '#9b59b6' : '#333'}`,
                     borderRadius: '8px',
                     padding: '6px 10px',
                     color: '#e0e0e0',
