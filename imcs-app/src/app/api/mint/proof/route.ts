@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAddress, isAddress } from 'viem'
+import merkleData from './merkle-data.json'
 
 const PHASES = [
   {
@@ -39,22 +40,13 @@ type ProofEntry = {
   }
 }
 
-const MERKLE_DATA: Record<string, {
+type MerklePhase = {
   root: string
   config: { name: string; dropStageIndex: number }
   proofs: Record<string, ProofEntry>
-}> = {
-  phase0_dev: {
-    root: "0xfc7988dc89013643b2e8d23628fc30f753e3e23b80fd14fb281474757834eb12",
-    config: { name: "Dev Mint", dropStageIndex: 0 },
-    proofs: {
-      "0x6878144669e7E558737FEB3820410174CEef04e6": {
-        proof: [],
-        mintParams: { mintPrice: "0", maxTotalMintableByWallet: "128", startTime: "1778245200", endTime: "1778471940", dropStageIndex: "0", maxTokenSupplyForStage: "3000", feeBps: "0", restrictFeeRecipients: true }
-      }
-    }
-  },
 }
+
+const MERKLE_DATA = merkleData as Record<string, MerklePhase>
 
 function getActivePhase(): typeof PHASES[number] | null {
   const now = Math.floor(Date.now() / 1000)
