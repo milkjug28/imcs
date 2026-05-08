@@ -15,7 +15,9 @@
   "description": "",
   "dependencies": {
     "@openzeppelin/merkle-tree": "^1.0.8",
+    "@supabase/supabase-js": "^2.105.3",
     "csv-parse": "^6.2.1",
-    "ethers": "^6.16.0"
+    "ethers": "^6.16.0",
+    "ws": "^8.20.0"
   }
 }
