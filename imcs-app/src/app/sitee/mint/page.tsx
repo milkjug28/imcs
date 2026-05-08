@@ -77,6 +77,13 @@ export default function MintPage() {
 
   const wrongChain = chainId !== MINT_CHAIN.id
 
+  const { data: totalSupplyData, queryKey: supplyKey } = useReadContract({
+    address: SAVANT_TOKEN_ADDRESS,
+    abi: SAVANT_TOKEN_ABI,
+    functionName: 'totalSupply',
+    query: { refetchInterval: 10000 },
+  })
+
   const { data: mintStats, queryKey: mintStatsKey } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
     abi: SAVANT_TOKEN_ABI,
@@ -86,7 +93,7 @@ export default function MintPage() {
   })
 
   const minterNumMinted = mintStats ? Number(mintStats[0]) : 0
-  const totalSupply = mintStats ? Number(mintStats[1]) : 0
+  const totalSupply = totalSupplyData ? Number(totalSupplyData) : 0
   const maxSupply = 4269
 
   const {
@@ -104,6 +111,7 @@ export default function MintPage() {
   useEffect(() => {
     if (isConfirmed) {
       queryClient.invalidateQueries({ queryKey: mintStatsKey })
+      queryClient.invalidateQueries({ queryKey: supplyKey })
     }
   }, [isConfirmed, queryClient, mintStatsKey])
 
