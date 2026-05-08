@@ -72,11 +72,11 @@ async function fetchWallets(column) {
     if (data.length < limit) break;
     offset += limit;
   }
-  // Deduplicate and checksum
-  const unique = [...new Set(all)];
-  return unique
+  // Checksum first, then deduplicate (DB has lowercase + checksummed dupes)
+  const checksummed = all
     .filter((a) => ethers.isAddress(a))
     .map((a) => ethers.getAddress(a));
+  return [...new Set(checksummed)];
 }
 
 async function main() {
