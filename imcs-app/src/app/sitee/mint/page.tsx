@@ -81,6 +81,7 @@ export default function MintPage() {
     address: SAVANT_TOKEN_ADDRESS,
     abi: SAVANT_TOKEN_ABI,
     functionName: 'totalSupply',
+    chainId: MINT_CHAIN.id,
     query: { refetchInterval: 10000 },
   })
 
