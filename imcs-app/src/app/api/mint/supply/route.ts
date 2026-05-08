@@ -5,7 +5,7 @@ import { SAVANT_TOKEN_ADDRESS } from '@/config/contracts'
 export async function GET() {
   try {
     const res = await fetch(
-      `https://api.etherscan.io/api?module=stats&action=tokensupply&contractaddress=${SAVANT_TOKEN_ADDRESS}&apikey=${process.env.ETHERSCAN_API_KEY}`
+      `https://api.etherscan.io/v2/api?chainid=1&module=stats&action=tokensupply&contractaddress=${SAVANT_TOKEN_ADDRESS}&apikey=${process.env.ETHERSCAN_API_KEY}`
     )
     const data = await res.json()
 
