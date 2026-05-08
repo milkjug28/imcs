@@ -54,6 +54,7 @@ function buildSignMessage(collection: string, mintWallet: string, timestamp: num
 }
 
 export async function POST(request: NextRequest) {
+  return NextResponse.json({ error: 'Community claims are closed' }, { status: 403 })
   try {
     const body = await request.json()
     const { holderWallet, mintWallet, collectionSlug, signature, timestamp } = body
