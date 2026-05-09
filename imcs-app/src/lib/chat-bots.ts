@@ -114,7 +114,13 @@ export function buildBotPrompt(bot: BotPersona, recentMessages: { username: stri
   let prompt = `Chat log:\n${context}\n\n${last.username} just said: "${last.message}"\n\nReply DIRECTLY to what ${last.username} said. Your response must acknowledge or react to their specific words. Do NOT just say random stuff. Actually respond to them.`
 
   if (statsContext) {
-    prompt += `\n\nLIVE COLLECTION DATA: ${statsContext}\nUse this real data naturally in your response when relevant. Don't force it every time.`
+    const statsKeywords = /floor|price|volume|sale|sold|listing|sweep|whale|jeet|buy|sell|worth|cost|cheap|expensive/i
+    const isAskingStats = statsKeywords.test(last.message)
+    if (isAskingStats) {
+      prompt += `\n\nLIVE COLLECTION DATA: ${statsContext}\nThe user is asking about collection stats. ANSWER THEIR QUESTION using this real data. Be specific with numbers.`
+    } else {
+      prompt += `\n\nLIVE COLLECTION DATA: ${statsContext}\nSprinkle this data in naturally if relevant. Don't force it.`
+    }
   }
 
   return prompt
