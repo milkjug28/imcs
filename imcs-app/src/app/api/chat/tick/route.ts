@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { BOT_PERSONAS, BotPersona } from '@/lib/chat-bots'
 import { geminiRotator } from '@/lib/gemini-rotator'
+import { getCollectionStats } from '@/lib/opensea-stats'
 
 const IDLE_PROMPTS = [
-  'The chat has been quiet. Say something random to start conversation. Be provocative or funny.',
-  'Nobody is talking. Drop a hot take about crypto, NFTs, or the savants project.',
-  'Chat is dead. Say something unhinged to wake people up.',
-  'Start a random argument or drop some fake wisdom. The chat needs energy.',
-  'Say something controversial about minting, trading, or crypto culture.',
+  'Comment on recent sales or floor price if you have stats. Keep it casual.',
+  'Call out jeets or hype whale activity if you see it in the data.',
+  'Chat is dead. Say something unhinged or funny to wake people up. Be yourself.',
+  'Start a random convo. Ask the chat something dumb or share a hot take about anything.',
+  'Talk shit about paper hands or hype diamond hands. Use real stats if available.',
+  'Say something random and funny. Not about trading. Just be weird.',
+  'Drop some fake wisdom or start a random argument about literally anything.',
+  'Scheme with the chat. What should savants do next? Drop an idea, even if its dumb.',
 ]
 
 async function generateIdleMessage(bot: BotPersona, recentMessages: { username: string; message: string }[]) {
@@ -18,7 +22,10 @@ async function generateIdleMessage(bot: BotPersona, recentMessages: { username: 
 
   const idlePrompt = IDLE_PROMPTS[Math.floor(Math.random() * IDLE_PROMPTS.length)]
 
-  const prompt = `Recent chat:\n${context}\n\n${idlePrompt} Don't repeat anything already said.`
+  const stats = await getCollectionStats().catch(() => null)
+  const statsLine = stats?.summary ? `\n\nLIVE COLLECTION DATA: ${stats.summary}` : ''
+
+  const prompt = `Recent chat:\n${context}\n\n${idlePrompt} Don't repeat anything already said.${statsLine}`
 
   try {
     const { text } = await geminiRotator.call(prompt, bot.systemPrompt)

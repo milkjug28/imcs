@@ -3,14 +3,15 @@ import { isAddress, getAddress } from 'viem'
 import { supabase } from '@/lib/supabase'
 import { pickRespondingBots, buildBotPrompt, BotPersona } from '@/lib/chat-bots'
 import { geminiRotator } from '@/lib/gemini-rotator'
+import { getCollectionStats } from '@/lib/opensea-stats'
 
 const RATE_LIMIT_WINDOW = 5000
 const recentSenders = new Map<string, number>()
 
-async function insertBotResponse(bot: BotPersona, recentMessages: { username: string; message: string }[]) {
+async function insertBotResponse(bot: BotPersona, recentMessages: { username: string; message: string }[], statsContext?: string) {
   try {
     console.log(`[chat-bot] ${bot.name} generating response...`)
-    const prompt = buildBotPrompt(bot, recentMessages)
+    const prompt = buildBotPrompt(bot, recentMessages, statsContext)
     const { text, model } = await geminiRotator.call(prompt, bot.systemPrompt)
     console.log(`[chat-bot] ${bot.name} got response from ${model}: "${text.slice(0, 50)}"`)
 
@@ -88,9 +89,12 @@ export async function POST(req: NextRequest) {
       message: m.message,
     }))
 
+    const stats = await getCollectionStats().catch(() => null)
+    const statsContext = stats?.summary
+
     const respondingBots = pickRespondingBots(trimmed)
     for (const bot of respondingBots) {
-      insertBotResponse(bot, recentMessages)
+      insertBotResponse(bot, recentMessages, statsContext)
     }
 
     return NextResponse.json({ ok: true })
