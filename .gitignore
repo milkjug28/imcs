@@ -3,5 +3,5 @@
 .env.*.local
 .DS_Store
 *.csv
-metadata/
-imcs-deployment/
+/metadata/
+/imcs-deployment/
