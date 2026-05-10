@@ -1,0 +1,44 @@
+{
+  "name": "#1269",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/1269.png",
+  "edition": 1269,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "meh trix"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "detygutme"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "shades"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "yarn guy"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "lamboh-derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 6,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "13-1-19-2-3-6-5-37-5-2-0"
+}

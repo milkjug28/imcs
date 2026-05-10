@@ -1,0 +1,48 @@
+{
+  "name": "#461",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/461.png",
+  "edition": 461,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "duh briks"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "blackbeeetur"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "kevv"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "oh"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "spechul het"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "wahlit lyte"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "8-2-4-2-7-7-3-30-13-2-0"
+}

@@ -1,0 +1,40 @@
+{
+  "name": "#3418",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/3418.png",
+  "edition": 3418,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "duh briks"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "entence"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "oh"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "frizzeh derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "8-2-19-2-4-7-3-10-8-2-0"
+}

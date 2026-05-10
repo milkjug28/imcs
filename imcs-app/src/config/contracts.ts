@@ -87,4 +87,11 @@ export const SAVANT_TOKEN_ABI = [
       { name: 'maxSupply', type: 'uint256' },
     ],
   },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
 ] as const

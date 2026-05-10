@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useAccount } from 'wagmi'
+import { useReadContract } from 'wagmi'
+import { useWallet } from '@/hooks/useWallet'
+import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 
 type ChatMessage = {
   id: string
@@ -14,7 +16,17 @@ type ChatMessage = {
 
 
 export default function ChatWidget() {
-  const { address, isConnected } = useAccount()
+  const { address, isConnected } = useWallet()
+  const { data: balanceRaw, isLoading: balanceLoading } = useReadContract({
+    address: SAVANT_TOKEN_ADDRESS,
+    abi: SAVANT_TOKEN_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: MINT_CHAIN.id,
+    query: { enabled: !!address },
+  })
+  const isHolder = balanceRaw !== undefined && Number(balanceRaw) > 0
+  const holderCheckDone = !balanceLoading
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -100,7 +112,7 @@ export default function ChatWidget() {
     if (!input.trim() || !address || sending) return
     setSending(true)
     try {
-      await fetch('/api/chat/send', {
+      const res = await fetch('/api/chat/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,6 +121,7 @@ export default function ChatWidget() {
           username,
         }),
       })
+      if (res.status === 403) return
       setInput('')
       await fetchMessages()
     } catch {}
@@ -159,7 +172,7 @@ export default function ChatWidget() {
         onClick={() => setIsOpen(!isOpen)}
         style={{
           position: 'fixed',
-          bottom: '60px',
+          bottom: '20px',
           right: '20px',
           width: '56px',
           height: '56px',
@@ -364,6 +377,25 @@ export default function ChatWidget() {
                 padding: '8px',
               }}>
                 connect wallet 2 chat, nerd
+              </div>
+            ) : !holderCheckDone ? (
+              <div style={{
+                color: '#888',
+                textAlign: 'center',
+                fontSize: '13px',
+                padding: '8px',
+              }}>
+                chekin ur bags...
+              </div>
+            ) : !isHolder ? (
+              <div style={{
+                color: '#ff69b4',
+                textAlign: 'center',
+                fontSize: '13px',
+                padding: '8px',
+              }}>
+                holdurs only, dork. get a savant on{' '}
+                <a href="https://opensea.io/collection/imaginary-magic-crypto-savants/overview" target="_blank" rel="noopener noreferrer" style={{ color: '#ff69b4', textDecoration: 'underline' }}>opensee</a>
               </div>
             ) : (
               <div style={{ display: 'flex', gap: '6px' }}>

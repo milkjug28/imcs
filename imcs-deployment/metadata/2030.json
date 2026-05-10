@@ -1,0 +1,48 @@
+{
+  "name": "#2030",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2030.png",
+  "edition": 2030,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "sabant"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "flat erff"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "meeh"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "dad burd"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "lamboh-lite"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "21-2-13-2-6-5-3-5-6-2-0"
+}

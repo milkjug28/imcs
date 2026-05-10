@@ -1,0 +1,19 @@
+{
+  "name": "#2902",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2902.png",
+  "edition": 2902,
+  "attributes": [
+    {
+      "trait_type": "1 of 1",
+      "value": "majik gundahm"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 111,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "0-0-0-0-0-0-0-0-0-0-0"
+}

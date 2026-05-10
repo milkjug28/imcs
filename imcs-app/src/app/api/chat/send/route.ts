@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { isAddress, getAddress } from 'viem'
+import { isAddress, getAddress, createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
 import { supabase } from '@/lib/supabase'
 import { pickRespondingBots, buildBotPrompt, BotPersona } from '@/lib/chat-bots'
 import { geminiRotator } from '@/lib/gemini-rotator'
 import { getCollectionStats } from '@/lib/opensea-stats'
+
+const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63' as const
+const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
+
+const ERC721_BALANCE_ABI = [{
+  inputs: [{ name: 'owner', type: 'address' }],
+  name: 'balanceOf',
+  outputs: [{ name: '', type: 'uint256' }],
+  stateMutability: 'view',
+  type: 'function',
+}] as const
+
+const ethClient = createPublicClient({
+  chain: mainnet,
+  transport: http(`https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY}`, { timeout: 10_000 }),
+})
 
 const RATE_LIMIT_WINDOW = 5000
 const recentSenders = new Map<string, number>()
@@ -63,6 +80,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Slow down' }, { status: 429 })
     }
     recentSenders.set(checksummed, now)
+
+    const balance = await ethClient.readContract({
+      address: SAVANT_TOKEN,
+      abi: ERC721_BALANCE_ABI,
+      functionName: 'balanceOf',
+      args: [checksummed],
+    })
+    if (balance === BigInt(0)) {
+      return NextResponse.json({ error: 'holder-only' }, { status: 403 })
+    }
 
     const displayName = username?.trim().slice(0, 20) || `${checksummed.slice(0, 6)}...${checksummed.slice(-4)}`
 

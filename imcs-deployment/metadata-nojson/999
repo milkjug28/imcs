@@ -1,0 +1,52 @@
+{
+  "name": "#999",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/999.png",
+  "edition": 999,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "muthamatics"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "peekah-chew"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "drool"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "shades"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "neenjah"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "pamp it"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 8,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "15-2-23-2-6-2-5-22-8-4-0"
+}

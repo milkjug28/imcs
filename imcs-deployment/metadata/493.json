@@ -1,0 +1,48 @@
+{
+  "name": "#493",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/493.png",
+  "edition": 493,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "sabant"
+    },
+    {
+      "trait_type": "bods",
+      "value": "vaynes"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "fav shert"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "sooper blucks"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "uhn-empresst"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "braycez"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "spinnor"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "21-7-11-3-13-1-3-31-8-2-0"
+}

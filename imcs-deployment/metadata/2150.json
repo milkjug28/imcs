@@ -1,0 +1,48 @@
+{
+  "name": "#2150",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2150.png",
+  "edition": 2150,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "blu"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "supa clean shurt"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "kunfushus"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "drool"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "frizzeh wyte"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "wahlit derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "1-1-28-2-9-2-3-11-12-2-0"
+}

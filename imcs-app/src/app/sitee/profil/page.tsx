@@ -2,355 +2,469 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '@/hooks/useWallet'
+import { useReadContract } from 'wagmi'
+import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 import ConnectWallet from '@/components/ConnectWallet'
+import { motion, AnimatePresence } from 'framer-motion'
 
-type ProfileData = {
-  wallet_address: string
+type Token = {
+  tokenId: string
   name: string
-  info: string
-  submission_score: number
-  submitted_at: string
-  referrer_code?: string
-  voting_karma: number
-  whitelist_status: string
-  whitelist_method?: string
-  referrals_made: number
-  rank?: number
-  task_points?: number
-  total_points?: number
+  image: string
+  iq: number
+  traits: { type: string; value: string }[]
 }
 
-type TaskCompletion = {
-  task_type: string
-  score: number
-  completion_count?: number
-  completed_at: string
+type HolderData = {
+  wallet: string
+  balance: number
+  tokens: Token[]
+}
+
+type ProfileData = {
+  total_points: number
+  rank: number | null
+  name: string
 }
 
 export default function ProfilePage() {
   const { address, isConnected, truncatedAddress } = useWallet()
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [completedTasks, setCompletedTasks] = useState<TaskCompletion[]>([])
+  const [holderData, setHolderData] = useState<HolderData | null>(null)
+  const [legacyProfile, setLegacyProfile] = useState<ProfileData | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [usernameInput, setUsernameInput] = useState('')
+  const [editingName, setEditingName] = useState(false)
+  const [savingName, setSavingName] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [rank, setRank] = useState<number | null>(null)
+  const [selectedToken, setSelectedToken] = useState<Token | null>(null)
 
-  const fetchAllData = useCallback(async () => {
-    if (!address) {
-      setLoading(false)
-      return
-    }
+  const { data: balanceRaw } = useReadContract({
+    address: SAVANT_TOKEN_ADDRESS,
+    abi: SAVANT_TOKEN_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: MINT_CHAIN.id,
+    query: { enabled: !!address },
+  })
 
+  const fetchData = useCallback(async () => {
+    if (!address) { setLoading(false); return }
     setLoading(true)
 
-    try {
-      // Fetch profile and tasks in parallel
-      const [profileRes, tasksRes] = await Promise.all([
-        fetch(`/api/profile/${address}`),
-        fetch(`/api/tasks/${address}`)
-      ])
+    const [holderRes, profileRes, usernameRes] = await Promise.all([
+      fetch(`/api/holder?wallet=${address}`).catch(() => null),
+      fetch(`/api/profile/${address}`).catch(() => null),
+      fetch(`/api/chat/username?wallet=${address}`).catch(() => null),
+    ])
 
-      // Process profile - this now includes correct total_points from API
-      if (profileRes.ok) {
-        const profileData = await profileRes.json()
-        setProfile(profileData)
-        setRank(profileData.rank || null)
-        setError(null)
-      } else {
-        setError('ur wallet not savant yet. submit form first, nerd')
-        setProfile(null)
-      }
+    if (holderRes?.ok) {
+      const data = await holderRes.json()
+      setHolderData(data)
+    }
 
-      // Process tasks
-      if (tasksRes.ok) {
-        const tasksData = await tasksRes.json()
-        setCompletedTasks(tasksData.tasks || [])
-      }
-    } catch (e) {
-      console.error('Failed to fetch profile data:', e)
-      setError('error loading profile')
+    if (profileRes?.ok) {
+      const data = await profileRes.json()
+      setLegacyProfile(data)
+    }
+
+    if (usernameRes?.ok) {
+      const data = await usernameRes.json()
+      setUsername(data.username || null)
     }
 
     setLoading(false)
   }, [address])
 
-  // Fetch on mount and when address changes
   useEffect(() => {
-    if (isConnected && address) {
-      fetchAllData()
-    } else {
-      setLoading(false)
-    }
-  }, [isConnected, address, fetchAllData])
+    if (isConnected && address) fetchData()
+    else setLoading(false)
+  }, [isConnected, address, fetchData])
 
-
-  // Total points comes directly from the API - it calculates correctly
-  const totalPoints = profile?.total_points || 0
-
-  const referralCode = address ? address.slice(2, 10).toUpperCase() : ''
-
-  const handleShare = () => {
-    const shareText = `im a savant with ${totalPoints} points! can u beat me? 🧙‍♂️✨ imcs.world #IMCS`
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
-    window.open(shareUrl, '_blank')
+  const saveUsername = async () => {
+    if (!usernameInput.trim() || !address) return
+    setSavingName(true)
+    try {
+      const res = await fetch('/api/chat/username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: address, username: usernameInput.trim() }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setUsername(data.username)
+        setEditingName(false)
+        setUsernameInput('')
+      } else {
+        alert(data.error || 'name taken or invalid')
+      }
+    } catch {}
+    setSavingName(false)
   }
 
-  const copyReferralCode = () => {
-    // Link to homepage with ref param - it will be stored and used on submit
-    navigator.clipboard.writeText(`https://imcs.world?ref=${referralCode}`)
-    alert('copied 2 clipboard!')
-  }
+  const balance = balanceRaw !== undefined ? Number(balanceRaw) : (holderData?.balance ?? null)
+  const isHolder = balance !== null && balance > 0
+  const totalIQ = holderData?.tokens.reduce((sum, t) => sum + t.iq, 0) || 0
 
-  // Not connected state
   if (!isConnected) {
     return (
-      <div className="page active">
-        <div className="form-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <h2 className="form-title">my savant profil</h2>
-          <p style={{ fontSize: '24px', marginBottom: '30px' }}>
+      <div className="page active" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #ff6b9d, #ffd700)',
+          border: '4px solid #000',
+          borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+          boxShadow: '8px 8px 0 #000',
+          padding: '40px 30px',
+          textAlign: 'center',
+          maxWidth: '400px',
+          transform: 'rotate(-1deg)',
+        }}>
+          <h2 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '28px', color: '#000', textShadow: '2px 2px 0 #fff', marginBottom: '16px' }}>
+            my savant profil
+          </h2>
+          <p style={{ fontFamily: "'Comic Neue', cursive", fontSize: '18px', marginBottom: '24px', color: '#000' }}>
             connect ur wallut 2 c ur stats
           </p>
-          <ConnectWallet label="connect wallut" />
+          <ConnectWallet label="connekt wallut" />
         </div>
       </div>
     )
   }
 
-  // Loading state
   if (loading) {
     return (
-      <div className="page active">
-        <div className="form-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div className="loading-spinner" style={{ marginBottom: '20px' }} />
-          <h2 className="form-title">loading...</h2>
+      <div className="page active" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center', fontFamily: "'Comic Neue', cursive" }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
+            {['#ff69b4', '#00bfff', '#ffd700'].map((color, i) => (
+              <motion.div
+                key={i}
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.2 }}
+                style={{ width: '14px', height: '14px', borderRadius: '50%', background: color, border: '2px solid #000' }}
+              />
+            ))}
+          </div>
+          <span style={{ fontSize: '18px', fontWeight: 'bold' }}>loading ur profil...</span>
         </div>
       </div>
     )
   }
-
-  // Error state - not on list
-  if (error || !profile) {
-    return (
-      <div className="page active">
-        <div className="form-container" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <h2 className="form-title">u dont exist yet</h2>
-          <p style={{ fontSize: '20px', marginBottom: '20px' }}>
-            {truncatedAddress}
-          </p>
-          <p style={{ fontSize: '24px', marginBottom: '30px' }}>
-            ur wallet not savant yet, dummie
-          </p>
-          <button
-            onClick={() => window.location.href = '/sitee/tasks'}
-            className="submit-btn"
-          >
-            proove im savant
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const isWhitelisted = profile.whitelist_status === 'approved'
 
   return (
     <div className="page active">
-      {/* Profile card */}
-      <div
-        className={`profile-card ${isWhitelisted ? 'whitelisted' : ''}`}
-        style={{
-          maxWidth: '700px',
-          margin: '30px auto',
-          padding: '30px',
-        }}
-      >
-        <h2 className="form-title" style={{ marginBottom: '10px' }}>
-          {profile.name}
-        </h2>
-        <p style={{
-          fontSize: '16px',
-          color: '#000',
-          marginBottom: '20px',
-          fontFamily: 'monospace',
-        }}>
-          {truncatedAddress}
-        </p>
+      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 16px' }}>
 
-        {/* Total points */}
-        <div className="profile-score">
-          {totalPoints}
-        </div>
-        <p style={{ fontSize: '20px', marginBottom: '20px' }}>
-          total points
-        </p>
-
-        {/* Rank */}
-        {rank && (
-          <p style={{
-            fontSize: '24px',
-            color: '#fff',
-            textShadow: '2px 2px 0 #000',
-            marginBottom: '20px',
-          }}>
-            rank #{rank}
-          </p>
-        )}
-
-        {/* Stats grid */}
+        {/* Identity Card */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: '15px',
-          marginBottom: '25px',
-        }}>
-          <div style={{
-            background: 'rgba(255,255,255,0.3)',
-            padding: '15px',
-            border: '3px solid #000',
-          }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-              {profile.submission_score || 0}
-            </div>
-            <div style={{ fontSize: '14px' }}>vote score</div>
-          </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.3)',
-            padding: '15px',
-            border: '3px solid #000',
-          }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-              {profile.voting_karma || 0}
-            </div>
-            <div style={{ fontSize: '14px' }}>voting karma</div>
-          </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.3)',
-            padding: '15px',
-            border: '3px solid #000',
-          }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-              {completedTasks.reduce((sum, t) => sum + (t.score || 0), 0)}
-            </div>
-            <div style={{ fontSize: '14px' }}>task points</div>
-          </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.3)',
-            padding: '15px',
-            border: '3px solid #000',
-          }}>
-            <div style={{ fontSize: '28px', fontWeight: 'bold' }}>
-              {profile.referrals_made || 0}
-            </div>
-            <div style={{ fontSize: '14px' }}>referrals</div>
-          </div>
-        </div>
-
-        {/* Whitelist status */}
-        <div className="profile-status" style={{ marginBottom: '20px' }}>
-          {isWhitelisted ? (
-            <span style={{ color: '#fff' }}>CONGRAAAATS U AR SAVANT! ✅🎉</span>
-          ) : (
-            <>
-              <span style={{ color: '#ffff00' }}>not savant yet... keep grinding!</span>
-              <div style={{
-                fontSize: '14px',
-                color: '#fff',
-                marginTop: '8px',
-                textShadow: '1px 1px 0 #000',
-              }}>
-                {totalPoints} / 1017 pts needed 4 whitelist
-                <div style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  borderRadius: '10px',
-                  height: '16px',
-                  marginTop: '6px',
-                  border: '2px solid #000',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{
-                    background: 'linear-gradient(90deg, #ff00ff, #00ff00)',
-                    height: '100%',
-                    width: `${Math.min(100, (totalPoints / 1017) * 100)}%`,
-                    borderRadius: '8px',
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Referral code */}
-        <div style={{
-          background: '#fff',
-          padding: '15px',
+          background: 'linear-gradient(135deg, #ff6b9d, #ffd700)',
           border: '3px solid #000',
+          borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+          boxShadow: '8px 8px 0 #000',
+          padding: '24px',
           marginBottom: '20px',
+          position: 'relative',
         }}>
-          <p style={{ fontSize: '16px', marginBottom: '8px' }}>ur referral code:</p>
-          <div style={{
-            fontFamily: 'monospace',
-            fontSize: '24px',
-            fontWeight: 'bold',
-            letterSpacing: '2px',
-          }}>
-            {referralCode}
+          {/* Username / Name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <h2 style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '28px',
+              color: '#000',
+              textShadow: '2px 2px 0 #fff',
+              margin: 0,
+            }}>
+              {username || legacyProfile?.name || truncatedAddress}
+            </h2>
+            <button
+              onClick={() => setEditingName(!editingName)}
+              style={{
+                fontFamily: "'Comic Neue', cursive",
+                fontSize: '11px',
+                padding: '2px 10px',
+                background: '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              {username ? 'change name' : 'set name'}
+            </button>
           </div>
-          <button
-            onClick={copyReferralCode}
-            style={{
-              fontFamily: 'Comic Neue, cursive',
-              fontSize: '14px',
-              padding: '8px 16px',
-              background: '#ffff00',
+
+          {editingName && (
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+              <input
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                placeholder="enter username..."
+                maxLength={20}
+                style={{
+                  flex: 1,
+                  fontFamily: "'Comic Neue', cursive",
+                  fontSize: '14px',
+                  padding: '6px 10px',
+                  border: '2px solid #000',
+                  background: '#fff',
+                }}
+              />
+              <button
+                onClick={saveUsername}
+                disabled={savingName}
+                style={{
+                  fontFamily: "'Comic Neue', cursive",
+                  fontSize: '14px',
+                  padding: '6px 14px',
+                  background: '#00ff00',
+                  border: '2px solid #000',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                {savingName ? '...' : 'save'}
+              </button>
+            </div>
+          )}
+
+          <p style={{ fontFamily: 'monospace', fontSize: '12px', color: 'rgba(0,0,0,0.6)', marginBottom: '16px' }}>
+            {truncatedAddress}
+          </p>
+
+          {/* Stats Row */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{
+              background: 'rgba(255,255,255,0.4)',
               border: '2px solid #000',
-              cursor: 'pointer',
-              marginTop: '10px',
+              padding: '10px 16px',
+              textAlign: 'center',
+              flex: '1 1 80px',
+            }}>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
+                {balance ?? 0}
+              </div>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>savants held</div>
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.4)',
+              border: '2px solid #000',
+              padding: '10px 16px',
+              textAlign: 'center',
+              flex: '1 1 80px',
+            }}>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
+                {totalIQ}
+              </div>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>total iq</div>
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.4)',
+              border: '2px solid #000',
+              padding: '10px 16px',
+              textAlign: 'center',
+              flex: '1 1 80px',
+            }}>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
+                {legacyProfile?.total_points || 0}
+              </div>
+              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>legacy pts</div>
+            </div>
+            {legacyProfile?.rank && (
+              <div style={{
+                background: 'rgba(255,255,255,0.4)',
+                border: '2px solid #000',
+                padding: '10px 16px',
+                textAlign: 'center',
+                flex: '1 1 80px',
+              }}>
+                <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
+                  #{legacyProfile.rank}
+                </div>
+                <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>legacy rank</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Holdings Gallery */}
+        {!isHolder ? (
+          <div style={{
+            border: '3px solid #000',
+            borderRadius: '225px 15px 225px 15px / 15px 225px 15px 255px',
+            boxShadow: '8px 8px 0 #000',
+            background: '#fff',
+            padding: '40px 20px',
+            textAlign: 'center',
+          }}>
+            <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '22px', marginBottom: '12px' }}>
+              u dont hold any savants 💀
+            </h3>
+            <p style={{ fontFamily: "'Comic Neue', cursive", fontSize: '16px', color: '#666' }}>
+              get 1 on{' '}
+              <a href="https://opensea.io/collection/imaginary-magic-crypto-savants/overview" target="_blank" rel="noopener noreferrer" style={{ color: '#ff69b4', textDecoration: 'underline' }}>
+                opensee
+              </a>
+              , dork
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h3 style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '20px',
+              marginBottom: '12px',
+              textShadow: '1px 1px 0 #ff69b4',
+            }}>
+              ur savants ({holderData?.tokens.length || 0})
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: '12px',
+            }}>
+              {holderData?.tokens.map(token => (
+                <motion.div
+                  key={token.tokenId}
+                  whileHover={{ scale: 1.05, rotate: 0 }}
+                  onClick={() => setSelectedToken(token)}
+                  style={{
+                    border: '3px solid #000',
+                    boxShadow: '4px 4px 0 #000',
+                    background: '#fff',
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    transform: `rotate(${(parseInt(token.tokenId) % 5 - 2) * 0.8}deg)`,
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={token.image}
+                    alt={token.name}
+                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div style={{
+                    padding: '6px 8px',
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    background: '#000',
+                    color: '#0f0',
+                  }}>
+                    <span>{token.name}</span>
+                    <span>IQ:{token.iq}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Token Detail Modal */}
+      <AnimatePresence>
+        {selectedToken && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedToken(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.7)',
+              zIndex: 10000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
             }}
           >
-            copy link
-          </button>
-        </div>
+            <motion.div
+              initial={{ scale: 0.8, rotate: -3 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0.8 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff',
+                border: '4px solid #000',
+                boxShadow: '10px 10px 0 #000',
+                borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+                maxWidth: '420px',
+                width: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={selectedToken.image}
+                alt={selectedToken.name}
+                style={{ width: '100%', display: 'block' }}
+              />
+              <div style={{ padding: '16px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}>
+                  <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '22px', margin: 0 }}>
+                    {selectedToken.name}
+                  </h3>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    background: '#000',
+                    color: '#0f0',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                  }}>
+                    IQ: {selectedToken.iq}
+                  </span>
+                </div>
 
-        {/* Completed tasks */}
-        {completedTasks.length > 0 && (
-          <div style={{
-            background: 'rgba(255,255,255,0.2)',
-            padding: '15px',
-            border: '3px solid #000',
-            marginBottom: '20px',
-          }}>
-            <p style={{ fontSize: '18px', marginBottom: '10px', fontWeight: 'bold' }}>
-              completed tasks:
-            </p>
-            {completedTasks.map((task, i) => (
-              <div key={i} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '8px 0',
-                borderBottom: i < completedTasks.length - 1 ? '1px solid rgba(0,0,0,0.2)' : 'none',
-              }}>
-                <span>
-                  ✅ {task.task_type}
-                  {task.completion_count && task.completion_count > 1 && (
-                    <span style={{ fontSize: '12px', color: '#666' }}> (x{task.completion_count})</span>
-                  )}
-                </span>
-                <span>+{task.score} pts</span>
+                <div style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '6px',
+                }}>
+                  {selectedToken.traits.map((trait, i) => (
+                    <span key={i} style={{
+                      fontFamily: "'Comic Neue', cursive",
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                      background: `hsl(${(i * 47) % 360}, 70%, 85%)`,
+                      border: '1px solid #000',
+                      borderRadius: '4px',
+                    }}>
+                      <strong>{trait.type}:</strong> {trait.value}
+                    </span>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setSelectedToken(null)}
+                  style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '14px',
+                    padding: '8px 20px',
+                    background: '#ff69b4',
+                    color: '#fff',
+                    border: '2px solid #000',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    marginTop: '14px',
+                    width: '100%',
+                  }}
+                >
+                  close
+                </button>
               </div>
-            ))}
-          </div>
+            </motion.div>
+          </motion.div>
         )}
-
-        {/* Share button */}
-        <button
-          onClick={handleShare}
-          className="submit-btn"
-          style={{ background: '#1DA1F2', color: '#fff' }}
-        >
-          share on X 🐦
-        </button>
-      </div>
+      </AnimatePresence>
     </div>
   )
 }

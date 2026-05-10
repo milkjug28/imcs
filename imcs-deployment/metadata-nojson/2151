@@ -1,0 +1,48 @@
+{
+  "name": "#2151",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2151.png",
+  "edition": 2151,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "sabant"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "drugs r gud"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "weht braycez"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "tech scunner"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "vann doitch"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "21-2-9-2-6-12-6-35-8-2-0"
+}

@@ -1,0 +1,48 @@
+{
+  "name": "#46",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/46.png",
+  "edition": 46,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "errange"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "sooper blucks"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "kevv"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "weht braycez"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "pelgrem"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "lamboh-derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "9-1-19-3-7-12-3-25-5-2-0"
+}

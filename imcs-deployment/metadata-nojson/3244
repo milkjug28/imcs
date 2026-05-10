@@ -1,0 +1,36 @@
+{
+  "name": "#3244",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/3244.png",
+  "edition": 3244,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "meh trix"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "chadd"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "frizzeh"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 4,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "13-2-19-2-1-6-3-12-8-2-0"
+}

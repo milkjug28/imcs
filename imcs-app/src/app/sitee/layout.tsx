@@ -19,7 +19,7 @@ const navButtons: NavButton[] = [
   { id: 'home', label: 'hoem', path: '/sitee', defaultPos: { x: 20, y: 15 } },
   { id: 'leaderboard', label: 'leederbord', path: '/sitee/leederbord', defaultPos: { x: 110, y: 15 } },
   { id: 'profile', label: 'profil', path: '/sitee/profil', defaultPos: { x: 250, y: 15 } },
-  { id: 'mint', label: 'MINT', path: '/sitee/mint', defaultPos: { x: 400, y: 15 } },
+  { id: 'games', label: 'gaymes', path: '/sitee/gaymes', defaultPos: { x: 400, y: 15 }, disabled: true },
 ]
 
 export default function SiteLayout({ children }: { children: ReactNode }) {
@@ -28,7 +28,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   const navRef = useRef<HTMLElement>(null)
   const [isMobile, setIsMobile] = useState(false)
 
-  const allowedPaths = ['/sitee', '/sitee/leederbord', '/sitee/profil', '/sitee/mint']
+  const allowedPaths = ['/sitee', '/sitee/leederbord', '/sitee/profil']
   useEffect(() => {
     if (!allowedPaths.includes(pathname)) {
       router.replace('/sitee')

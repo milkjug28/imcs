@@ -1,0 +1,52 @@
+{
+  "name": "#262",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/262.png",
+  "edition": 262,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "aniumeh citeh"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "dirtehbeeter"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "sooper blucks"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-darhk"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "shmuck"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "frizzeh wyte"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "lamboh-derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 8,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "0-1-8-3-5-10-3-11-5-2-0"
+}

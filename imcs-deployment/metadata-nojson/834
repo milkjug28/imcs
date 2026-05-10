@@ -1,0 +1,48 @@
+{
+  "name": "#834",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/834.png",
+  "edition": 834,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "duh briks"
+    },
+    {
+      "trait_type": "bods",
+      "value": "ranboh"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "teem rokit"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "kunfushus"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "meeh"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "pelgrem"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "pamp it"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "8-4-29-2-9-5-3-25-8-4-0"
+}

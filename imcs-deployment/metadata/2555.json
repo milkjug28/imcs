@@ -1,0 +1,40 @@
+{
+  "name": "#2555",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2555.png",
+  "edition": 2555,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "errange"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "fav shert"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "chadd"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "tech scunner"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "9-1-11-2-1-6-6-21-8-2-0"
+}

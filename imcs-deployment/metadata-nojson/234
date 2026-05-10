@@ -1,0 +1,48 @@
+{
+  "name": "#234",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/234.png",
+  "edition": 234,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "greeen"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "flowa shurt"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "miledeh"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "drool"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "kitti hat og"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "10-2-15-1-6-2-3-18-8-2-0"
+}

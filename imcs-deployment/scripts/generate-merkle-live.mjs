@@ -122,7 +122,7 @@ async function main() {
     phase3_fcfs: {
       name: "FCFS",
       dropStageIndex: 3,
-      startTime: 1778288400,    // May 8, 2026 9:00 PM EDT
+      startTime: 1778289600,    // May 8, 2026 9:20 PM EDT
       endTime: END_TIME,
       maxTokenSupplyForStage: 3000,
       wallets: fcfsWallets,

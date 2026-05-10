@@ -1,0 +1,52 @@
+{
+  "name": "#445",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/445.png",
+  "edition": 445,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "blu"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "supa clean shurt"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-darhk"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "meeh"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "shades"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "tinn foyall"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "imaginate"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 8,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "1-1-28-2-5-5-5-33-8-0-0"
+}

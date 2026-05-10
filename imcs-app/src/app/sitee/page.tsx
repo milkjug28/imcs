@@ -1,526 +1,390 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
-const ETH_RE = /^0x[a-fA-F0-9]{40}$/
+type TranslationMode = 'to_imcs' | 'from_imcs'
 
-type CheckResult = {
-  wallet: string
-  found: boolean
-  phases: { gtd: boolean; community: boolean; fcfs: boolean }
-  totalMints: number
-  source: string | null
-  total_points: number
-}
+const HAND_DRAWN_LEFT = '15px 225px 15px 255px / 225px 15px 225px 15px'
+const HAND_DRAWN_RIGHT = '225px 15px 225px 15px / 15px 225px 15px 255px'
+const HAND_DRAWN_BUTTON = '50px 15px 70px 15px / 15px 70px 15px 50px'
 
-const emojis = [
-  { emoji: '⭐', top: '10%', left: '15%', delay: '0s' },
-  { emoji: '✨', top: '25%', right: '20%', delay: '0.5s' },
-  { emoji: '💫', top: '50%', left: '8%', delay: '1s' },
-  { emoji: '🌟', top: '15%', right: '10%', delay: '1.5s' },
-  { emoji: '⭐', bottom: '25%', left: '25%', delay: '2s' },
-  { emoji: '✨', bottom: '35%', right: '15%', delay: '2.5s' },
-  { emoji: '💫', top: '40%', right: '30%', delay: '3s' },
-  { emoji: '🌟', bottom: '15%', left: '10%', delay: '3.5s' },
+const decorativeTexts = [
+  { text: 'i am an imaginary magic crypto savant', rotate: 2, color: '#000' },
+  { text: 'i am an imaginary magic crypto savant', rotate: -5, color: '#2563eb' },
+  { text: 'i am an imaginary magic crypto savant', rotate: 1, color: '#000' },
+  { text: 'i am an imaginary magic crypto savant', rotate: -2, color: '#ff69b4' },
+  { text: 'i am an imaginary magic crypto savant', rotate: 3, color: '#000' },
+  { text: 'i am an imaginary magic crypto savant', rotate: -8, color: '#22c55e' },
+  { text: 'i am an imaginary magic crypto savant', rotate: 12, color: '#000' },
+  { text: 'i am an imaginary magic crypto savant', rotate: -1, color: '#ff6600' },
 ]
 
-function getResponseMessage(result: CheckResult): { title: string; body: string; vibe: 'hype' | 'mega' | 'sad' } {
-  const { gtd, community, fcfs } = result.phases
-
-  if (gtd && community && fcfs) {
-    return {
-      title: 'kungratz u iz speshul savaant 🧙‍♂️✨🎉',
-      body: `gtd = 1. community = 1. fcfs = 1.\nu have all 3 savaants 2 mint.`,
-      vibe: 'mega',
-    }
-  }
-
-  if (gtd && fcfs) {
-    return {
-      title: 'kungratz u iz savaant 🧙‍♂️🔥',
-      body: `gtd = 1. community = 0. fcfs = 1.\nu haz 2 savaants 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  if (community && fcfs) {
-    return {
-      title: 'kungratz u haz kumunity 🤝✨',
-      body: `gtd = 0. community = 1. fcfs = 1.\nu haz 2 savaants 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  if (gtd && community) {
-    return {
-      title: 'kungratz u iz savaant 🧙‍♂️🔥',
-      body: `gtd = 1. community = 1. fcfs = 0.\nu haz 2 savaants 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  if (gtd) {
-    return {
-      title: 'kungratz u iz savaant 🧙‍♂️',
-      body: `gtd = 1. community = 0. fcfs = 0.\nu haz 1 savaant 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  if (community) {
-    return {
-      title: 'kungratz u haz kumunity 🤝',
-      body: `gtd = 0. community = 1. fcfs = 0.\nu haz 1 savaant 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  if (fcfs) {
-    return {
-      title: 'kungratz u haz fcfs 🏃',
-      body: `gtd = 0. community = 0. fcfs = 1.\nu haz 1 savaant 2 mint.`,
-      vibe: 'hype',
-    }
-  }
-
-  return {
-    title: 'srry u iz not savant 💀',
-    body: `gtd = 0. community = 0. fcfs = 0.\nu have no savaants 2 mint.`,
-    vibe: 'sad',
-  }
-}
-
-function getCardImage(result: CheckResult): string {
-  const { gtd, community, fcfs } = result.phases
-  if (gtd) return '/assets/for-cards/savaant.png'
-  if (community) return '/assets/for-cards/community.png'
-  if (fcfs) return '/assets/for-cards/fcfs.png'
-  return '/assets/for-cards/no-savant.png'
-}
-
-function truncateWallet(w: string) {
-  return w.slice(0, 6) + '...' + w.slice(-4)
-}
-
-async function captureCardBlob(el: HTMLElement): Promise<Blob> {
-  const html2canvas = (await import('html2canvas')).default
-  await document.fonts.ready
-
-  const originalTransform = el.style.transform
-  el.style.transform = 'none'
-
-  const cardCanvas = await html2canvas(el, {
-    backgroundColor: null,
-    scale: 2,
-    useCORS: true,
-    logging: false,
-  })
-
-  el.style.transform = originalTransform
-
-  const pad = 32
-  const angle = -0.5 * (Math.PI / 180)
-  const cos = Math.abs(Math.cos(angle))
-  const sin = Math.abs(Math.sin(angle))
-  const rw = Math.ceil(cardCanvas.width * cos + cardCanvas.height * sin)
-  const rh = Math.ceil(cardCanvas.height * cos + cardCanvas.width * sin)
-  const w = rw + pad * 2
-  const h = rh + pad * 2
-  const final = document.createElement('canvas')
-  final.width = w
-  final.height = h
-  const ctx = final.getContext('2d')!
-  const grad = ctx.createLinearGradient(0, 0, w, h)
-  grad.addColorStop(0, '#ff6b9d')
-  grad.addColorStop(1, '#ffd700')
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, w, h)
-  ctx.save()
-  ctx.translate(w / 2, h / 2)
-  ctx.rotate(angle)
-  ctx.drawImage(cardCanvas, -cardCanvas.width / 2, -cardCanvas.height / 2)
-  ctx.restore()
-
-  return new Promise((resolve) => {
-    final.toBlob((blob) => resolve(blob!), 'image/png')
-  })
-}
-
 export default function HomePage() {
-  const [wallet, setWallet] = useState('')
-  const [result, setResult] = useState<CheckResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [copyLabel, setCopyLabel] = useState('copy')
-  const cardRef = useRef<HTMLDivElement>(null)
+  const [inputText, setInputText] = useState('')
+  const [outputText, setOutputText] = useState('')
+  const [mode, setMode] = useState<TranslationMode>('to_imcs')
+  const [isLoading, setIsLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const handleCheck = async () => {
-    const trimmed = wallet.trim()
-    if (!ETH_RE.test(trimmed)) {
-      setError('dats not a wallet address u dummy')
-      setResult(null)
-      return
-    }
-    setError('')
-    setResult(null)
-    setLoading(true)
+  const translate = async () => {
+    if (!inputText.trim()) return
+    setIsLoading(true)
+    setOutputText('')
     try {
-      const res = await fetch(`/api/check?wallet=${encodeURIComponent(trimmed)}`, { cache: 'no-store' })
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText, mode }),
+      })
       const data = await res.json()
-      if (!res.ok) setError(data.error || 'sumthin went wrong')
-      else setResult(data)
-    } catch {
-      setError('cant reach da server, try agen')
-    }
-    setLoading(false)
-  }
-
-  const handleCopy = async () => {
-    if (!cardRef.current) return
-    try {
-      const blob = await captureCardBlob(cardRef.current)
-      if (window.ClipboardItem && navigator.clipboard?.write) {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-        setCopyLabel('copied!')
+      if (res.ok) {
+        setOutputText(data.translation)
       } else {
-        handleDownload()
-        setCopyLabel('downloaded!')
+        setOutputText(data.error || 'sumthin broked...')
       }
     } catch {
-      setCopyLabel('failed')
+      setOutputText('error: translashun machine broke... sry frens')
     }
-    setTimeout(() => setCopyLabel('copy'), 2000)
+    setIsLoading(false)
   }
 
-  const handleDownload = async () => {
-    if (!cardRef.current) return
-    const blob = await captureCardBlob(cardRef.current)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `imcs-savant-status.png`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const toggleMode = () => {
+    setMode(prev => prev === 'to_imcs' ? 'from_imcs' : 'to_imcs')
+    setInputText('')
+    setOutputText('')
   }
 
-  const handleShareX = () => {
-    if (!result) return
-    const msg = result.totalMints > 0
-      ? `im a savaant wit ${result.totalMints} mint${result.totalMints > 1 ? 's' : ''}. r u on da list?? chek ur wallut @imcsnft`
-      : `im not a savant yet... r u?? chek ur wallut @imcsnft`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(msg)}&url=${encodeURIComponent('https://imcs.world')}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+  const copyOutput = () => {
+    if (!outputText) return
+    navigator.clipboard.writeText(outputText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
-
-  const msg = result ? getResponseMessage(result) : null
 
   return (
     <div className="page active" id="home" style={{ position: 'relative', minHeight: '70vh' }}>
-      {/* Background "imaginate" text */}
+      {/* Dot grid background */}
       <div style={{
         position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 1,
-        textAlign: 'center',
-        padding: '0 10px',
-        width: '100%',
+        inset: 0,
         pointerEvents: 'none',
+        opacity: 0.03,
+        backgroundImage: 'radial-gradient(#000 1px, transparent 1px)',
+        backgroundSize: '30px 30px',
+      }} />
+
+      {/* Background decorative text */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        pointerEvents: 'none',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '60px 40px',
+        padding: '40px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: 0.06,
       }}>
-        <h1 style={{
-          fontFamily: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif',
-          fontSize: 'clamp(60px, 15vw, 180px)',
-          color: '#ffff00',
-          textTransform: 'uppercase',
-          letterSpacing: '2px',
-          WebkitTextStroke: '3px #000',
-          textShadow: '4px 4px 0 #000',
-          margin: 0,
-          lineHeight: 1,
-          fontWeight: 700,
-        }}>
-          imaginate
-        </h1>
+        {decorativeTexts.map((item, i) => (
+          <span key={i} style={{
+            transform: `rotate(${item.rotate}deg)`,
+            color: item.color,
+            fontSize: 'clamp(14px, 3vw, 24px)',
+            fontFamily: "'Comic Neue', cursive",
+            fontWeight: 700,
+            fontStyle: 'italic',
+            whiteSpace: 'nowrap',
+          }}>
+            {item.text}
+          </span>
+        ))}
       </div>
 
-      {/* Floating emojis */}
-      {emojis.map((item, i) => (
-        <div
-          key={i}
-          className="floating-emoji"
-          style={{
-            top: item.top,
-            bottom: (item as unknown as Record<string, string>).bottom,
-            left: item.left,
-            right: item.right,
-            animationDelay: item.delay,
-          }}
-        >
-          {item.emoji}
-        </div>
-      ))}
-
-      {/* Wallet checker card */}
       <div style={{
         position: 'relative',
         zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '60vh',
-        padding: '20px',
+        maxWidth: '740px',
+        margin: '0 auto',
+        padding: '16px',
       }}>
+        {/* Mode Toggle */}
         <div style={{
-          background: 'linear-gradient(135deg, #ff6b9d, #ffd700)',
-          border: '5px solid #000',
-          boxShadow: '8px 8px 0 #000',
-          maxWidth: '480px',
-          width: '100%',
-          transform: 'rotate(-1deg)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '16px',
+          marginBottom: '14px',
+          paddingTop: '0px',
         }}>
-          <div style={{ textAlign: 'center', padding: '30px 20px' }}>
-            <h2 style={{
-              fontSize: 'clamp(24px, 7vw, 36px)',
-              color: '#000',
-              textShadow: '2px 2px 0 #ff00ff',
-              marginBottom: '8px',
-            }}>
-              chek wallut 🧙‍♂️
-            </h2>
-            <p style={{ fontSize: '16px', marginBottom: '20px', color: '#000', fontWeight: 700 }}>
-              paste ur wallet 2 see if ur a savaant
-            </p>
+          <button
+            onClick={() => mode !== 'to_imcs' && toggleMode()}
+            style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: 'clamp(14px, 3.5vw, 17px)',
+              fontWeight: 'bold',
+              padding: '6px 12px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: mode === 'to_imcs' ? '#ff69b4' : '#999',
+              textDecoration: mode === 'to_imcs' ? 'underline' : 'none',
+              textDecorationColor: '#ff69b4',
+              textUnderlineOffset: '8px',
+              textDecorationThickness: '4px',
+              transition: 'color 0.2s',
+            }}
+          >
+            normie 2 savant
+          </button>
+          <span style={{ color: '#999', fontSize: '20px' }}>⇄</span>
+          <button
+            onClick={() => mode !== 'from_imcs' && toggleMode()}
+            style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: 'clamp(14px, 3.5vw, 17px)',
+              fontWeight: 'bold',
+              padding: '6px 12px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: mode === 'from_imcs' ? '#00bfff' : '#999',
+              textDecoration: mode === 'from_imcs' ? 'underline' : 'none',
+              textDecorationColor: '#00bfff',
+              textUnderlineOffset: '8px',
+              textDecorationThickness: '4px',
+              transition: 'color 0.2s',
+            }}
+          >
+            savant 2 normie
+          </button>
+        </div>
 
-            {/* Input */}
-            <input
-              type="text"
-              value={wallet}
-              onChange={(e) => setWallet(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              placeholder="0x..."
+        {/* Translator Panels */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+          alignItems: 'start',
+        }}>
+          {/* Input Panel */}
+          <div style={{
+            padding: '22px',
+            border: '3px solid #000',
+            background: '#fff',
+            borderRadius: HAND_DRAWN_LEFT,
+            boxShadow: '8px 8px 0 rgba(0,0,0,1)',
+            position: 'relative',
+            minHeight: '220px',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '-16px',
+              left: '-12px',
+              background: '#fff',
+              border: '2px solid #000',
+              padding: '2px 14px',
+              transform: 'rotate(-3deg)',
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '16px',
+              fontWeight: 'bold',
+            }}>
+              {mode === 'to_imcs' ? 'normie' : 'savant'}
+            </div>
+            <textarea
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              placeholder={mode === 'to_imcs' ? 'type normally here...' : 'paste savant speek here...'}
+              maxLength={1000}
+              spellCheck={false}
               style={{
                 width: '100%',
-                fontFamily: 'Comic Neue, cursive',
+                height: '190px',
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                outline: 'none',
+                resize: 'none',
+                fontFamily: "'Comic Neue', cursive",
                 fontSize: '15px',
-                padding: '12px 14px',
-                border: '4px solid #000',
-                boxShadow: '4px 4px 0 #000',
-                marginBottom: '12px',
-                boxSizing: 'border-box',
-                background: '#ffffcc',
+                lineHeight: '1.6',
+                color: '#000',
               }}
             />
+          </div>
 
-            <button
-              onClick={handleCheck}
-              disabled={loading}
-              style={{
-                fontFamily: 'Comic Neue, cursive',
-                fontSize: '20px',
-                padding: '12px 30px',
-                background: loading ? '#999' : 'linear-gradient(135deg, #00ff00, #00bfff)',
-                color: '#000',
-                border: '4px solid #000',
-                boxShadow: loading ? '2px 2px 0 #000' : '5px 5px 0 #000',
-                cursor: loading ? 'wait' : 'pointer',
-                fontWeight: 'bold',
-                width: '100%',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => { if (!loading) e.currentTarget.style.transform = 'rotate(1deg) scale(1.03)' }}
-              onMouseLeave={e => e.currentTarget.style.transform = 'none'}
-            >
-              {loading ? 'hmmmm checkin...' : 'chek it 👀'}
-            </button>
+          {/* Output Panel */}
+          <div style={{
+            padding: '22px',
+            border: '3px solid #000',
+            background: '#fff',
+            borderRadius: HAND_DRAWN_RIGHT,
+            boxShadow: '8px 8px 0 rgba(0,0,0,1)',
+            position: 'relative',
+            minHeight: '220px',
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '-16px',
+              right: '-12px',
+              background: '#ff00ff',
+              color: '#fff',
+              border: '2px solid #000',
+              padding: '2px 14px',
+              transform: 'rotate(3deg)',
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '16px',
+              fontWeight: 'bold',
+            }}>
+              {mode === 'to_imcs' ? 'savant' : 'normie'}
+            </div>
 
-            {/* Error */}
-            {error && (
-              <div style={{
-                marginTop: '16px',
-                background: '#ff4444',
-                border: '3px solid #000',
-                padding: '10px 14px',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '15px',
-                textShadow: '1px 1px 0 #000',
-              }}>
-                {error}
-              </div>
-            )}
-
-            {/* Result card (capturable) */}
-            {result && msg && (
-              <>
-                <div
-                  ref={cardRef}
-                  data-card
-                  style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    marginTop: '16px',
-                    background: msg.vibe === 'sad'
-                      ? 'linear-gradient(135deg, #ff4444, #cc0000)'
-                      : msg.vibe === 'mega'
-                        ? 'linear-gradient(135deg, #ffd700, #ff00ff, #00ffff)'
-                        : 'linear-gradient(135deg, #00ff88, #00ccff)',
-                    border: '4px solid #000',
-                    boxShadow: '5px 5px 0 #000',
-                    padding: '20px 16px 20px 16px',
-                    transform: msg.vibe === 'mega' ? 'rotate(1deg)' : 'rotate(-0.5deg)',
-                  }}
-                >
-                  {/* Character image - bottom left, clipped at bottom */}
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '-10px',
-                    left: '-15px',
-                    width: '130px',
-                    height: '130px',
-                    overflow: 'hidden',
-                    pointerEvents: 'none',
-                  }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={getCardImage(result)}
-                      alt=""
-                      style={{
-                        width: '130px',
-                        height: '130px',
-                        objectFit: 'contain',
-                        objectPosition: 'center top',
-                        transform: 'rotate(-5deg)',
-                      }}
-                    />
-                  </div>
-
-                  {/* IMCS branding for screenshot */}
-                  <div style={{
-                    position: 'relative',
-                    fontFamily: 'Comic Neue, cursive',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: msg.vibe === 'sad' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.4)',
-                    margin: '0px 0px 10px 0px',
-                    padding: '0px',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    lineHeight: '16px',
-                  }}>
-                    imcs.world - {truncateWallet(result.wallet)}
-                  </div>
-
-                  <h3 style={{
-                    position: 'relative',
-                    fontFamily: 'Comic Neue, cursive',
-                    fontSize: '24px',
-                    color: msg.vibe === 'sad' ? '#fff' : '#000',
-                    textShadow: msg.vibe === 'sad' ? '2px 2px 0 #000' : '2px 2px 0 #fff',
-                    margin: '0px 0px 12px 0px',
-                    padding: '0px',
-                    lineHeight: '30px',
-                    fontWeight: 700,
-                  }}>
-                    {msg.title}
-                  </h3>
-                  <p style={{
-                    position: 'relative',
-                    fontFamily: 'Comic Neue, cursive',
-                    fontSize: '16px',
-                    color: msg.vibe === 'sad' ? '#ffd' : '#000',
-                    fontWeight: 700,
-                    lineHeight: '26px',
-                    margin: '0px 0px 12px 0px',
-                    padding: '0px',
-                    whiteSpace: 'pre-line',
-                  }}>
-                    {msg.body}
-                  </p>
-                  {result.total_points > 0 && (
-                    <p style={{
-                      position: 'relative',
-                      fontFamily: 'Comic Neue, cursive',
-                      fontSize: '14px',
-                      color: msg.vibe === 'sad' ? '#ffa' : '#333',
-                      fontWeight: 700,
-                      margin: '0px 0px 4px 0px',
-                      padding: '0px',
-                      lineHeight: '20px',
-                    }}>
-                      {result.total_points} savant points
-                    </p>
-                  )}
-                  {result.source && (
+            <div style={{ minHeight: '190px', paddingTop: '8px' }}>
+              <AnimatePresence mode="wait">
+                {isLoading ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingTop: '80px',
+                      gap: '16px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {['#ff69b4', '#00bfff', '#ffd700'].map((color, i) => (
+                        <motion.div
+                          key={i}
+                          animate={{ y: [0, -10, 0] }}
+                          transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.2 }}
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            borderRadius: '50%',
+                            background: color,
+                            border: '2px solid #000',
+                          }}
+                        />
+                      ))}
+                    </div>
                     <span style={{
-                      position: 'relative',
-                      display: 'inline-block',
-                      marginTop: '8px',
-                      background: '#000',
-                      color: '#ffff00',
-                      fontWeight: 700,
-                      fontFamily: 'Comic Neue, cursive',
-                      fontSize: '12px',
-                      padding: '3px 10px',
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                      lineHeight: '18px',
-                      borderRadius: '50px', 
+                      fontFamily: "'Comic Neue', cursive",
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      fontStyle: 'italic',
                     }}>
-                      {result.source === 'collab' ? 'savaantkollab fren' : result.source === 'leaderboard' ? 'imaginari magikal cripto savaant' : 'kumuntitty holdur'}
+                      thinking hard...
                     </span>
-                  )}
-                </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="output"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{
+                      fontFamily: "'Comic Neue', cursive",
+                      fontSize: '15px',
+                      lineHeight: '1.6',
+                      whiteSpace: 'pre-wrap',
+                      color: mode === 'to_imcs' ? '#000' : '#2563eb',
+                    }}
+                  >
+                    {outputText || (
+                      <span style={{ color: '#ddd' }}>
+                        waiting 4 vybes...
+                      </span>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-                {/* Share buttons */}
-                <div style={{
-                  marginTop: '12px',
+            {outputText && (
+              <button
+                onClick={copyOutput}
+                style={{
+                  position: 'absolute',
+                  bottom: '12px',
+                  right: '12px',
+                  background: '#c8ffc8',
+                  border: '2px solid #000',
+                  borderRadius: '20px',
+                  padding: '4px 12px',
+                  fontFamily: "'Comic Neue', cursive",
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
                   display: 'flex',
-                  gap: '8px',
-                  justifyContent: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                  {[
-                    { label: copyLabel, icon: '📋', onClick: handleCopy },
-                    { label: 'save', icon: '⬇️', onClick: handleDownload },
-                    { label: 'share 2 X', icon: '𝕏', onClick: handleShareX },
-                  ].map((btn) => (
-                    <button
-                      key={btn.label}
-                      onClick={btn.onClick}
-                      style={{
-                        fontFamily: 'Comic Neue, cursive',
-                        fontSize: '14px',
-                        padding: '8px 16px',
-                        background: 'linear-gradient(135deg, #ff6b9d, #ffd700)',
-                        color: '#000',
-                        border: '3px solid #000',
-                        boxShadow: '3px 3px 0 #000',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.transform = 'translateY(-2px)'
-                        e.currentTarget.style.boxShadow = '3px 5px 0 #000'
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.transform = 'none'
-                        e.currentTarget.style.boxShadow = '3px 3px 0 #000'
-                      }}
-                    >
-                      <span>{btn.icon}</span> {btn.label}
-                    </button>
-                  ))}
-                </div>
-              </>
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                {copied ? '✓ copied!' : '📋 copy it'}
+              </button>
             )}
           </div>
+        </div>
+
+        {/* Translate Button */}
+        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center' }}>
+          <motion.button
+            whileHover={{ scale: 1.05, rotate: -1 }}
+            whileTap={{ scale: 0.95 }}
+            disabled={isLoading || !inputText.trim()}
+            onClick={translate}
+            style={{
+              padding: '12px 40px',
+              background: isLoading || !inputText.trim() ? '#ccc' : '#ff69b4',
+              color: isLoading || !inputText.trim() ? '#999' : '#fff',
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: 'clamp(18px, 4vw, 26px)',
+              fontWeight: 900,
+              border: '4px solid #000',
+              borderRadius: HAND_DRAWN_BUTTON,
+              boxShadow: '8px 8px 0 rgba(0,0,0,1)',
+              cursor: isLoading || !inputText.trim() ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              transition: 'background 0.2s, color 0.2s',
+            }}
+          >
+            <span>⚡</span>
+            <span>{mode === 'to_imcs' ? 'trunslate' : 'translate'}</span>
+          </motion.button>
+        </div>
+
+        {/* Scribbles footer */}
+        <div style={{
+          marginTop: '40px',
+          paddingTop: '20px',
+          borderTop: '3px solid rgba(0,0,0,0.08)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '20px 30px',
+          justifyContent: 'center',
+          opacity: 0.12,
+          pointerEvents: 'none',
+          fontStyle: 'italic',
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '14px',
+        }}>
+          {decorativeTexts.map((item, i) => (
+            <span key={i} style={{
+              transform: `rotate(${item.rotate}deg)`,
+              color: item.color,
+              display: 'inline-block',
+            }}>
+              {item.text}
+            </span>
+          ))}
         </div>
       </div>
     </div>

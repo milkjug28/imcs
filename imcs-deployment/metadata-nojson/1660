@@ -1,0 +1,48 @@
+{
+  "name": "#1660",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/1660.png",
+  "edition": 1660,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "leins nd dots"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "flat erff"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "uhn-empresst"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "goldin teef"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "muheck"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "wahlit derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "12-1-13-2-13-3-3-20-12-2-0"
+}

@@ -1,0 +1,52 @@
+{
+  "name": "#486",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/486.png",
+  "edition": 486,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "duh briks"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "fav shert"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "hmm"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "tech scunner"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "degenn"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "outside"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 8,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "8-2-11-2-6-4-6-6-8-3-0"
+}

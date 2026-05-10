@@ -13,6 +13,14 @@ const IDLE_PROMPTS = [
   'Say something random and funny. Not about trading. Just be weird.',
   'Drop some fake wisdom or start a random argument about literally anything.',
   'Scheme with the chat. What should savants do next? Drop an idea, even if its dumb.',
+  'Complain about something random. Gas fees, the weather, your wifi, whatever.',
+  'Flex on the chat. Talk about your bags, your IQ, or how early you got in.',
+  'Ask the chat a dumb question. "would u rather have 100 savants or 1 bored ape" type energy.',
+  'React to a recent message in the chat. Agree, disagree, or roast it.',
+  'Talk about what you did today. Make it up. Be ridiculous.',
+  'Drop a conspiracy theory about the savants collection. Make it absurd.',
+  'Challenge someone in the chat to something stupid. A bet, a dare, whatever.',
+  'Say something wholesome for once. Then immediately ruin it.',
 ]
 
 async function generateIdleMessage(bot: BotPersona, recentMessages: { username: string; message: string }[]) {
@@ -25,7 +33,13 @@ async function generateIdleMessage(bot: BotPersona, recentMessages: { username: 
   const stats = await getCollectionStats().catch(() => null)
   const statsLine = stats?.summary ? `\n\nLIVE COLLECTION DATA: ${stats.summary}` : ''
 
-  const prompt = `Recent chat:\n${context}\n\n${idlePrompt} Don't repeat anything already said.${statsLine}`
+  const ownRecent = recentMessages
+    .filter(m => m.username === bot.name)
+    .map(m => m.message)
+    .join(', ')
+  const antiRepeat = ownRecent ? `\n\nYou already said these recently, DO NOT repeat or rephrase them: "${ownRecent}"` : ''
+
+  const prompt = `Recent chat:\n${context}\n\n${idlePrompt} Don't repeat anything already said.${statsLine}${antiRepeat}`
 
   try {
     const { text } = await geminiRotator.call(prompt, bot.systemPrompt)
@@ -48,7 +62,7 @@ export async function GET() {
     .from('chat_messages')
     .select('username, message, created_at')
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(15)
 
   const recentMessages = (recent || []).reverse().map(m => ({
     username: m.username,

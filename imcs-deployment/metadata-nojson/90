@@ -1,0 +1,60 @@
+{
+  "name": "#90",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/90.png",
+  "edition": 90,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "shaypes"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "dirtehbeeter"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "sooper blucks"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "entence"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "drool"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "tech scunner"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "strawh haht"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "wahlit lyte"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "new bayc"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 10,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "22-2-8-3-4-2-6-32-13-1-0"
+}

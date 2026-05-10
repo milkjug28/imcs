@@ -1,0 +1,48 @@
+{
+  "name": "#1550",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/1550.png",
+  "edition": 1550,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "muthamatics"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "wyte imcs h00die"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-darhk"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "braycez"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "chert anilizers"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "froh"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "15-1-32-2-5-1-0-13-8-2-0"
+}

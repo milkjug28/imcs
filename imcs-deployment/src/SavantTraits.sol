@@ -13,8 +13,8 @@ contract SavantTraits is Ownable {
     IERC721 public immutable savantToken;
 
     enum SlotType {
-        BGS, BODS, CLOTHS, SPESHUL, FAYCE,
-        FACESSORIES, HATSS, EXTRUHS, TEXTUH, NOISE
+        BGS, BODS, CLOTHS, SPESHUL, AYEZZ,
+        MOUFS, FACESSORIES, HATSS, EXTRUHS, TEXTUH
     }
 
     struct Traits {

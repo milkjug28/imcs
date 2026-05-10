@@ -1,0 +1,48 @@
+{
+  "name": "#1230",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/1230.png",
+  "edition": 1230,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "kumic strup"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "tetuus"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-lite"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "meeh"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "yarn guy"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "stahrrs"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "11-2-30-2-6-5-3-37-9-2-0"
+}

@@ -1,0 +1,19 @@
+{
+  "name": "#1865",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/1865.png",
+  "edition": 1865,
+  "attributes": [
+    {
+      "trait_type": "1 of 1",
+      "value": "pepe da savaant"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 111,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "0-0-0-0-0-0-0-0-0-0-0"
+}

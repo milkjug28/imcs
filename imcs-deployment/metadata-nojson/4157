@@ -1,0 +1,40 @@
+{
+  "name": "#4157",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/4157.png",
+  "edition": 4157,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "shaypes"
+    },
+    {
+      "trait_type": "bods",
+      "value": "lyte"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "blackbeeetur"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "chadd"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "frizzeh"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 5,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "22-2-4-2-1-6-3-12-8-2-0"
+}

@@ -1,0 +1,48 @@
+{
+  "name": "#2475",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/2475.png",
+  "edition": 2475,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "blu"
+    },
+    {
+      "trait_type": "bods",
+      "value": "derk"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "jeen vest"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "fayded-darhk"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "shmowk"
+    },
+    {
+      "trait_type": "hatss",
+      "value": "trenchur"
+    },
+    {
+      "trait_type": "extruhs",
+      "value": "ehnergi derk"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 7,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "1-1-18-2-5-9-3-34-2-2-0"
+}

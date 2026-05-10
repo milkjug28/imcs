@@ -1,0 +1,52 @@
+{
+  "name": "#32",
+  "description": "imaginary magic crypto savants",
+  "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/32.png",
+  "edition": 32,
+  "attributes": [
+    {
+      "trait_type": "bg's",
+      "value": "clowds"
+    },
+    {
+      "trait_type": "bods",
+      "value": "siithru"
+    },
+    {
+      "trait_type": "cloths",
+      "value": "supa clean shurt"
+    },
+    {
+      "trait_type": "speshul",
+      "value": "sooper blucks"
+    },
+    {
+      "trait_type": "ayezz",
+      "value": "kevv"
+    },
+    {
+      "trait_type": "moufs",
+      "value": "meeh"
+    },
+    {
+      "trait_type": "facessories",
+      "value": "engii glassurs"
+    },
+    {
+      "trait_type": "textuh",
+      "value": "imaginate"
+    },
+    {
+      "trait_type": "Trait Count",
+      "value": 8,
+      "display_type": "number"
+    },
+    {
+      "trait_type": "IQ",
+      "value": 69,
+      "max_value": 420,
+      "display_type": "number"
+    }
+  ],
+  "dna": "3-5-28-3-7-5-1-21-8-0-0"
+}
