@@ -76,8 +76,16 @@ export default function ProfilePage() {
   }, [address])
 
   useEffect(() => {
-    if (isConnected && address) fetchData()
-    else setLoading(false)
+    if (isConnected && address) {
+      fetchData()
+    } else {
+      setHolderData(null)
+      setLegacyProfile(null)
+      setUsername(null)
+      setSelectedToken(null)
+      setEditingName(false)
+      setLoading(false)
+    }
   }, [isConnected, address, fetchData])
 
   const saveUsername = async () => {

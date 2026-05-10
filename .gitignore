@@ -4,4 +4,7 @@
 .DS_Store
 *.csv
 /metadata/
-/imcs-deployment/
+/imcs-deployment/metadata/
+/imcs-deployment/metadata-nojson/
+/imcs-deployment/config/merkle-*.json
+.vercel/

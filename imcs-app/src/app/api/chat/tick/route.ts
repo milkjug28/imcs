@@ -60,11 +60,19 @@ async function generateIdleMessage(bot: BotPersona, recentMessages: { username: 
 export async function GET() {
   const { data: recent } = await supabase
     .from('chat_messages')
-    .select('username, message, created_at')
+    .select('username, message, created_at, is_bot')
     .order('created_at', { ascending: false })
     .limit(15)
 
-  const recentMessages = (recent || []).reverse().map(m => ({
+  const reversed = (recent || []).reverse()
+
+  // If last 3+ messages are all bots, skip this tick to prevent circular convos
+  const lastFew = (recent || []).slice(0, 3)
+  if (lastFew.length >= 3 && lastFew.every(m => m.is_bot)) {
+    return NextResponse.json({ ok: true, skipped: 'too many consecutive bot messages' })
+  }
+
+  const recentMessages = reversed.map(m => ({
     username: m.username,
     message: m.message,
   }))
