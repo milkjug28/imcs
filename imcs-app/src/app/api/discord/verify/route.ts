@@ -19,6 +19,19 @@ async function getHoldings(wallet: string): Promise<number> {
   return data.totalCount ?? (data.ownedNfts?.length ?? 0)
 }
 
+async function getTotalHoldings(discordUserId: string): Promise<{ total: number; wallets: { address: string; count: number }[] }> {
+  const { data: wallets } = await supabase
+    .from('discord_wallets')
+    .select('wallet_address, token_count')
+    .eq('discord_user_id', discordUserId)
+
+  if (!wallets || wallets.length === 0) return { total: 0, wallets: [] }
+
+  const result = wallets.map(w => ({ address: w.wallet_address, count: w.token_count }))
+  const total = result.reduce((sum, w) => sum + w.count, 0)
+  return { total, wallets: result }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const ip = getRequestIP(request)
@@ -42,54 +55,89 @@ export async function POST(request: NextRequest) {
 
     const discordUser = await getDiscordUser(accessToken)
     const checksummed = getAddress(wallet)
-    const tokenCount = await getHoldings(checksummed)
+    const walletCount = await getHoldings(checksummed)
 
-    if (tokenCount === 0) {
+    // Check if wallet is already linked to a different discord user
+    const { data: existingLink } = await supabase
+      .from('discord_wallets')
+      .select('discord_user_id')
+      .eq('wallet_address', checksummed)
+      .single()
+
+    if (existingLink && existingLink.discord_user_id !== discordUser.id) {
       return NextResponse.json({
         success: false,
-        message: 'u dont hold any savants, dummie',
-        tokenCount: 0,
-        tiers: [],
-      })
+        message: 'dis wallet already linked 2 another discord account',
+      }, { status: 409 })
     }
 
-    const tiers = getTiersForCount(tokenCount)
-    const tierNames = tiers.map(t => t.name)
-
-    const { error: dbError } = await supabase
+    // Upsert the discord user record
+    const { error: userError } = await supabase
       .from('discord_verifications')
       .upsert({
         discord_user_id: discordUser.id,
         discord_username: discordUser.username,
         wallet_address: checksummed,
-        token_count: tokenCount,
-        tiers: tierNames,
         verified_at: new Date().toISOString(),
         last_checked: new Date().toISOString(),
       }, { onConflict: 'discord_user_id' })
 
-    if (dbError) {
-      console.error('Supabase upsert error:', dbError)
+    if (userError) {
+      console.error('Supabase user upsert error:', userError)
       return NextResponse.json({ error: 'database error' }, { status: 500 })
     }
 
-    await assignTierRoles(GUILD_ID, discordUser.id, tokenCount)
+    // Upsert the wallet link
+    const { error: walletError } = await supabase
+      .from('discord_wallets')
+      .upsert({
+        discord_user_id: discordUser.id,
+        wallet_address: checksummed,
+        token_count: walletCount,
+        linked_at: new Date().toISOString(),
+      }, { onConflict: 'wallet_address' })
+
+    if (walletError) {
+      console.error('Supabase wallet upsert error:', walletError)
+      return NextResponse.json({ error: 'database error' }, { status: 500 })
+    }
+
+    // Get total across all linked wallets
+    const { total, wallets } = await getTotalHoldings(discordUser.id)
+
+    // Update the main record with total
+    const tiers = getTiersForCount(total)
+    const tierNames = tiers.map(t => t.name)
+
+    await supabase
+      .from('discord_verifications')
+      .update({
+        token_count: total,
+        tiers: tierNames,
+        last_checked: new Date().toISOString(),
+      })
+      .eq('discord_user_id', discordUser.id)
+
+    await assignTierRoles(GUILD_ID, discordUser.id, total)
 
     cookieStore.delete('discord_access_token')
 
     return NextResponse.json({
       success: true,
-      message: tokenCount >= 51
+      message: total >= 51
         ? 'ABSULUT CHED SAVANAT!!! u ar da goat'
-        : tokenCount >= 25
+        : total >= 25
         ? 'CHED SAVANT DETECTED!!! u ar legend'
-        : tokenCount >= 6
+        : total >= 6
         ? 'supa savants status achieved. respekt'
-        : tokenCount >= 2
+        : total >= 2
         ? 'reel sabant energy. nice'
-        : 'verified holder. welcum 2 savant wurld',
-      tokenCount,
+        : total >= 1
+        ? 'verified holder. welcum 2 savant wurld'
+        : 'u dont hold any savants across ur wallets, dummie',
+      tokenCount: total,
       tiers: tierNames,
+      wallets,
       discord: {
         id: discordUser.id,
         username: discordUser.username,

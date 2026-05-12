@@ -367,10 +367,29 @@ async function runCron() {
 
   for (const record of records) {
     try {
-      const count = await getHoldings(record.wallet_address)
-      const earnedKeys = getTierKeys(count)
+      // Fetch all wallets for this discord user
+      const { data: wallets } = await supabase
+        .from('discord_wallets')
+        .select('wallet_address')
+        .eq('discord_user_id', record.discord_user_id)
 
-      // Update roles
+      let totalCount = 0
+
+      if (wallets && wallets.length > 0) {
+        for (const w of wallets) {
+          const count = await getHoldings(w.wallet_address)
+          await supabase
+            .from('discord_wallets')
+            .update({ token_count: count })
+            .eq('wallet_address', w.wallet_address)
+          totalCount += count
+        }
+      } else {
+        totalCount = await getHoldings(record.wallet_address)
+      }
+
+      const earnedKeys = getTierKeys(totalCount)
+
       let member
       try {
         member = await guild.members.fetch(record.discord_user_id)
@@ -379,7 +398,6 @@ async function runCron() {
         continue
       }
 
-      const allRoleIds = Object.values(ROLE_IDS)
       for (const tier of TIERS) {
         const roleId = ROLE_IDS[tier.key]
         if (!roleId) continue
@@ -396,12 +414,11 @@ async function runCron() {
         }
       }
 
-      // Update DB
-      if (count !== record.token_count) {
+      if (totalCount !== record.token_count) {
         await supabase
           .from('discord_verifications')
           .update({
-            token_count: count,
+            token_count: totalCount,
             tiers: earnedKeys.length > 0 ? earnedKeys : null,
             last_checked: new Date().toISOString(),
           })
@@ -414,7 +431,6 @@ async function runCron() {
           .eq('discord_user_id', record.discord_user_id)
       }
 
-      // Small delay to avoid rate limits
       await new Promise(r => setTimeout(r, 500))
     } catch (err) {
       log(`Error checking ${record.discord_user_id}: ${err}`)

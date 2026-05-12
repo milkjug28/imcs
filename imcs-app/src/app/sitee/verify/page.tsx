@@ -8,11 +8,14 @@ import ConnectWallet from '@/components/ConnectWallet'
 const DISCORD_CLIENT_ID = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || ''
 const SITE_URL = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'
 
+type WalletInfo = { address: string; count: number }
+
 type VerifyResult = {
   success: boolean
   message: string
   tokenCount: number
   tiers: string[]
+  wallets?: WalletInfo[]
   discord?: { id: string; username: string }
 }
 
@@ -30,7 +33,6 @@ function VerifyContent() {
 
   const linked = searchParams.get('linked') === 'true'
   const discordUser = searchParams.get('discord_user')
-  const discordId = searchParams.get('discord_id')
   const error = searchParams.get('error')
 
   const [verifying, setVerifying] = useState(false)
@@ -78,6 +80,12 @@ function VerifyContent() {
     }
   }, [linked, isConnected, address, result, verifying, verifyError, autoVerifyAttempted, handleVerify])
 
+  const handleAddWallet = () => {
+    setResult(null)
+    setVerifyError(null)
+    setAutoVerifyAttempted(false)
+  }
+
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
       <h2 style={{
@@ -98,7 +106,6 @@ function VerifyContent() {
         boxShadow: '6px 6px 0 #000',
         transform: 'rotate(-0.5deg)',
       }}>
-        {/* Step 1: Connect Wallet */}
         <StepBox
           number={1}
           title="connekt ur wallet"
@@ -114,7 +121,6 @@ function VerifyContent() {
           )}
         </StepBox>
 
-        {/* Step 2: Link Discord */}
         <StepBox
           number={2}
           title="link ur discrod"
@@ -132,7 +138,6 @@ function VerifyContent() {
           )}
         </StepBox>
 
-        {/* Step 3: Verify Holdings */}
         <StepBox
           number={3}
           title="verify holdins"
@@ -144,7 +149,7 @@ function VerifyContent() {
           ) : verifying ? (
             <p style={{ color: '#fff', textAlign: 'center' }}>checkin ur bags...</p>
           ) : result ? (
-            <ResultDisplay result={result} />
+            <ResultDisplay result={result} onAddWallet={handleAddWallet} />
           ) : verifyError ? (
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: '#ff6b6b', marginBottom: '10px' }}>{verifyError}</p>
@@ -164,7 +169,6 @@ function VerifyContent() {
         )}
       </div>
 
-      {/* Tier info */}
       <div style={{
         marginTop: '30px',
         background: '#fff',
@@ -183,7 +187,7 @@ function VerifyContent() {
         <TierRow emoji="👑" name="ched savant" range="25-50 savants" />
         <TierRow emoji="🐐" name="absulut ched savanat" range="51+ savants" />
         <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-          roles r cumulative. more savants = more roles
+          roles r cumulative. more savants = more roles. link multiple wallets 2 combine holdins
         </p>
       </div>
     </div>
@@ -216,7 +220,7 @@ function StepBox({ number, title, active, done, children }: {
   )
 }
 
-function ResultDisplay({ result }: { result: VerifyResult }) {
+function ResultDisplay({ result, onAddWallet }: { result: VerifyResult; onAddWallet: () => void }) {
   return (
     <div style={{ textAlign: 'center' }}>
       <p style={{
@@ -228,8 +232,29 @@ function ResultDisplay({ result }: { result: VerifyResult }) {
         {result.message}
       </p>
       <p style={{ color: '#ddd' }}>
-        holding {result.tokenCount} savant{result.tokenCount !== 1 ? 's' : ''}
+        {result.tokenCount} savant{result.tokenCount !== 1 ? 's' : ''} total across {result.wallets?.length || 1} wallet{(result.wallets?.length || 1) !== 1 ? 's' : ''}
       </p>
+
+      {result.wallets && result.wallets.length > 0 && (
+        <div style={{ marginTop: '10px', textAlign: 'left' }}>
+          {result.wallets.map(w => (
+            <div key={w.address} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '4px 8px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '6px',
+              marginBottom: '4px',
+              fontSize: '13px',
+              color: '#ddd',
+            }}>
+              <span>{w.address.slice(0, 6)}...{w.address.slice(-4)}</span>
+              <span>{w.count} savant{w.count !== 1 ? 's' : ''}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ marginTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
         {result.tiers.map(tier => (
           <span key={tier} style={{
@@ -244,9 +269,19 @@ function ResultDisplay({ result }: { result: VerifyResult }) {
           </span>
         ))}
       </div>
+
       <p style={{ color: '#aaffaa', marginTop: '15px', fontSize: '14px' }}>
-        roles assigned in discord. u can close dis page
+        roles assigned in discord
       </p>
+
+      <button onClick={onAddWallet} style={{
+        ...btnStyle,
+        marginTop: '12px',
+        background: '#444',
+        fontSize: '0.9rem',
+      }}>
+        + add another wallet
+      </button>
     </div>
   )
 }
