@@ -46,15 +46,21 @@ export async function GET(request: NextRequest) {
 
     const checksummed = getAddress(wallet)
 
-    const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTsForOwner?owner=${checksummed}&contractAddresses[]=${SAVANT_TOKEN}&withMetadata=true&pageSize=100`
+    let nfts: AlchemyNft[] = []
+    let pageKey: string | undefined
 
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) {
-      return NextResponse.json({ error: 'alchemy error' }, { status: 502 })
-    }
+    do {
+      const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTsForOwner?owner=${checksummed}&contractAddresses[]=${SAVANT_TOKEN}&withMetadata=true&pageSize=100${pageKey ? `&pageKey=${pageKey}` : ''}`
 
-    const data = await res.json()
-    const nfts = (data.ownedNfts || []) as AlchemyNft[]
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) {
+        return NextResponse.json({ error: 'alchemy error' }, { status: 502 })
+      }
+
+      const data = await res.json()
+      nfts.push(...((data.ownedNfts || []) as AlchemyNft[]))
+      pageKey = data.pageKey
+    } while (pageKey)
 
     const tokenIds = nfts.map(n => parseInt(n.tokenId))
     const { data: iqRows } = tokenIds.length > 0
