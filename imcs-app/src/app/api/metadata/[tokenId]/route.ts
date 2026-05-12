@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
 export const dynamic = 'force-dynamic'
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
-const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
+const METADATA_DIR = resolve(process.cwd(), '../imcs-deployment/metadata-nojson')
 const IQ_FLOOR = 69
-
-type AlchemyAttribute = {
-  trait_type: string
-  value: string | number
-  display_type?: string
-  max_value?: number
-}
-
-type AlchemyNftResponse = {
-  raw?: {
-    metadata?: {
-      name?: string
-      description?: string
-      image?: string
-      attributes?: AlchemyAttribute[]
-    }
-  }
-}
 
 export async function GET(
   request: NextRequest,
@@ -35,49 +18,35 @@ export async function GET(
   }
 
   try {
-    const [nftRes, iqRow] = await Promise.all([
-      fetch(
-        `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTMetadata?contractAddress=${SAVANT_TOKEN}&tokenId=${tokenId}&refreshCache=false`,
-        { next: { revalidate: 3600 } }
-      ),
-      supabase
-        .from('savant_iq')
-        .select('iq_points')
-        .eq('token_id', tokenId)
-        .single(),
-    ])
-
-    if (!nftRes.ok) {
+    let rawMeta: Record<string, unknown>
+    try {
+      const content = readFileSync(resolve(METADATA_DIR, String(tokenId)), 'utf-8')
+      rawMeta = JSON.parse(content)
+    } catch {
       return NextResponse.json({ error: 'token not found' }, { status: 404 })
     }
 
-    const nftData: AlchemyNftResponse = await nftRes.json()
-    const rawMeta = nftData.raw?.metadata
+    const { data: iqRow } = await supabase
+      .from('savant_iq')
+      .select('iq_points')
+      .eq('token_id', tokenId)
+      .single()
 
-    if (!rawMeta) {
-      return NextResponse.json({ error: 'no metadata' }, { status: 404 })
-    }
+    const iqPoints = iqRow?.iq_points ?? IQ_FLOOR
 
-    const iqPoints = iqRow.data?.iq_points ?? IQ_FLOOR
-
-    const attributes: AlchemyAttribute[] = (rawMeta.attributes || [])
-      .filter(a => a.trait_type !== 'IQ' && a.trait_type !== 'Trait Count')
+    const attributes = (rawMeta.attributes as { trait_type: string; value: string }[]) || []
 
     attributes.push({
       trait_type: 'IQ',
-      value: iqPoints,
-      display_type: 'number',
-      max_value: 420,
+      value: String(iqPoints),
     })
 
-    const metadata = {
-      name: rawMeta.name || `Savant #${tokenId}`,
-      description: rawMeta.description || 'an imaginary magic crypto savant',
-      image: rawMeta.image || '',
+    return NextResponse.json({
+      name: rawMeta.name,
+      description: rawMeta.description,
+      image: rawMeta.image,
       attributes,
-    }
-
-    return NextResponse.json(metadata, {
+    }, {
       headers: {
         'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
         'Content-Type': 'application/json',
