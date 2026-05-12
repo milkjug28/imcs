@@ -27,6 +27,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_URL || 'https://imcs.world'
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 const CRON_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 hours
+const SALES_CHANNEL_ID = '1503601324670062712'
+const SALES_POLL_MS = 3 * 60 * 1000 // 3 min
+const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY
+const COLLECTION_SLUG = 'imaginary-magic-crypto-savants'
 
 const ROLE_IDS = {
   verified: process.env.VERIFIED!,
@@ -109,9 +113,17 @@ client.once('ready', async () => {
   // Post verification widget
   await postWidget()
 
-  // Start cron
+  // Start crons
   log(`Cron set: re-verify every ${CRON_INTERVAL_MS / 3600000}h`)
   setInterval(runCron, CRON_INTERVAL_MS)
+
+  if (OPENSEA_API_KEY) {
+    log(`Sales feed: polling every ${SALES_POLL_MS / 60000} min`)
+    pollSales()
+    setInterval(pollSales, SALES_POLL_MS)
+  } else {
+    log('OPENSEA_API_KEY not set - sales feed disabled')
+  }
 })
 
 client.on('interactionCreate', async (interaction: Interaction) => {
@@ -251,6 +263,80 @@ async function postWidget() {
     components: [row],
   })
   log('Widget posted')
+}
+
+// ── Sales Feed ──────────────────────────────────────────────────────
+
+let lastSaleTimestamp = Math.floor(Date.now() / 1000)
+
+async function pollSales() {
+  try {
+    const after = lastSaleTimestamp
+    const url = `https://api.opensea.io/api/v2/events/collection/${COLLECTION_SLUG}?event_type=sale&after=${after}&limit=10`
+    const res = await fetch(url, {
+      headers: {
+        'x-api-key': OPENSEA_API_KEY!,
+        'accept': 'application/json',
+      },
+    })
+
+    if (!res.ok) {
+      log(`Sales poll error: ${res.status}`)
+      return
+    }
+
+    const data = await res.json()
+    const events = data.asset_events || []
+
+    if (events.length === 0) return
+
+    let salesChannel = client.channels.cache.get(SALES_CHANNEL_ID)
+    if (!salesChannel) {
+      try {
+        salesChannel = await client.channels.fetch(SALES_CHANNEL_ID) ?? undefined
+      } catch {
+        log('Sales channel not found')
+        return
+      }
+    }
+    if (!salesChannel?.isTextBased()) return
+
+    const textChannel = salesChannel as import('discord.js').TextChannel
+
+    for (const event of events.reverse()) {
+      const ts = event.event_timestamp ? Math.floor(new Date(event.event_timestamp).getTime() / 1000) : after
+      if (ts <= lastSaleTimestamp) continue
+
+      const tokenId = event.nft?.identifier || '?'
+      const name = event.nft?.name || `Savant #${tokenId}`
+      const image = event.nft?.image_url || event.nft?.display_image_url || ''
+      const priceWei = event.payment?.quantity || '0'
+      const priceEth = (Number(priceWei) / 1e18).toFixed(4)
+      const symbol = event.payment?.symbol || 'ETH'
+      const buyer = event.buyer ? `${event.buyer.slice(0, 6)}...${event.buyer.slice(-4)}` : '???'
+      const seller = event.seller ? `${event.seller.slice(0, 6)}...${event.seller.slice(-4)}` : '???'
+      const permalink = `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${name} sold!`)
+        .setURL(permalink)
+        .setColor(0x00ff88)
+        .addFields(
+          { name: 'price', value: `${priceEth} ${symbol}`, inline: true },
+          { name: 'buyer', value: buyer, inline: true },
+          { name: 'seller', value: seller, inline: true },
+        )
+        .setFooter({ text: 'imaginary magic crypto savants' })
+        .setTimestamp(new Date(event.event_timestamp))
+
+      if (image) embed.setThumbnail(image)
+
+      await textChannel.send({ embeds: [embed] })
+      lastSaleTimestamp = Math.max(lastSaleTimestamp, ts)
+    }
+  } catch (err) {
+    log(`Sales poll error: ${err}`)
+  }
 }
 
 // ── Cron: re-verify all holders ─────────────────────────────────────
