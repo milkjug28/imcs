@@ -13,7 +13,7 @@ IMCS Slang Characteristics:
   - "savant" -> "savaant"
   - "imagine" -> "imaginate"
   - "imagining" -> "imaginatin"
-  - "imagination" -> "imaginashun"
+  - "imagination" -> "imaginate"
   - "imaginary" -> "imaginate"
   - Any form of "imagine" should use "imaginate" as the root
   - "magic" -> "magic" or "magik"
