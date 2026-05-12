@@ -441,16 +441,14 @@ async function buildSnapshot() {
   }
   console.log(`  ${snapshotRows.length} wallet snapshots written`)
 
-  // Upsert wallet_iq_balances - only for holders with positive IQ
-  const balanceRows = holders
-    .filter(h => h.totalIQPoints > 0)
-    .map(h => ({
-      wallet: h.wallet,
-      total_earned: h.totalIQPoints,
-      total_allocated: 0,
-      last_snapshot_id: snapshot.id,
-      updated_at: new Date().toISOString(),
-    }))
+  // Upsert wallet_iq_balances for ALL holders
+  const balanceRows = holders.map(h => ({
+    wallet: h.wallet,
+    total_earned: h.totalIQPoints,
+    total_allocated: 0,
+    last_snapshot_id: snapshot.id,
+    updated_at: new Date().toISOString(),
+  }))
 
   for (let i = 0; i < balanceRows.length; i += BATCH) {
     const batch = balanceRows.slice(i, i + BATCH)
