@@ -81,11 +81,12 @@ export default function ProfilePage() {
     if (!address) { setLoading(false); return }
     setLoading(true)
 
+    const nc = { cache: 'no-store' as RequestCache }
     const [holderRes, profileRes, usernameRes, iqRes] = await Promise.all([
-      fetch(`/api/holder?wallet=${address}`).catch(() => null),
-      fetch(`/api/profile/${address}`).catch(() => null),
+      fetch(`/api/holder?wallet=${address}`, nc).catch(() => null),
+      fetch(`/api/profile/${address}`, nc).catch(() => null),
       fetch(`/api/chat/username?wallet=${address}`).catch(() => null),
-      fetch(`/api/iq/balance?wallet=${address}`).catch(() => null),
+      fetch(`/api/iq/balance?wallet=${address}`, nc).catch(() => null),
     ])
 
     if (holderRes?.ok) {

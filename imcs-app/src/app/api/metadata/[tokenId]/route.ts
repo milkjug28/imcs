@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getBaseIQ } from '@/lib/iq'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 export const dynamic = 'force-dynamic'
 
 const METADATA_DIR = resolve(process.cwd(), '../imcs-deployment/metadata-nojson')
-const IQ_FLOOR = 69
 
 export async function GET(
   request: NextRequest,
@@ -32,13 +32,14 @@ export async function GET(
       .eq('token_id', tokenId)
       .single()
 
-    const iqPoints = iqRow?.iq_points ?? IQ_FLOOR
+    const allocated = iqRow?.iq_points ?? 0
+    const totalIQ = getBaseIQ(tokenId) + allocated
 
     const attributes = (rawMeta.attributes as { trait_type: string; value: string }[]) || []
 
     attributes.push({
       trait_type: 'IQ',
-      value: String(iqPoints),
+      value: String(totalIQ),
     })
 
     return NextResponse.json({

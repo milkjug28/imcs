@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyMessage } from 'viem'
 import { supabase } from '@/lib/supabase'
+import { getBaseIQ } from '@/lib/iq'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
-const IQ_FLOOR = 69
 
 type Allocation = {
   tokenId: number
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     }, { status: 400 })
   }
 
-  const results: { tokenId: number; newIQ: number }[] = []
+  const results: { tokenId: number; totalIQ: number }[] = []
 
   for (const alloc of allocations) {
     const { data: existing } = await supabase
@@ -133,14 +133,14 @@ export async function POST(request: NextRequest) {
       .eq('token_id', alloc.tokenId)
       .single()
 
-    const currentIQ = existing?.iq_points ?? IQ_FLOOR
-    const newIQ = currentIQ + alloc.points
+    const currentAllocated = existing?.iq_points ?? 0
+    const newAllocated = currentAllocated + alloc.points
 
     const { error: upsertErr } = await supabase
       .from('savant_iq')
       .upsert({
         token_id: alloc.tokenId,
-        iq_points: newIQ,
+        iq_points: newAllocated,
         allocated_by: normalizedWallet,
         last_updated_at: new Date().toISOString(),
         ...(!existing && { allocated_at: new Date().toISOString() }),
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `failed on token ${alloc.tokenId}` }, { status: 500 })
     }
 
-    results.push({ tokenId: alloc.tokenId, newIQ })
+    results.push({ tokenId: alloc.tokenId, totalIQ: getBaseIQ(alloc.tokenId) + newAllocated })
   }
 
   const { error: balUpdate } = await supabase

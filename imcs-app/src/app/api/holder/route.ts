@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAddress, getAddress } from 'viem'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
+import { supabase } from '@/lib/supabase'
+import { getBaseIQ } from '@/lib/iq'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,14 +56,28 @@ export async function GET(request: NextRequest) {
     const data = await res.json()
     const nfts = (data.ownedNfts || []) as AlchemyNft[]
 
+    const tokenIds = nfts.map(n => parseInt(n.tokenId))
+    const { data: iqRows } = tokenIds.length > 0
+      ? await supabase.from('savant_iq').select('token_id, iq_points').in('token_id', tokenIds)
+      : { data: [] }
+
+    const allocatedMap = new Map<number, number>()
+    if (iqRows) {
+      for (const row of iqRows) {
+        allocatedMap.set(row.token_id, row.iq_points)
+      }
+    }
+
     const tokens = nfts.map(nft => {
+      const id = parseInt(nft.tokenId)
+      const allocated = allocatedMap.get(id) ?? 0
+      const totalIQ = getBaseIQ(id) + allocated
       const attrs = nft.raw?.metadata?.attributes || []
-      const iq = attrs.find(a => a.trait_type === 'IQ')
       return {
         tokenId: nft.tokenId,
         name: nft.raw?.metadata?.name || `#${nft.tokenId}`,
         image: resolveImage(nft),
-        iq: iq ? Number(iq.value) : 69,
+        iq: totalIQ,
         traits: attrs.filter(a => a.trait_type !== 'IQ' && a.trait_type !== 'Trait Count').map(a => ({
           type: a.trait_type,
           value: String(a.value),
@@ -74,7 +90,7 @@ export async function GET(request: NextRequest) {
       balance: tokens.length,
       tokens,
     }, {
-      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' }
+      headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' }
     })
   } catch {
     return NextResponse.json({ error: 'failed to fetch holdings' }, { status: 500 })
