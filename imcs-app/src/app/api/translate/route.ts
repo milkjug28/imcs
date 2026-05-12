@@ -11,7 +11,11 @@ IMCS Slang Characteristics:
   - "check" -> "chek"
   - "wallet" -> "wallut"
   - "savant" -> "savaant"
-  - "imaginary" -> "imaginary" or "imaginate"
+  - "imagine" -> "imaginate"
+  - "imagining" -> "imaginatin"
+  - "imagination" -> "imaginashun"
+  - "imaginary" -> "imaginate"
+  - Any form of "imagine" should use "imaginate" as the root
   - "magic" -> "magic" or "magik"
   - "crypto" -> "cripto"
   - "you" -> "u"
