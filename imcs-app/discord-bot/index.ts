@@ -172,29 +172,19 @@ async function handleSavantLookup(interaction: import('discord.js').CommandInter
 
     const data = await res.json()
     const name = data.raw?.metadata?.name || `Savant #${tokenId}`
-    const image = data.image?.cachedUrl || data.image?.originalUrl || data.raw?.metadata?.image || ''
-    const attrs = data.raw?.metadata?.attributes || []
+    const rawImage = data.raw?.metadata?.image || ''
+    const imageUrl = rawImage.startsWith('ipfs://')
+      ? `https://ipfs.io/ipfs/${rawImage.slice(7)}`
+      : data.image?.originalUrl || data.image?.cachedUrl || rawImage
 
     const embed = new EmbedBuilder()
       .setTitle(name)
       .setColor(0xff69b4)
+      .setFooter({ text: `savant #${tokenId} • imaginary magic crypto savants` })
 
-    if (image) {
-      const displayImage = image.startsWith('ipfs://')
-        ? `https://ipfs.io/ipfs/${image.slice(7)}`
-        : image
-      embed.setImage(displayImage)
+    if (imageUrl) {
+      embed.setImage(imageUrl)
     }
-
-    const traitLines = attrs
-      .filter((a: { trait_type: string }) => a.trait_type !== 'Trait Count')
-      .map((a: { trait_type: string; value: string | number }) => `**${a.trait_type}:** ${a.value}`)
-
-    if (traitLines.length > 0) {
-      embed.setDescription(traitLines.join('\n'))
-    }
-
-    embed.setFooter({ text: `savant #${tokenId} • imaginary magic crypto savants` })
 
     await interaction.editReply({ embeds: [embed] })
   } catch (err) {
