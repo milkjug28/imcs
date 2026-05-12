@@ -12,6 +12,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   SlashCommandBuilder,
+  MessageFlags,
   type Interaction,
   type Message,
 } from 'discord.js'
@@ -117,7 +118,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   if (interaction.isButton() && interaction.customId === 'verify_savant') {
     await interaction.reply({
       content: `go here to verify ur holdins: ${SITE_URL}/sitee/verify`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
       components: [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
@@ -132,7 +133,7 @@ client.on('interactionCreate', async (interaction: Interaction) => {
   if (interaction.isCommand() && interaction.commandName === 'verify') {
     await interaction.reply({
       content: `connekt wallet + discord on our site to get ur roles`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
       components: [
         new ActionRowBuilder<ButtonBuilder>().addComponents(
           new ButtonBuilder()
