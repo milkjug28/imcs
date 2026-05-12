@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
-const IPFS_GATEWAY = 'https://ipfs.io/ipfs/'
+const IPFS_GATEWAY = 'https://maroon-adequate-gazelle-687.mypinata.cloud/ipfs/'
 
 type AlchemyNft = {
   tokenId: string
@@ -22,10 +22,11 @@ type AlchemyNft = {
 }
 
 function resolveImage(nft: AlchemyNft): string {
-  if (nft.image?.cachedUrl) return nft.image.cachedUrl
   const raw = nft.raw?.metadata?.image || ''
   if (raw.startsWith('ipfs://')) return IPFS_GATEWAY + raw.slice(7)
-  return raw
+  const cached = nft.image?.cachedUrl || ''
+  if (cached.includes('/ipfs/')) return IPFS_GATEWAY + cached.split('/ipfs/')[1]
+  return cached || raw
 }
 
 export async function GET(request: NextRequest) {
