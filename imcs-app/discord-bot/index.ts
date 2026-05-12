@@ -1,7 +1,7 @@
 import dotenv from 'dotenv'
 import path from 'path'
 
-const root = path.resolve(__dirname, '..')
+const root = process.cwd()
 dotenv.config({ path: path.join(root, '.env') })
 dotenv.config({ path: path.join(root, '.env.local'), override: true })
 import {
@@ -139,9 +139,17 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 async function postWidget() {
   if (!VERIFICATION_CHANNEL_ID) return
 
-  const channel = client.channels.cache.get(VERIFICATION_CHANNEL_ID)
+  let channel = client.channels.cache.get(VERIFICATION_CHANNEL_ID)
+  if (!channel) {
+    try {
+      channel = await client.channels.fetch(VERIFICATION_CHANNEL_ID) ?? undefined
+    } catch {
+      log(`Channel ${VERIFICATION_CHANNEL_ID} not found`)
+      return
+    }
+  }
   if (!channel || !channel.isTextBased()) {
-    log(`Channel ${VERIFICATION_CHANNEL_ID} not found`)
+    log(`Channel ${VERIFICATION_CHANNEL_ID} not text-based`)
     return
   }
 
@@ -158,28 +166,31 @@ async function postWidget() {
   }
 
   const embed = new EmbedBuilder()
-    .setTitle('savant verificashun')
+    .setTitle('savant holder verificashun')
     .setDescription(
-      '**verify ur savant NFT holdins 2 get roles:**\n\n' +
-      '✅ **verified** - 1+ savants\n' +
-      '🧠 **reel sabant** - 2-5 savants\n' +
-      '🔮 **supa savants** - 6-24 savants\n' +
-      '👑 **ched savant** - 25-50 savants\n' +
-      '🐐 **absulut ched savanat** - 51+ savants\n\n' +
-      'roles r cumulative. cliq button below 2 start.'
+      '✅ **verified** — 1+ savant\n' +
+      '🧠 **reel sabant** — 2-5 savants\n' +
+      '🔮 **supa savants** — 6-24 savants\n' +
+      '👑 **ched savant** — 25-50 savants\n' +
+      '🐐 **absulut ched savanat** — 51+ savants\n\n' +
+      'roles stack. cliq below 2 verify.'
     )
-    .setColor(0x764ba2)
+    .setColor(0xff69b4)
     .setFooter({ text: 'imaginary magic crypto savants' })
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('verify_savant')
-      .setLabel('verify holdins')
+      .setLabel('prov ur a savant')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🧙')
   )
 
-  await textChannel.send({ embeds: [embed], components: [row] })
+  await textChannel.send({
+    content: '# verify ur savant holdins\n\nconnekt ur wallet 2 get instant holder roles.',
+    embeds: [embed],
+    components: [row],
+  })
   log('Widget posted')
 }
 
