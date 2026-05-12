@@ -304,7 +304,8 @@ async function pollSales() {
     const textChannel = salesChannel as import('discord.js').TextChannel
 
     for (const event of events.reverse()) {
-      const ts = event.event_timestamp ? Math.floor(new Date(event.event_timestamp).getTime() / 1000) : after
+      const rawTs = event.event_timestamp
+      const ts = typeof rawTs === 'number' ? rawTs : Math.floor(new Date(rawTs).getTime() / 1000)
       if (ts <= lastSaleTimestamp) continue
 
       const tokenId = event.nft?.identifier || '?'
@@ -327,7 +328,7 @@ async function pollSales() {
           { name: 'seller', value: seller, inline: true },
         )
         .setFooter({ text: 'imaginary magic crypto savants' })
-        .setTimestamp(new Date(event.event_timestamp))
+        .setTimestamp(typeof event.event_timestamp === 'number' ? new Date(event.event_timestamp * 1000) : new Date(event.event_timestamp))
 
       if (image) embed.setThumbnail(image)
 
