@@ -35,6 +35,6 @@ export async function GET(request: NextRequest) {
     wallet,
     ...balance,
   }, {
-    headers: { 'Cache-Control': 'public, max-age=0, s-maxage=10, stale-while-revalidate=30' },
+    headers: { 'Cache-Control': 'no-store' },
   })
 }

@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       balance: tokens.length,
       tokens,
     }, {
-      headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=30' }
+      headers: { 'Cache-Control': 'no-store' }
     })
   } catch {
     return NextResponse.json({ error: 'failed to fetch holdings' }, { status: 500 })
