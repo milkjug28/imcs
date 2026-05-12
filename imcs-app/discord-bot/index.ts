@@ -90,6 +90,17 @@ client.once('ready', async () => {
         .setName('verify')
         .setDescription('verify ur savant holdins n get roles')
         .toJSON(),
+      new SlashCommandBuilder()
+        .setName('sabant')
+        .setDescription('look up a savant by token id')
+        .addIntegerOption(opt =>
+          opt.setName('id')
+            .setDescription('token id (1-4269)')
+            .setRequired(true)
+            .setMinValue(1)
+            .setMaxValue(4269)
+        )
+        .toJSON(),
     ])
     log('Slash commands registered')
   }
@@ -132,7 +143,64 @@ client.on('interactionCreate', async (interaction: Interaction) => {
       ],
     })
   }
+
+  if (interaction.isCommand() && interaction.commandName === 'sabant') {
+    await handleSavantLookup(interaction)
+  }
 })
+
+// ── Savant Lookup ───────────────────────────────────────────────────
+
+async function handleSavantLookup(interaction: import('discord.js').CommandInteraction) {
+  try {
+    await interaction.deferReply()
+  } catch {
+    return
+  }
+
+  const tokenId = interaction.options.get('id')?.value as number
+  if (!tokenId || tokenId < 1 || tokenId > 4269) {
+    await interaction.editReply('invalid id. pick 1-4269 u nerd')
+    return
+  }
+
+  try {
+    const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTMetadata?contractAddress=${SAVANT_TOKEN}&tokenId=${tokenId}&refreshCache=false`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('alchemy error')
+
+    const data = await res.json()
+    const name = data.raw?.metadata?.name || `Savant #${tokenId}`
+    const image = data.image?.cachedUrl || data.image?.originalUrl || data.raw?.metadata?.image || ''
+    const attrs = data.raw?.metadata?.attributes || []
+
+    const embed = new EmbedBuilder()
+      .setTitle(name)
+      .setColor(0xff69b4)
+
+    if (image) {
+      const displayImage = image.startsWith('ipfs://')
+        ? `https://ipfs.io/ipfs/${image.slice(7)}`
+        : image
+      embed.setImage(displayImage)
+    }
+
+    const traitLines = attrs
+      .filter((a: { trait_type: string }) => a.trait_type !== 'Trait Count')
+      .map((a: { trait_type: string; value: string | number }) => `**${a.trait_type}:** ${a.value}`)
+
+    if (traitLines.length > 0) {
+      embed.setDescription(traitLines.join('\n'))
+    }
+
+    embed.setFooter({ text: `savant #${tokenId} • imaginary magic crypto savants` })
+
+    await interaction.editReply({ embeds: [embed] })
+  } catch (err) {
+    log(`Savant lookup error for #${tokenId}: ${err}`)
+    await interaction.editReply('couldnt find dat savant. try agen')
+  }
+}
 
 // ── Widget ──────────────────────────────────────────────────────────
 
