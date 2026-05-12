@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useWallet } from '@/hooks/useWallet'
-import { useReadContract } from 'wagmi'
+import { useReadContract, useSignMessage } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 import ConnectWallet from '@/components/ConnectWallet'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -27,8 +27,31 @@ type ProfileData = {
   name: string
 }
 
+type IQBalance = {
+  total_earned: number
+  total_allocated: number
+  available: number
+}
+
+function buildAllocateMessage(wallet: string, allocations: { tokenId: number; points: number }[]): string {
+  const lines = allocations.map(a => `  Savant #${a.tokenId}: +${a.points} IQ`)
+  const total = allocations.reduce((s, a) => s + a.points, 0)
+  return [
+    'Allocate IQ Points to Savants',
+    '',
+    ...lines,
+    '',
+    `Total: ${total} IQ points`,
+    '',
+    'This action is permanent and cannot be undone.',
+    '',
+    `Wallet: ${wallet.toLowerCase()}`,
+  ].join('\n')
+}
+
 export default function ProfilePage() {
   const { address, isConnected, truncatedAddress } = useWallet()
+  const { signMessageAsync } = useSignMessage()
   const [holderData, setHolderData] = useState<HolderData | null>(null)
   const [legacyProfile, setLegacyProfile] = useState<ProfileData | null>(null)
   const [username, setUsername] = useState<string | null>(null)
@@ -37,6 +60,13 @@ export default function ProfilePage() {
   const [savingName, setSavingName] = useState(false)
   const [loading, setLoading] = useState(true)
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
+
+  const [iqBalance, setIqBalance] = useState<IQBalance | null>(null)
+  const [allocations, setAllocations] = useState<Record<string, number>>({})
+  const [allocating, setAllocating] = useState(false)
+  const [allocateError, setAllocateError] = useState<string | null>(null)
+  const [allocateSuccess, setAllocateSuccess] = useState<string | null>(null)
+  const [showAllocator, setShowAllocator] = useState(false)
 
   const { data: balanceRaw } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
@@ -51,10 +81,11 @@ export default function ProfilePage() {
     if (!address) { setLoading(false); return }
     setLoading(true)
 
-    const [holderRes, profileRes, usernameRes] = await Promise.all([
+    const [holderRes, profileRes, usernameRes, iqRes] = await Promise.all([
       fetch(`/api/holder?wallet=${address}`).catch(() => null),
       fetch(`/api/profile/${address}`).catch(() => null),
       fetch(`/api/chat/username?wallet=${address}`).catch(() => null),
+      fetch(`/api/iq/balance?wallet=${address}`).catch(() => null),
     ])
 
     if (holderRes?.ok) {
@@ -72,6 +103,11 @@ export default function ProfilePage() {
       setUsername(data.username || null)
     }
 
+    if (iqRes?.ok) {
+      const data = await iqRes.json()
+      setIqBalance(data)
+    }
+
     setLoading(false)
   }, [address])
 
@@ -84,6 +120,9 @@ export default function ProfilePage() {
       setUsername(null)
       setSelectedToken(null)
       setEditingName(false)
+      setIqBalance(null)
+      setAllocations({})
+      setShowAllocator(false)
       setLoading(false)
     }
   }, [isConnected, address, fetchData])
@@ -107,6 +146,47 @@ export default function ProfilePage() {
       }
     } catch {}
     setSavingName(false)
+  }
+
+  const totalAllocating = Object.values(allocations).reduce((s, v) => s + (v || 0), 0)
+  const canAllocate = totalAllocating > 0 && totalAllocating <= (iqBalance?.available || 0)
+
+  const handleAllocate = async () => {
+    if (!address || !canAllocate) return
+    setAllocating(true)
+    setAllocateError(null)
+    setAllocateSuccess(null)
+
+    const allocs = Object.entries(allocations)
+      .filter(([, pts]) => pts > 0)
+      .map(([tokenId, points]) => ({ tokenId: parseInt(tokenId), points }))
+
+    if (!allocs.length) return
+
+    const message = buildAllocateMessage(address, allocs)
+
+    try {
+      const signature = await signMessageAsync({ message })
+
+      const res = await fetch('/api/iq/allocate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: address, allocations: allocs, signature, message }),
+      })
+
+      const data = await res.json()
+      if (data.ok) {
+        setAllocateSuccess(`allocated ${totalAllocating} IQ points!`)
+        setAllocations({})
+        setShowAllocator(false)
+        fetchData()
+      } else {
+        setAllocateError(data.error || 'allocation failed')
+      }
+    } catch (err) {
+      setAllocateError(err instanceof Error ? err.message : 'signature rejected')
+    }
+    setAllocating(false)
   }
 
   const balance = balanceRaw !== undefined ? Number(balanceRaw) : (holderData?.balance ?? null)
@@ -240,58 +320,312 @@ export default function ProfilePage() {
 
           {/* Stats Row */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.4)',
-              border: '2px solid #000',
-              padding: '10px 16px',
-              textAlign: 'center',
-              flex: '1 1 80px',
-            }}>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
-                {balance ?? 0}
-              </div>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>savants held</div>
-            </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.4)',
-              border: '2px solid #000',
-              padding: '10px 16px',
-              textAlign: 'center',
-              flex: '1 1 80px',
-            }}>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
-                {totalIQ}
-              </div>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>total iq</div>
-            </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.4)',
-              border: '2px solid #000',
-              padding: '10px 16px',
-              textAlign: 'center',
-              flex: '1 1 80px',
-            }}>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
-                {legacyProfile?.total_points || 0}
-              </div>
-              <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>legacy pts</div>
-            </div>
-            {legacyProfile?.rank && (
-              <div style={{
-                background: 'rgba(255,255,255,0.4)',
-                border: '2px solid #000',
-                padding: '10px 16px',
-                textAlign: 'center',
-                flex: '1 1 80px',
-              }}>
-                <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
-                  #{legacyProfile.rank}
-                </div>
-                <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>legacy rank</div>
-              </div>
+            <StatBox label="savants held" value={balance ?? 0} />
+            <StatBox label="total iq" value={totalIQ} />
+            {iqBalance && iqBalance.available > 0 && (
+              <StatBox label="iq 2 allocate" value={iqBalance.available} highlight />
             )}
+            <StatBox label="legacy pts" value={legacyProfile?.total_points || 0} />
+            {legacyProfile?.rank && <StatBox label="legacy rank" value={`#${legacyProfile.rank}`} />}
           </div>
         </div>
+
+        {/* IQ Allocation Banner */}
+        {iqBalance && iqBalance.available > 0 && isHolder && !showAllocator && (
+          <motion.div
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
+            style={{
+              background: 'linear-gradient(135deg, #00ff87, #60efff)',
+              border: '3px solid #000',
+              boxShadow: '6px 6px 0 #000',
+              padding: '16px 20px',
+              marginBottom: '20px',
+              cursor: 'pointer',
+              textAlign: 'center',
+            }}
+            onClick={() => setShowAllocator(true)}
+          >
+            <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', fontWeight: 'bold', color: '#000' }}>
+              u have {iqBalance.available} IQ points 2 allocate!
+            </div>
+            <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '14px', color: '#333', marginTop: '4px' }}>
+              tap here 2 make ur savants smarter (permanent, no takebacks)
+            </div>
+          </motion.div>
+        )}
+
+        {/* Allocation Success/Error */}
+        {allocateSuccess && (
+          <div style={{
+            background: '#00ff87',
+            border: '2px solid #000',
+            padding: '12px',
+            marginBottom: '16px',
+            fontFamily: "'Comic Neue', cursive",
+            fontWeight: 'bold',
+            textAlign: 'center',
+          }}>
+            {allocateSuccess}
+          </div>
+        )}
+        {allocateError && (
+          <div style={{
+            background: '#ff4444',
+            color: '#fff',
+            border: '2px solid #000',
+            padding: '12px',
+            marginBottom: '16px',
+            fontFamily: "'Comic Neue', cursive",
+            fontWeight: 'bold',
+            textAlign: 'center',
+          }}>
+            {allocateError}
+          </div>
+        )}
+
+        {/* IQ Allocator Panel */}
+        <AnimatePresence>
+          {showAllocator && iqBalance && holderData && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              style={{
+                background: '#111',
+                border: '3px solid #0f0',
+                boxShadow: '0 0 20px rgba(0,255,0,0.3)',
+                marginBottom: '20px',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ padding: '20px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '16px',
+                }}>
+                  <h3 style={{
+                    fontFamily: 'monospace',
+                    fontSize: '16px',
+                    color: '#0f0',
+                    margin: 0,
+                  }}>
+                    IQ ALLOCATION TERMINAL
+                  </h3>
+                  <button
+                    onClick={() => { setShowAllocator(false); setAllocations({}) }}
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                      background: 'transparent',
+                      color: '#666',
+                      border: '1px solid #333',
+                      padding: '2px 8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    [X]
+                  </button>
+                </div>
+
+                <div style={{
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  color: '#0f0',
+                  marginBottom: '16px',
+                  padding: '8px',
+                  background: '#0a0a0a',
+                  border: '1px solid #333',
+                }}>
+                  Available: {iqBalance.available - totalAllocating} / {iqBalance.available} IQ pts
+                  {totalAllocating > 0 && <span style={{ color: '#ff0' }}> (allocating {totalAllocating})</span>}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {holderData.tokens.map(token => (
+                    <div
+                      key={token.tokenId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '8px',
+                        background: '#1a1a1a',
+                        border: '1px solid #333',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={token.image}
+                        alt={token.name}
+                        style={{ width: '48px', height: '48px', objectFit: 'cover', border: '1px solid #333' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: 'monospace', fontSize: '13px', color: '#fff' }}>
+                          {token.name}
+                        </div>
+                        <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#888' }}>
+                          Current IQ: {token.iq}
+                          {(allocations[token.tokenId] || 0) > 0 && (
+                            <span style={{ color: '#0f0' }}>
+                              {' '}→ {token.iq + (allocations[token.tokenId] || 0)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          onClick={() => {
+                            const current = allocations[token.tokenId] || 0
+                            if (current > 0) setAllocations(p => ({ ...p, [token.tokenId]: current - 1 }))
+                          }}
+                          style={{
+                            fontFamily: 'monospace',
+                            width: '28px',
+                            height: '28px',
+                            background: '#333',
+                            color: '#fff',
+                            border: '1px solid #555',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            lineHeight: '1',
+                          }}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min={0}
+                          max={iqBalance.available - totalAllocating + (allocations[token.tokenId] || 0)}
+                          value={allocations[token.tokenId] || 0}
+                          onChange={e => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0)
+                            const otherAllocations = totalAllocating - (allocations[token.tokenId] || 0)
+                            const clamped = Math.min(val, iqBalance.available - otherAllocations)
+                            setAllocations(p => ({ ...p, [token.tokenId]: clamped }))
+                          }}
+                          style={{
+                            fontFamily: 'monospace',
+                            width: '60px',
+                            textAlign: 'center',
+                            background: '#000',
+                            color: '#0f0',
+                            border: '1px solid #0f0',
+                            padding: '4px',
+                            fontSize: '14px',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const current = allocations[token.tokenId] || 0
+                            const remaining = iqBalance.available - totalAllocating
+                            if (remaining > 0) setAllocations(p => ({ ...p, [token.tokenId]: current + 1 }))
+                          }}
+                          style={{
+                            fontFamily: 'monospace',
+                            width: '28px',
+                            height: '28px',
+                            background: '#333',
+                            color: '#fff',
+                            border: '1px solid #555',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            lineHeight: '1',
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick actions */}
+                {holderData.tokens.length > 1 && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    marginBottom: '12px',
+                    flexWrap: 'wrap',
+                  }}>
+                    <button
+                      onClick={() => {
+                        const perToken = Math.floor(iqBalance.available / holderData.tokens.length)
+                        const remainder = iqBalance.available % holderData.tokens.length
+                        const newAllocs: Record<string, number> = {}
+                        holderData.tokens.forEach((t, i) => {
+                          newAllocs[t.tokenId] = perToken + (i < remainder ? 1 : 0)
+                        })
+                        setAllocations(newAllocs)
+                      }}
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        background: '#1a1a1a',
+                        color: '#0f0',
+                        border: '1px solid #0f0',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      split evenly
+                    </button>
+                    <button
+                      onClick={() => setAllocations({})}
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        background: '#1a1a1a',
+                        color: '#666',
+                        border: '1px solid #333',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      clear all
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleAllocate}
+                  disabled={!canAllocate || allocating}
+                  style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    padding: '12px 24px',
+                    width: '100%',
+                    background: canAllocate ? '#0f0' : '#333',
+                    color: canAllocate ? '#000' : '#666',
+                    border: `2px solid ${canAllocate ? '#0f0' : '#333'}`,
+                    cursor: canAllocate ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {allocating
+                    ? 'sign in wallet...'
+                    : canAllocate
+                      ? `allocate ${totalAllocating} IQ points (permanent)`
+                      : 'enter points above'
+                  }
+                </button>
+
+                <div style={{
+                  fontFamily: 'monospace',
+                  fontSize: '10px',
+                  color: '#666',
+                  textAlign: 'center',
+                  marginTop: '8px',
+                }}>
+                  requires wallet signature. no gas. no takebacks.
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Holdings Gallery */}
         {!isHolder ? (
@@ -304,7 +638,7 @@ export default function ProfilePage() {
             textAlign: 'center',
           }}>
             <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '22px', marginBottom: '12px' }}>
-              u dont hold any savants 💀
+              u dont hold any savants
             </h3>
             <p style={{ fontFamily: "'Comic Neue', cursive", fontSize: '16px', color: '#666' }}>
               get 1 on{' '}
@@ -473,6 +807,24 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+function StatBox({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
+  return (
+    <div style={{
+      background: highlight ? 'rgba(0,255,0,0.3)' : 'rgba(255,255,255,0.4)',
+      border: `2px solid ${highlight ? '#0f0' : '#000'}`,
+      padding: '10px 16px',
+      textAlign: 'center',
+      flex: '1 1 80px',
+      ...(highlight && { animation: 'pulse 2s infinite' }),
+    }}>
+      <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '24px', fontWeight: 'bold' }}>
+        {value}
+      </div>
+      <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '12px' }}>{label}</div>
     </div>
   )
 }
