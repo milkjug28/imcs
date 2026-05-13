@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 
 export const dynamic = 'force-dynamic'
-
-const METADATA_DIR = resolve(process.cwd(), 'data/metadata')
 
 export async function GET(
   request: NextRequest,
@@ -18,42 +14,40 @@ export async function GET(
   }
 
   try {
-    let rawMeta: Record<string, unknown>
-    try {
-      const content = readFileSync(resolve(METADATA_DIR, String(tokenId)), 'utf-8')
-      rawMeta = JSON.parse(content)
-    } catch {
+    const [metaResult, iqResult] = await Promise.all([
+      supabase
+        .from('savant_metadata')
+        .select('name, description, image, attributes')
+        .eq('token_id', tokenId)
+        .single(),
+      supabase
+        .from('savant_iq')
+        .select('iq_points, savant_name')
+        .eq('token_id', tokenId)
+        .single(),
+    ])
+
+    if (!metaResult.data) {
       return NextResponse.json({ error: 'token not found' }, { status: 404 })
     }
 
-    const { data: iqRow } = await supabase
-      .from('savant_iq')
-      .select('iq_points, savant_name')
-      .eq('token_id', tokenId)
-      .single()
-
-    const allocated = iqRow?.iq_points ?? 0
+    const meta = metaResult.data
+    const allocated = iqResult.data?.iq_points ?? 0
     const totalIQ = getBaseIQ(tokenId) + allocated
-    const savantName = iqRow?.savant_name || null
+    const savantName = iqResult.data?.savant_name || null
 
-    const attributes = (rawMeta.attributes as { trait_type: string; value: string }[]) || []
+    const attributes = [...(meta.attributes as { trait_type: string; value: string }[] || [])]
 
     attributes.push({
       trait_type: 'IQ',
       value: String(totalIQ),
     })
 
-    if (savantName) {
-      attributes.push({
-        trait_type: 'Savant Name',
-        value: savantName,
-      })
-    }
-
     return NextResponse.json({
-      name: rawMeta.name,
-      description: rawMeta.description,
-      image: rawMeta.image,
+      name: meta.name,
+      description: meta.description,
+      image: meta.image,
+      ...(savantName && { savant_name: savantName }),
       attributes,
     }, {
       headers: {
