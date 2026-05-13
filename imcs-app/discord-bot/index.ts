@@ -291,27 +291,27 @@ function startSalesStream() {
         : '???'
       const permalink = payload.item?.permalink || `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
 
-      // Fetch token stats from supabase
+      // Fetch token stats from supabase + OpenSea rarity
       let iq = '?'
-      let traitCount = '?'
+      let rarityRank = '?'
       let savantName = ''
       if (!isNaN(tokenNum)) {
         const ONE_OF_ONE_TOKENS = new Set([315, 851, 1023, 1865, 2902, 3541, 4248])
         const baseIQ = ONE_OF_ONE_TOKENS.has(tokenNum) ? 111 : 69
 
-        const [metaRes, iqRes] = await Promise.all([
-          supabase.from('savant_metadata').select('attributes').eq('token_id', tokenNum).single(),
+        const [iqRes, osRes] = await Promise.all([
           supabase.from('savant_iq').select('iq_points, savant_name').eq('token_id', tokenNum).single(),
+          fetch(`https://api.opensea.io/api/v2/chain/ethereum/contract/${SAVANT_TOKEN}/nfts/${tokenNum}`, {
+            headers: { 'x-api-key': OPENSEA_API_KEY! },
+          }).then(r => r.ok ? r.json() : null).catch(() => null),
         ])
 
         const allocated = iqRes.data?.iq_points ?? 0
         iq = String(baseIQ + allocated)
         savantName = iqRes.data?.savant_name || ''
 
-        const attrs = metaRes.data?.attributes as { trait_type: string }[] | null
-        if (attrs) {
-          traitCount = String(attrs.filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ').length)
-        }
+        const rank = osRes?.nft?.rarity?.rank
+        if (rank) rarityRank = `#${rank} / 4269`
       }
 
       const title = savantName ? `${savantName} (${name}) sold!` : `${name} sold!`
@@ -323,7 +323,7 @@ function startSalesStream() {
         .addFields(
           { name: 'price', value: `${priceEth} ${symbol}`, inline: true },
           { name: 'IQ', value: iq, inline: true },
-          { name: 'traits', value: traitCount, inline: true },
+          { name: 'rarity', value: rarityRank, inline: true },
           { name: 'buyer', value: buyer, inline: true },
           { name: 'seller', value: seller, inline: true },
         )
