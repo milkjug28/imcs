@@ -1,4 +1,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scoped reset for Savant Radio widget - in base layer so Tailwind utilities win */
+@layer base {
+  [data-savant-radio] {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    line-height: 1.5;
+  }
+  [data-savant-radio] button {
+    appearance: none;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    outline: none;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  [data-savant-radio] img {
+    display: block;
+    max-width: 100%;
+  }
+  [data-savant-radio] p {
+    margin: 0;
+  }
+  [data-savant-radio] *::-webkit-scrollbar { width: 4px; height: 4px; }
+  [data-savant-radio] *::-webkit-scrollbar-track { background: transparent; }
+  [data-savant-radio] *::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+  [data-savant-radio] * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
+}
 
 * {
   margin: 0;

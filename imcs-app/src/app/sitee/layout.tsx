@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useRef, useEffect, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import MusicPlayer from '@/components/MusicPlayer'
+import SavantRadioWidget from '@/components/SavantRadioWidget'
 import PopupSavants from '@/components/PopupSavants'
 import ConnectWallet from '@/components/ConnectWallet'
 import ChatWidget from '@/components/ChatWidget'
@@ -192,8 +192,8 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Background Music Player */}
-      <MusicPlayer />
+      {/* Savant Radio */}
+      <SavantRadioWidget />
 
       {/* Popup Savant Characters */}
       <PopupSavants />
