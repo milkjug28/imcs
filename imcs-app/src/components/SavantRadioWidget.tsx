@@ -36,6 +36,7 @@ export default function SavantRadioWidget({
   const [tracks, setTracks] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [dark, setDark] = useState(defaultDark);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
@@ -101,18 +102,6 @@ export default function SavantRadioWidget({
 
   useEffect(() => () => stopTimeTracking(), [stopTimeTracking]);
 
-  useEffect(() => {
-    if (tracks.length === 0) return;
-    const autoplay = () => {
-      if (!hasInteracted.current && playerRef.current) {
-        hasInteracted.current = true;
-        playerRef.current.playVideo();
-      }
-      document.removeEventListener('click', autoplay);
-    };
-    document.addEventListener('click', autoplay);
-    return () => document.removeEventListener('click', autoplay);
-  }, [tracks]);
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     setDragging(true);
@@ -143,14 +132,24 @@ export default function SavantRadioWidget({
     playerRef.current = event.target;
     setCurrentTime(0);
     setDuration(0);
-    if (hasInteracted.current) {
-      event.target.playVideo();
+    hasInteracted.current = true;
+    if (currentTrack) {
+      event.target.loadVideoById(currentTrack.id);
     }
   };
+
+  useEffect(() => {
+    if (playerRef.current && currentTrack && hasInteracted.current) {
+      playerRef.current.loadVideoById(currentTrack.id);
+      setCurrentTime(0);
+      setDuration(0);
+    }
+  }, [currentTrackIndex]);
 
   const onPlayerStateChange: YouTubeProps['onStateChange'] = (event) => {
     if (event.data === 1) {
       setIsPlaying(true);
+      setLoading(false);
       startTimeTracking();
     } else if (event.data === 2) {
       setIsPlaying(false);
@@ -222,8 +221,8 @@ export default function SavantRadioWidget({
   return (
     <div data-savant-radio>
       <div
-        className={`fixed z-50 ${bg} rounded-2xl border ${border} shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden ${dragging ? 'cursor-grabbing' : ''}`}
-        style={{ width: 300, bottom: position.y, left: position.x }}
+        className={`fixed ${bg} rounded-2xl border ${border} shadow-[0_8px_32px_rgba(0,0,0,0.4)] overflow-hidden ${dragging ? 'cursor-grabbing' : ''}`}
+        style={{ width: 300, bottom: position.y, left: position.x, zIndex: 9998 }}
       >
         <div
           className={`flex items-center justify-between px-3 py-1.5 border-b ${dark ? 'border-white/5' : 'border-[#e0e0e0]'} cursor-grab active:cursor-grabbing select-none`}
@@ -333,21 +332,29 @@ export default function SavantRadioWidget({
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="flex items-center gap-2 p-2"
             >
-              {currentTrack && <img src={currentTrack.thumbnail} alt="" className="w-8 h-8 rounded-lg object-cover" />}
-              <p className={`text-[10px] truncate flex-1 ${text}`}>{currentTrack?.title || 'No track'}</p>
-              <button onClick={togglePlay} className={`${text} ${activeHover}`}>
-                {isPlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
-              </button>
+              {loading ? (
+                <>
+                  <Radio size={12} className={`${active} animate-pulse`} />
+                  <p className={`text-[10px] truncate flex-1 ${sub}`}>loading...</p>
+                </>
+              ) : (
+                <>
+                  {currentTrack && <img src={currentTrack.thumbnail} alt="" className="w-8 h-8 rounded-lg object-cover" />}
+                  <p className={`text-[10px] truncate flex-1 ${text}`}>{currentTrack?.title || 'No track'}</p>
+                  <button onClick={togglePlay} className={`${text} ${activeHover}`}>
+                    {isPlaying ? <Pause size={12} /> : <Play size={12} className="ml-0.5" />}
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       <div className="hidden">
-        {currentTrack && (
+        {tracks.length > 0 && (
           <YouTube
-            key={currentTrack.id + currentTrackIndex}
-            videoId={currentTrack.id}
+            videoId={tracks[0].id}
             opts={opts}
             onReady={onPlayerReady}
             onStateChange={onPlayerStateChange}

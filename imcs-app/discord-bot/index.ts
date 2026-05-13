@@ -17,6 +17,8 @@ import {
   type Message,
 } from 'discord.js'
 import { createClient } from '@supabase/supabase-js'
+import { OpenSeaStreamClient } from '@opensea/stream-js'
+import { WebSocket } from 'ws'
 
 // ── Config ──────────────────────────────────────────────────────────
 
@@ -28,7 +30,6 @@ const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 const CRON_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 hours
 const SALES_CHANNEL_ID = '1503601324670062712'
-const SALES_POLL_MS = 3 * 60 * 1000 // 3 min
 const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY
 const COLLECTION_SLUG = 'imaginary-magic-crypto-savants'
 
@@ -118,9 +119,7 @@ client.once('ready', async () => {
   setInterval(runCron, CRON_INTERVAL_MS)
 
   if (OPENSEA_API_KEY) {
-    log(`Sales feed: polling every ${SALES_POLL_MS / 60000} min`)
-    pollSales()
-    setInterval(pollSales, SALES_POLL_MS)
+    startSalesStream()
   } else {
     log('OPENSEA_API_KEY not set - sales feed disabled')
   }
@@ -265,58 +264,31 @@ async function postWidget() {
   log('Widget posted')
 }
 
-// ── Sales Feed ──────────────────────────────────────────────────────
+// ── Sales Stream (WebSocket) ────────────────────────────────────────
 
-let lastSaleTimestamp = Math.floor(Date.now() / 1000)
+function startSalesStream() {
+  const osClient = new OpenSeaStreamClient({
+    token: OPENSEA_API_KEY!,
+    connectOptions: { transport: WebSocket },
+    onError: (err) => log(`Stream error: ${err}`),
+  })
 
-async function pollSales() {
-  try {
-    const after = lastSaleTimestamp
-    const url = `https://api.opensea.io/api/v2/events/collection/${COLLECTION_SLUG}?event_type=sale&after=${after}&limit=10`
-    const res = await fetch(url, {
-      headers: {
-        'x-api-key': OPENSEA_API_KEY!,
-        'accept': 'application/json',
-      },
-    })
-
-    if (!res.ok) {
-      log(`Sales poll error: ${res.status}`)
-      return
-    }
-
-    const data = await res.json()
-    const events = data.asset_events || []
-
-    if (events.length === 0) return
-
-    let salesChannel = client.channels.cache.get(SALES_CHANNEL_ID)
-    if (!salesChannel) {
-      try {
-        salesChannel = await client.channels.fetch(SALES_CHANNEL_ID) ?? undefined
-      } catch {
-        log('Sales channel not found')
-        return
-      }
-    }
-    if (!salesChannel?.isTextBased()) return
-
-    const textChannel = salesChannel as import('discord.js').TextChannel
-
-    for (const event of events.reverse()) {
-      const rawTs = event.event_timestamp
-      const ts = typeof rawTs === 'number' ? rawTs : Math.floor(new Date(rawTs).getTime() / 1000)
-      if (ts <= lastSaleTimestamp) continue
-
-      const tokenId = event.nft?.identifier || '?'
-      const name = event.nft?.name || `Savant #${tokenId}`
-      const image = event.nft?.image_url || event.nft?.display_image_url || ''
-      const priceWei = event.payment?.quantity || '0'
+  osClient.onItemSold(COLLECTION_SLUG, async (event) => {
+    try {
+      const payload = event.payload
+      const tokenId = payload.item?.nft_id?.split('/')?.pop() || '?'
+      const name = payload.item?.metadata?.name || `Savant #${tokenId}`
+      const image = payload.item?.metadata?.image_url || ''
+      const priceWei = payload.sale_price || '0'
       const priceEth = (Number(priceWei) / 1e18).toFixed(4)
-      const symbol = event.payment?.symbol || 'ETH'
-      const buyer = event.buyer ? `${event.buyer.slice(0, 6)}...${event.buyer.slice(-4)}` : '???'
-      const seller = event.seller ? `${event.seller.slice(0, 6)}...${event.seller.slice(-4)}` : '???'
-      const permalink = `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
+      const symbol = payload.payment_token?.symbol || 'ETH'
+      const buyer = payload.taker?.address
+        ? `${payload.taker.address.slice(0, 6)}...${payload.taker.address.slice(-4)}`
+        : '???'
+      const seller = payload.maker?.address
+        ? `${payload.maker.address.slice(0, 6)}...${payload.maker.address.slice(-4)}`
+        : '???'
+      const permalink = payload.item?.permalink || `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
 
       const embed = new EmbedBuilder()
         .setTitle(`${name} sold!`)
@@ -328,16 +300,25 @@ async function pollSales() {
           { name: 'seller', value: seller, inline: true },
         )
         .setFooter({ text: 'imaginary magic crypto savants' })
-        .setTimestamp(typeof event.event_timestamp === 'number' ? new Date(event.event_timestamp * 1000) : new Date(event.event_timestamp))
+        .setTimestamp(new Date(payload.event_timestamp))
 
       if (image) embed.setThumbnail(image)
 
+      let salesChannel = client.channels.cache.get(SALES_CHANNEL_ID)
+      if (!salesChannel) {
+        salesChannel = await client.channels.fetch(SALES_CHANNEL_ID) ?? undefined
+      }
+      if (!salesChannel?.isTextBased()) return
+
+      const textChannel = salesChannel as import('discord.js').TextChannel
       await textChannel.send({ embeds: [embed] })
-      lastSaleTimestamp = Math.max(lastSaleTimestamp, ts)
+      log(`Sale posted: ${name} for ${priceEth} ${symbol}`)
+    } catch (err) {
+      log(`Stream sale handler error: ${err}`)
     }
-  } catch (err) {
-    log(`Sales poll error: ${err}`)
-  }
+  })
+
+  log('Sales stream connected (websocket)')
 }
 
 // ── Cron: re-verify all holders ─────────────────────────────────────

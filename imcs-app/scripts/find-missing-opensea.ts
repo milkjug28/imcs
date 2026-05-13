@@ -13,37 +13,62 @@ const API_KEY = env.OPENSEA_API_KEY
 const CONTRACT = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 const TOTAL_SUPPLY = 4269
 
-async function checkToken(tokenId: number): Promise<boolean> {
-  const url = `https://api.opensea.io/api/v2/chain/ethereum/contract/${CONTRACT}/nfts/${tokenId}`
-  const res = await fetch(url, {
-    headers: { 'x-api-key': API_KEY },
-  })
-  if (res.status === 404 || res.status === 400) return false
-  if (!res.ok) {
-    console.log(`  Token ${tokenId}: HTTP ${res.status} (retrying...)`)
-    await new Promise(r => setTimeout(r, 2000))
-    return checkToken(tokenId)
+async function fetchAllIndexed(): Promise<Set<number>> {
+  const indexed = new Set<number>()
+  let next: string | null = null
+  let page = 0
+
+  while (true) {
+    page++
+    let url = `https://api.opensea.io/api/v2/chain/ethereum/contract/${CONTRACT}/nfts?limit=200`
+    if (next) url += `&next=${next}`
+
+    const res = await fetch(url, { headers: { 'x-api-key': API_KEY } })
+
+    if (res.status === 429) {
+      console.log(`  429 on page ${page}, backing off...`)
+      await new Promise(r => setTimeout(r, 3000))
+      continue
+    }
+
+    if (!res.ok) {
+      console.log(`  HTTP ${res.status} on page ${page}, retrying...`)
+      await new Promise(r => setTimeout(r, 2000))
+      continue
+    }
+
+    const data = await res.json()
+    const nfts = data.nfts || []
+
+    for (const nft of nfts) {
+      const id = parseInt(nft.identifier)
+      if (!isNaN(id)) indexed.add(id)
+    }
+
+    console.log(`  Page ${page}: +${nfts.length} tokens (${indexed.size} total)`)
+
+    next = data.next
+    if (!next || nfts.length === 0) break
+
+    await new Promise(r => setTimeout(r, 260))
   }
-  return true
+
+  return indexed
 }
 
 async function findMissing() {
-  const missing: number[] = []
-  console.log(`Scanning from ${TOTAL_SUPPLY} downward, looking for 5 missing tokens...\n`)
+  console.log(`Fetching all indexed tokens from OpenSea...\n`)
 
-  for (let id = TOTAL_SUPPLY; id >= 1 && missing.length < 5; id--) {
-    const exists = await checkToken(id)
-    if (!exists) {
-      console.log(`MISSING: Token #${id}`)
-      missing.push(id)
-    } else if (id % 100 === 0) {
-      console.log(`  Checked down to #${id}... (${missing.length} missing so far)`)
-    }
-    // rate limit
-    await new Promise(r => setTimeout(r, 200))
+  const indexed = await fetchAllIndexed()
+
+  console.log(`\nOpenSea has ${indexed.size} / ${TOTAL_SUPPLY} indexed.`)
+
+  const missing: number[] = []
+  for (let id = 1; id <= TOTAL_SUPPLY; id++) {
+    if (!indexed.has(id)) missing.push(id)
   }
 
-  console.log(`\nFound ${missing.length} missing tokens:`, missing)
+  console.log(`\nMissing (${missing.length}):`, missing)
 }
 
 findMissing()
