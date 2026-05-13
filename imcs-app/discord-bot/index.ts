@@ -277,6 +277,7 @@ function startSalesStream() {
     try {
       const payload = event.payload
       const tokenId = payload.item?.nft_id?.split('/')?.pop() || '?'
+      const tokenNum = parseInt(tokenId)
       const name = payload.item?.metadata?.name || `Savant #${tokenId}`
       const image = payload.item?.metadata?.image_url || ''
       const priceWei = payload.sale_price || '0'
@@ -290,19 +291,46 @@ function startSalesStream() {
         : '???'
       const permalink = payload.item?.permalink || `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
 
+      // Fetch token stats from supabase
+      let iq = '?'
+      let traitCount = '?'
+      let savantName = ''
+      if (!isNaN(tokenNum)) {
+        const ONE_OF_ONE_TOKENS = new Set([315, 851, 1023, 1865, 2902, 3541, 4248])
+        const baseIQ = ONE_OF_ONE_TOKENS.has(tokenNum) ? 111 : 69
+
+        const [metaRes, iqRes] = await Promise.all([
+          supabase.from('savant_metadata').select('attributes').eq('token_id', tokenNum).single(),
+          supabase.from('savant_iq').select('iq_points, savant_name').eq('token_id', tokenNum).single(),
+        ])
+
+        const allocated = iqRes.data?.iq_points ?? 0
+        iq = String(baseIQ + allocated)
+        savantName = iqRes.data?.savant_name || ''
+
+        const attrs = metaRes.data?.attributes as { trait_type: string }[] | null
+        if (attrs) {
+          traitCount = String(attrs.filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ').length)
+        }
+      }
+
+      const title = savantName ? `${savantName} (${name}) sold!` : `${name} sold!`
+
       const embed = new EmbedBuilder()
-        .setTitle(`${name} sold!`)
+        .setTitle(title)
         .setURL(permalink)
         .setColor(0x00ff88)
         .addFields(
           { name: 'price', value: `${priceEth} ${symbol}`, inline: true },
+          { name: 'IQ', value: iq, inline: true },
+          { name: 'traits', value: traitCount, inline: true },
           { name: 'buyer', value: buyer, inline: true },
           { name: 'seller', value: seller, inline: true },
         )
         .setFooter({ text: 'imaginary magic crypto savants' })
         .setTimestamp(new Date(payload.event_timestamp))
 
-      if (image) embed.setThumbnail(image)
+      if (image) embed.setImage(image)
 
       let salesChannel = client.channels.cache.get(SALES_CHANNEL_ID)
       if (!salesChannel) {
