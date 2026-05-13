@@ -36,7 +36,7 @@ export async function GET() {
         wallet: o.ownerAddress,
         count: o.tokenBalances.reduce((sum, tb) => sum + parseInt(tb.balance || '0'), 0),
       }))
-      .filter(h => h.count > 0)
+      .filter(h => h.count > 0 && h.wallet.toLowerCase() !== '0x6878144669e7e558737feb3820410174ceef04e6')
       .sort((a, b) => b.count - a.count)
 
     cachedData = { holders, fetchedAt: Date.now() }

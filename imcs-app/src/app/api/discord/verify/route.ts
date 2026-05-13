@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { isAddress, getAddress } from 'viem'
+import { isAddress, getAddress, recoverMessageAddress } from 'viem'
 import { getDiscordUser, assignTierRoles, getTiersForCount } from '@/lib/discord'
 import { supabase } from '@/lib/supabase'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
@@ -41,19 +41,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { wallet } = body
+    const { wallet, signature, message } = body
 
     if (!wallet || !isAddress(wallet)) {
       return NextResponse.json({ error: 'invalid wallet' }, { status: 400 })
     }
 
+    if (!signature || !message) {
+      return NextResponse.json({ error: 'signature required to prove wallet ownership' }, { status: 400 })
+    }
+
+    const checksummedEarly = getAddress(wallet)
+    const recovered = await recoverMessageAddress({ message, signature })
+    if (getAddress(recovered) !== checksummedEarly) {
+      return NextResponse.json({ error: 'signature doesnt match wallet' }, { status: 401 })
+    }
+
+    const tsMatch = message.match(/Timestamp: (\d+)/)
+    if (!tsMatch || Math.abs(Date.now() - Number(tsMatch[1])) > 300_000) {
+      return NextResponse.json({ error: 'signature expired. try agen' }, { status: 401 })
+    }
+
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('discord_access_token')?.value
-    if (!accessToken) {
+    const sessionUserId = cookieStore.get('discord_session')?.value
+
+    let discordUser: { id: string; username: string }
+
+    if (accessToken) {
+      const user = await getDiscordUser(accessToken)
+      discordUser = { id: user.id, username: user.username }
+    } else if (sessionUserId) {
+      const { data: sessionData } = await supabase
+        .from('discord_verifications')
+        .select('discord_user_id, discord_username')
+        .eq('discord_user_id', sessionUserId)
+        .single()
+      if (!sessionData) {
+        return NextResponse.json({ error: 'session expired. link discord agen' }, { status: 401 })
+      }
+      discordUser = { id: sessionData.discord_user_id, username: sessionData.discord_username }
+    } else {
       return NextResponse.json({ error: 'discord not linked. connect discord first' }, { status: 401 })
     }
 
-    const discordUser = await getDiscordUser(accessToken)
     const checksummed = getAddress(wallet)
     const walletCount = await getHoldings(checksummed)
 
@@ -120,7 +151,17 @@ export async function POST(request: NextRequest) {
 
     await assignTierRoles(GUILD_ID, discordUser.id, total)
 
-    cookieStore.delete('discord_access_token')
+    if (accessToken) {
+      cookieStore.delete('discord_access_token')
+    }
+
+    cookieStore.set('discord_session', discordUser.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 604800,
+    })
 
     return NextResponse.json({
       success: true,

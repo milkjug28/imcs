@@ -28,12 +28,13 @@ export async function GET(
 
     const { data: iqRow } = await supabase
       .from('savant_iq')
-      .select('iq_points')
+      .select('iq_points, savant_name')
       .eq('token_id', tokenId)
       .single()
 
     const allocated = iqRow?.iq_points ?? 0
     const totalIQ = getBaseIQ(tokenId) + allocated
+    const savantName = iqRow?.savant_name || null
 
     const attributes = (rawMeta.attributes as { trait_type: string; value: string }[]) || []
 
@@ -41,6 +42,13 @@ export async function GET(
       trait_type: 'IQ',
       value: String(totalIQ),
     })
+
+    if (savantName) {
+      attributes.push({
+        trait_type: 'Savant Name',
+        value: savantName,
+      })
+    }
 
     return NextResponse.json({
       name: rawMeta.name,

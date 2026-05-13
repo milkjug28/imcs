@@ -64,26 +64,27 @@ export async function GET(request: NextRequest) {
 
     const tokenIds = nfts.map(n => parseInt(n.tokenId))
     const { data: iqRows } = tokenIds.length > 0
-      ? await supabase.from('savant_iq').select('token_id, iq_points').in('token_id', tokenIds)
+      ? await supabase.from('savant_iq').select('token_id, iq_points, savant_name').in('token_id', tokenIds)
       : { data: [] }
 
-    const allocatedMap = new Map<number, number>()
+    const iqMap = new Map<number, { allocated: number; savantName: string | null }>()
     if (iqRows) {
       for (const row of iqRows) {
-        allocatedMap.set(row.token_id, row.iq_points)
+        iqMap.set(row.token_id, { allocated: row.iq_points || 0, savantName: row.savant_name || null })
       }
     }
 
     const tokens = nfts.map(nft => {
       const id = parseInt(nft.tokenId)
-      const allocated = allocatedMap.get(id) ?? 0
-      const totalIQ = getBaseIQ(id) + allocated
+      const iqData = iqMap.get(id)
+      const totalIQ = getBaseIQ(id) + (iqData?.allocated ?? 0)
       const attrs = nft.raw?.metadata?.attributes || []
       return {
         tokenId: nft.tokenId,
         name: nft.raw?.metadata?.name || `#${nft.tokenId}`,
         image: resolveImage(nft),
         iq: totalIQ,
+        savantName: iqData?.savantName || null,
         traits: attrs.filter(a => a.trait_type !== 'IQ' && a.trait_type !== 'Trait Count').map(a => ({
           type: a.trait_type,
           value: String(a.value),

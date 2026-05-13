@@ -12,6 +12,7 @@ type Token = {
   name: string
   image: string
   iq: number
+  savantName?: string | null
   traits: { type: string; value: string }[]
 }
 
@@ -67,6 +68,11 @@ export default function ProfilePage() {
   const [allocateError, setAllocateError] = useState<string | null>(null)
   const [allocateSuccess, setAllocateSuccess] = useState<string | null>(null)
   const [showAllocator, setShowAllocator] = useState(false)
+
+  const [namingToken, setNamingToken] = useState(false)
+  const [savantNameInput, setSavantNameInput] = useState('')
+  const [namingError, setNamingError] = useState<string | null>(null)
+  const [namingSuccess, setNamingSuccess] = useState(false)
 
   const { data: balanceRaw } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
@@ -188,6 +194,51 @@ export default function ProfilePage() {
       setAllocateError(err instanceof Error ? err.message : 'signature rejected')
     }
     setAllocating(false)
+  }
+
+  const handleNameSavant = async () => {
+    if (!address || !selectedToken || !savantNameInput.trim()) return
+    setNamingToken(true)
+    setNamingError(null)
+    setNamingSuccess(false)
+
+    const tokenId = parseInt(selectedToken.tokenId)
+    const trimmed = savantNameInput.trim()
+    const message = [
+      'Name Your Savant',
+      '',
+      `Savant #${tokenId}: "${trimmed}"`,
+      '',
+      `Wallet: ${address.toLowerCase()}`,
+    ].join('\n')
+
+    try {
+      const signature = await signMessageAsync({ message })
+
+      const res = await fetch('/api/savant/name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: address, tokenId, name: trimmed, signature, message }),
+      })
+
+      const data = await res.json()
+      if (data.ok) {
+        setSelectedToken({ ...selectedToken, savantName: trimmed })
+        setSavantNameInput('')
+        setNamingSuccess(true)
+        if (holderData) {
+          const updated = holderData.tokens.map(t =>
+            t.tokenId === selectedToken.tokenId ? { ...t, savantName: trimmed } : t
+          )
+          setHolderData({ ...holderData, tokens: updated })
+        }
+      } else {
+        setNamingError(data.error || 'failed to set name')
+      }
+    } catch (err) {
+      setNamingError(err instanceof Error ? err.message : 'signature rejected')
+    }
+    setNamingToken(false)
   }
 
   const balance = balanceRaw !== undefined ? Number(balanceRaw) : (holderData?.balance ?? null)
@@ -693,9 +744,11 @@ export default function ProfilePage() {
                     justifyContent: 'space-between',
                     background: '#000',
                     color: '#0f0',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
                   }}>
-                    <span>{token.name}</span>
-                    <span>IQ:{token.iq}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{token.name}{token.savantName ? ` - ${token.savantName}` : ''}</span>
+                    <span style={{ flexShrink: 0, marginLeft: '4px' }}>IQ:{token.iq}</span>
                   </div>
                 </motion.div>
               ))}
@@ -733,7 +786,7 @@ export default function ProfilePage() {
                 border: '4px solid #000',
                 boxShadow: '10px 10px 0 #000',
                 borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
-                maxWidth: '420px',
+                maxWidth: '340px',
                 width: '100%',
                 overflow: 'hidden',
               }}
@@ -742,17 +795,17 @@ export default function ProfilePage() {
               <img
                 src={selectedToken.image}
                 alt={selectedToken.name}
-                style={{ width: '100%', display: 'block' }}
+                style={{ width: '100%', maxHeight: '280px', objectFit: 'cover', display: 'block' }}
               />
               <div style={{ padding: '16px' }}>
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  marginBottom: '12px',
+                  marginBottom: '4px',
                 }}>
                   <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '22px', margin: 0 }}>
-                    {selectedToken.name}
+                    {selectedToken.savantName || selectedToken.name}
                   </h3>
                   <span style={{
                     fontFamily: 'monospace',
@@ -767,27 +820,96 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
+                {selectedToken.savantName && (
+                  <div style={{
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    color: '#888',
+                    marginBottom: '8px',
+                  }}>
+                    {selectedToken.name}
+                  </div>
+                )}
+
+                {/* Savant Naming */}
                 <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '6px',
+                  background: '#f5f5f5',
+                  border: '2px solid #000',
+                  padding: '10px',
+                  marginBottom: '12px',
                 }}>
-                  {selectedToken.traits.map((trait, i) => (
-                    <span key={i} style={{
+                  <div style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    marginBottom: '6px',
+                  }}>
+                    {selectedToken.savantName ? 'rename ur savant' : 'sett naym'}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input
+                      value={savantNameInput}
+                      onChange={e => setSavantNameInput(e.target.value)}
+                      placeholder={selectedToken.savantName || 'name ur savant...'}
+                      maxLength={32}
+                      style={{
+                        flex: 1,
+                        fontFamily: "'Comic Neue', cursive",
+                        fontSize: '13px',
+                        padding: '6px 8px',
+                        border: '2px solid #000',
+                        background: '#fff',
+                      }}
+                    />
+                    <button
+                      onClick={handleNameSavant}
+                      disabled={namingToken || !savantNameInput.trim()}
+                      style={{
+                        fontFamily: "'Comic Neue', cursive",
+                        fontSize: '12px',
+                        padding: '6px 12px',
+                        background: savantNameInput.trim() ? '#00ff00' : '#ccc',
+                        border: '2px solid #000',
+                        cursor: savantNameInput.trim() ? 'pointer' : 'not-allowed',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {namingToken ? '...' : 'sign & save'}
+                    </button>
+                  </div>
+                  {namingSuccess && (
+                    <div style={{
                       fontFamily: "'Comic Neue', cursive",
                       fontSize: '11px',
-                      padding: '3px 8px',
-                      background: `hsl(${(i * 47) % 360}, 70%, 85%)`,
-                      border: '1px solid #000',
-                      borderRadius: '4px',
+                      color: '#00aa00',
+                      fontWeight: 'bold',
+                      marginTop: '4px',
                     }}>
-                      <strong>{trait.type}:</strong> {trait.value}
-                    </span>
-                  ))}
+                      naym saved! ur savant is now known as &quot;{selectedToken.savantName}&quot;
+                    </div>
+                  )}
+                  {namingError && (
+                    <div style={{
+                      fontFamily: "'Comic Neue', cursive",
+                      fontSize: '11px',
+                      color: '#ff0000',
+                      marginTop: '4px',
+                    }}>
+                      {namingError}
+                    </div>
+                  )}
+                  <div style={{
+                    fontFamily: 'monospace',
+                    fontSize: '9px',
+                    color: '#999',
+                    marginTop: '4px',
+                  }}>
+                    requires wallet signature. shows on leederbord & metadata.
+                  </div>
                 </div>
 
                 <button
-                  onClick={() => setSelectedToken(null)}
+                  onClick={() => { setSelectedToken(null); setSavantNameInput(''); setNamingError(null); setNamingSuccess(false) }}
                   style={{
                     fontFamily: "'Comic Neue', cursive",
                     fontSize: '14px',
