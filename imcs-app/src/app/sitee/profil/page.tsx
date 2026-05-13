@@ -50,6 +50,186 @@ function buildAllocateMessage(wallet: string, allocations: { tokenId: number; po
   ].join('\n')
 }
 
+function IQInfoPopup({ onClose }: { onClose: () => void }) {
+  const [dontShow, setDontShow] = useState(false)
+
+  const handleClose = () => {
+    if (dontShow) {
+      localStorage.setItem('hide-iq-info', '1')
+    }
+    onClose()
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={handleClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.7)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, rotate: -2 }}
+        animate={{ scale: 1, rotate: 0 }}
+        exit={{ scale: 0.8 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff',
+          border: '4px solid #000',
+          boxShadow: '10px 10px 0 #000',
+          borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+          maxWidth: '420px',
+          width: '100%',
+          padding: '24px',
+          transform: 'rotate(0.5deg)',
+        }}
+      >
+        <h3 style={{
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '22px',
+          textAlign: 'center',
+          marginBottom: '16px',
+          textShadow: '2px 2px 0 #ff69b4',
+        }}>
+          how iq wurks
+        </h3>
+
+        <div style={{
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '14px',
+          lineHeight: '1.6',
+          marginBottom: '16px',
+        }}>
+          <div style={{ marginBottom: '12px' }}>
+            <strong style={{ color: '#006600' }}>u mint n hold?</strong> +5 IQ poinz pur savnat
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong style={{ color: '#0044cc' }}>u bye sabant?</strong> +2 IQ poinz pur savaant
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong style={{ color: '#cc0000' }}>u paypurr haand?!</strong> -10 IQ poinz. paypurrhands r dum
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong style={{ color: '#cc4400' }}>u lihst savant 4 saal?</strong> -1 IQ pointz pur listin. wee c u
+          </div>
+        </div>
+
+        <div style={{
+          background: '#111',
+          border: '2px solid #0f0',
+          padding: '12px',
+          marginBottom: '16px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '10px',
+            color: '#0f0',
+            marginBottom: '4px',
+          }}>
+            CLASSIFIED SAVANT MAFS
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: '#0f0',
+            lineHeight: '1.8',
+          }}>
+            IQ = (H * 5) + (B * 2) - (S * 10) - (L * 1)
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '9px',
+            color: '#666',
+            marginTop: '8px',
+            lineHeight: '1.6',
+          }}>
+            where H = mint hodl coefficient<br/>
+            B = secondary acquisition factor<br/>
+            S = paperhands liquidation index<br/>
+            L = intent-to-dump signal ratio<br/>
+            <br/>
+            leederbord pts to iq conversion:<br/>
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '10px',
+            color: '#ff0',
+            marginTop: '4px',
+          }}>
+            totalIQ = leaderboardIQ + tradingIQ
+          </div>
+          <div style={{
+            fontFamily: 'monospace',
+            fontSize: '8px',
+            color: '#555',
+            marginTop: '4px',
+          }}>
+            leederIQ = ceil(submissionScore * ln(votingKarma + 1))<br/>
+            * sqrt(referralBonus) / (1 + e^(-communityFactor))<br/>
+            * cos(0) + i*sin(savantVibes) - 0 + pi*0
+          </div>
+        </div>
+
+        <div style={{
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '12px',
+          textAlign: 'center',
+          color: '#999',
+          marginBottom: '12px',
+          fontStyle: 'italic',
+        }}>
+          iq points can be allocated 2 ur savants. dis is permanent. no takebacks. makes them smarter 4ever.
+        </div>
+
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontFamily: "'Comic Neue', cursive",
+          fontSize: '12px',
+          marginBottom: '12px',
+          cursor: 'pointer',
+        }}>
+          <input
+            type="checkbox"
+            checked={dontShow}
+            onChange={e => setDontShow(e.target.checked)}
+            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+          />
+          dont show me dis agen im not dum
+        </label>
+
+        <button
+          onClick={handleClose}
+          style={{
+            fontFamily: "'Comic Neue', cursive",
+            fontSize: '14px',
+            padding: '8px 20px',
+            background: '#ff69b4',
+            color: '#fff',
+            border: '2px solid #000',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            width: '100%',
+          }}
+        >
+          ok i get it (i dont)
+        </button>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function ProfilePage() {
   const { address, isConnected, truncatedAddress } = useWallet()
   const { signMessageAsync } = useSignMessage()
@@ -68,6 +248,7 @@ export default function ProfilePage() {
   const [allocateError, setAllocateError] = useState<string | null>(null)
   const [allocateSuccess, setAllocateSuccess] = useState<string | null>(null)
   const [showAllocator, setShowAllocator] = useState(false)
+  const [showIQInfo, setShowIQInfo] = useState(false)
 
   const [namingToken, setNamingToken] = useState(false)
   const [savantNameInput, setSavantNameInput] = useState('')
@@ -117,6 +298,12 @@ export default function ProfilePage() {
 
     setLoading(false)
   }, [address])
+
+  useEffect(() => {
+    if (isConnected && address && !localStorage.getItem('hide-iq-info')) {
+      setShowIQInfo(true)
+    }
+  }, [isConnected, address])
 
   useEffect(() => {
     if (isConnected && address) {
@@ -756,6 +943,11 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* IQ Info Popup */}
+      <AnimatePresence>
+        {showIQInfo && <IQInfoPopup onClose={() => setShowIQInfo(false)} />}
+      </AnimatePresence>
 
       {/* Token Detail Modal */}
       <AnimatePresence>
