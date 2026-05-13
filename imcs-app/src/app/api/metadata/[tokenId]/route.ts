@@ -6,7 +6,7 @@ import { resolve } from 'path'
 
 export const dynamic = 'force-dynamic'
 
-const METADATA_DIR = resolve(process.cwd(), '../imcs-deployment/metadata-nojson')
+const METADATA_DIR = resolve(process.cwd(), 'data/metadata')
 
 export async function GET(
   request: NextRequest,

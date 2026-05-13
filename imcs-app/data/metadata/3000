@@ -1,0 +1,33 @@
+{
+    "name": "#3000",
+    "description": "imaginary magic crypto savants",
+    "image": "ipfs://bafybeicsv74c4tolpbali5od4pvzzwiw33s2podbsicmiai7k4zbobtbpy/3000.png",
+    "edition": 3000,
+    "attributes": [
+        {
+            "trait_type": "bg's",
+            "value": "greeen"
+        },
+        {
+            "trait_type": "bods",
+            "value": "derk"
+        },
+        {
+            "trait_type": "cloths",
+            "value": "drugs r gud"
+        },
+        {
+            "trait_type": "ayezz",
+            "value": "fayded-darhk"
+        },
+        {
+            "trait_type": "moufs",
+            "value": "meeh"
+        },
+        {
+            "trait_type": "hatss",
+            "value": "pelgrem"
+        }
+    ],
+    "dna": "10-1-9-2-5-5-3-25-8-2-0"
+}

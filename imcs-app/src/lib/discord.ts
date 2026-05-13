@@ -14,7 +14,7 @@ export type Tier = {
 }
 
 export const TIERS: Tier[] = [
-  { name: 'verified', roleEnvKey: 'VERIFIED', minCount: 1 },
+  { name: 'simpul sabant', roleEnvKey: 'SIMPUL_SABANT', minCount: 1 },
   { name: 'reel sabant', roleEnvKey: 'REEL_SABANT', minCount: 2 },
   { name: 'supa savants', roleEnvKey: 'SUPA_SAVANTS', minCount: 6 },
   { name: 'ched savant', roleEnvKey: 'CHED_SAVANT', minCount: 25 },

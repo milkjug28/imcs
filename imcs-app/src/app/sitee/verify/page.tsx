@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
-import { useAccount, useSignMessage } from 'wagmi'
+import { useAccount, useSignMessage, useDisconnect } from 'wagmi'
 import { useSearchParams } from 'next/navigation'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import ConnectWallet from '@/components/ConnectWallet'
 
 const DISCORD_CLIENT_ID = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || ''
@@ -39,6 +40,8 @@ function VerifyContent() {
   const { address, isConnected } = useAccount()
   const searchParams = useSearchParams()
   const { signMessageAsync } = useSignMessage()
+  const { disconnect } = useDisconnect()
+  const { openConnectModal } = useConnectModal()
 
   const linked = searchParams.get('linked') === 'true'
   const discordUser = searchParams.get('discord_user')
@@ -252,7 +255,7 @@ function VerifyContent() {
             </p>
           </div>
 
-          <button onClick={handleDiscordLink} style={btnStyle}>
+          <button onClick={() => { disconnect(); setTimeout(() => openConnectModal?.(), 100) }} style={btnStyle}>
             + link another wallet
           </button>
 
@@ -301,7 +304,7 @@ function VerifyContent() {
           ) : verifying ? (
             <p style={{ color: '#fff', textAlign: 'center' }}>sign in ur wallet then checkin bags...</p>
           ) : result ? (
-            <ResultDisplay result={result} onAddWallet={handleDiscordLink} />
+            <ResultDisplay result={result} onAddWallet={() => { disconnect(); setTimeout(() => openConnectModal?.(), 100) }} />
           ) : verifyError ? (
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: '#ff6b6b', marginBottom: '10px' }}>{verifyError}</p>
@@ -402,7 +405,7 @@ function TierSection() {
       transform: 'rotate(0.3deg)',
     }}>
       <h3 style={{ fontFamily: "'Comic Neue', cursive", marginBottom: '15px' }}>tier systum</h3>
-      <TierRow emoji="✅" name="verified" range="1+ savants" />
+      <TierRow emoji="🤓" name="simpul sabant" range="1 savant" />
       <TierRow emoji="🧠" name="reel sabant" range="2-5 savants" />
       <TierRow emoji="🔮" name="supa savants" range="6-24 savants" />
       <TierRow emoji="👑" name="ched savant" range="25-50 savants" />

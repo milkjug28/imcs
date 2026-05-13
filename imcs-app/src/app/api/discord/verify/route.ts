@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         : total >= 2
         ? 'reel sabant energy. nice'
         : total >= 1
-        ? 'verified holder. welcum 2 savant wurld'
+        ? 'simpul sabant detected. welcum 2 savant wurld'
         : 'u dont hold any savants across ur wallets, dummie',
       tokenCount: total,
       tiers: tierNames,

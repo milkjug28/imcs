@@ -33,7 +33,7 @@ const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY
 const COLLECTION_SLUG = 'imaginary-magic-crypto-savants'
 
 const ROLE_IDS = {
-  verified: process.env.VERIFIED!,
+  simpul_sabant: process.env.SIMPUL_SABANT!,
   reel_sabant: process.env.REEL_SABANT!,
   supa_savants: process.env.SUPA_SAVANTS!,
   ched_savant: process.env.CHED_SAVANT!,
@@ -41,7 +41,7 @@ const ROLE_IDS = {
 }
 
 const TIERS = [
-  { key: 'verified' as const, min: 1 },
+  { key: 'simpul_sabant' as const, min: 1 },
   { key: 'reel_sabant' as const, min: 2 },
   { key: 'supa_savants' as const, min: 6 },
   { key: 'ched_savant' as const, min: 25 },
@@ -239,7 +239,7 @@ async function postWidget() {
   const embed = new EmbedBuilder()
     .setTitle('savant holder verificashun')
     .setDescription(
-      '✅ **verified** — 1+ savant\n' +
+      '🤓 **simpul sabant** — 1 savant\n' +
       '🧠 **reel sabant** — 2-5 savants\n' +
       '🔮 **supa savants** — 6-24 savants\n' +
       '👑 **ched savant** — 25-50 savants\n' +
