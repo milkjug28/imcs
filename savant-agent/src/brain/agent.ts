@@ -7,15 +7,28 @@ import { log, logError } from '../utils/log'
 
 const MAX_ITERATIONS = 3
 
+export interface ImageAttachment {
+  mimeType: string
+  base64: string
+}
+
 export async function runAgent(
   prompt: string,
   extraContext?: string,
   acquisitionContext?: string,
+  images?: ImageAttachment[],
 ): Promise<string> {
   const systemInstruction = buildSystemPrompt(extraContext, acquisitionContext)
 
+  const userParts: GeminiPart[] = [{ text: prompt }]
+  if (images && images.length > 0) {
+    for (const img of images) {
+      userParts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } })
+    }
+  }
+
   const contents: GeminiContent[] = [
-    { role: 'user', parts: [{ text: prompt }] },
+    { role: 'user', parts: userParts },
   ]
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
@@ -41,6 +54,10 @@ export async function runAgent(
         const text = textParts.map((p: GeminiPart) => p.text).join(' ').trim()
         if (text) {
           const safe = sanitize(text)
+          if (!safe) {
+            log(`[agent] gibberish filtered, dropping response`)
+            break
+          }
           log(`[agent] responded via ${model} (${i + 1} iterations): "${safe.slice(0, 80)}..."`)
           return safe
         }

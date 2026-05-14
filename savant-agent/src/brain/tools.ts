@@ -80,7 +80,7 @@ export const AGENT_TOOLS = [
       },
       {
         name: 'buy_savant',
-        description: 'Buy the cheapest listed savant on OpenSea. ONLY use this when someone explicitly tells you to buy a savant and you have confirmed you have enough ETH via check_wallet_balance. This spends real ETH.',
+        description: 'Buy the cheapest listed savant on OpenSea. Use when asked to buy a savant. First check balance with check_wallet_balance, then call this. Pass confirm="yes_buy_floor" to execute.',
         parameters: {
           type: 'OBJECT',
           properties: {
@@ -94,7 +94,7 @@ export const AGENT_TOOLS = [
       },
       {
         name: 'get_user_context',
-        description: 'Look up information about a Discord user - their linked wallets, how many savants they hold, their tier, and IQ balance. Use when someone asks about their own holdings, IQ, or wallet, or when you want to know more about who you are talking to.',
+        description: 'Look up a Discord user\'s linked wallets, savant holdings, tier, and IQ balance. Use ONLY when someone asks about their own holdings, IQ, wallet, or verification status.',
         parameters: {
           type: 'OBJECT',
           properties: {

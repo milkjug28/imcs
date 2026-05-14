@@ -132,5 +132,17 @@ export function sanitize(text: string): string {
   for (const pattern of PRIVATE_KEY_PATTERNS) {
     result = result.replace(pattern, '[REDACTED]')
   }
+  // Strip leaked tool call markup (DeepSeek outputs fake XML tool calls as text)
+  result = result.replace(/<\s*\|?\s*DSML\s*\|?[\s\S]*?<\/\s*\|?\s*DSML\s*\|?\s*tool_calls\s*>/gi, '')
+  result = result.replace(/<\s*tool_call[\s\S]*?<\/\s*tool_call\s*>/gi, '')
+  result = result.replace(/<\|.*?\|>/g, '')
+  result = result.trim()
+
+  // Reject gibberish - if >30% non-Latin characters, response is garbage
+  const nonLatin = result.replace(/[\x00-\x7F]/g, '').length
+  if (result.length > 10 && nonLatin / result.length > 0.3) {
+    return ''
+  }
+
   return result
 }

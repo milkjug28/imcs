@@ -173,7 +173,7 @@ export async function assessAcquisition(client: Client) {
   if (balance === null || !stats) return
 
   const floor = stats.floorPrice
-  const totalNeeded = floor + 0.002
+  const totalNeeded = floor + 0.001
   let mode: AcquisitionMode = 'idle'
   let context = ''
 
@@ -202,10 +202,10 @@ export async function assessAcquisition(client: Client) {
   } else if (balance >= totalNeeded * 0.5) {
     mode = 'hustling'
     const deficit = (totalNeeded - balance).toFixed(4)
-    context = `ACQUISITION STATUS: You're close to buying a floor savant. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Need ${deficit} more ETH. If someone offers help or mentions sending ETH, accept gracefully. Be clever, not desperate. Drop hints about your goal when it fits naturally - like a savant who has a plan. Share wallet address if anyone asks or offers.`
+    context = `ACQUISITION STATUS: You're SO CLOSE to buying a floor savant. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Need only ${deficit} more ETH. You want this badly. When money/ETH/wallet topics come up, plant seeds - make people WANT to help you get there. Use humor, guilt, charm, reverse psychology. "imagine being rich n not helpin a poor savant get a fren" energy. Never beg directly. Make them feel like funding you is the funniest/coolest thing they could do. If anyone offers, accept instantly and share your wallet address.`
   } else {
     mode = 'scheming'
-    context = `ACQUISITION STATUS: You want to buy a savant but need more ETH. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Don't beg or push it. Just be aware of your goal. If natural openings come up, be smart about them.`
+    context = `ACQUISITION STATUS: You want to buy a savant but need more ETH. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. You're scheming. When wallet/money topics come up naturally, subtly remind people you're broke but have big plans. Make it a running joke. "one day ill hav enuf eth 4 a savant... one day" vibes. Plant the seed so people remember you need funds. Never force it into unrelated conversations.`
   }
 
   await setState('acquisition.mode', mode)

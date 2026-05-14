@@ -27,10 +27,10 @@ export function createBot(): Client {
 
   const respondedTo = new Set<string>()
   const channelCooldowns = new Map<string, number>()
-  const COOLDOWN_MS = 3_000
+  const channelLocks = new Set<string>()
+  const COOLDOWN_MS = 8_000
 
   client.on('messageCreate', async (message: Message) => {
-    // Skip all bots - check both bot flag and webhook messages
     if (message.author.bot) return
     if (message.webhookId) return
     if (!message.guild || message.guild.id !== config.guildId) return
@@ -38,7 +38,6 @@ export function createBot(): Client {
     const mentioned = message.mentions.has(client.user!)
     if (!mentioned) return
 
-    // Deduplicate - never respond to same message twice
     if (respondedTo.has(message.id)) return
     respondedTo.add(message.id)
     if (respondedTo.size > 200) {
@@ -46,12 +45,19 @@ export function createBot(): Client {
       if (first) respondedTo.delete(first)
     }
 
-    // Per-channel cooldown - no rapid-fire responses
+    // Per-channel processing lock - only one response at a time per channel
+    if (channelLocks.has(message.channelId)) {
+      log(`[bot] channel locked, skip ${message.id} in ${message.channelId}`)
+      return
+    }
+
     const lastReply = channelCooldowns.get(message.channelId) || 0
     if (Date.now() - lastReply < COOLDOWN_MS) {
       log(`[bot] cooldown skip in ${message.channelId}`)
       return
     }
+
+    channelLocks.add(message.channelId)
     channelCooldowns.set(message.channelId, Date.now())
 
     try {
@@ -62,6 +68,8 @@ export function createBot(): Client {
       try {
         await message.reply('brain broke lol. try agen')
       } catch { /* ignore */ }
+    } finally {
+      channelLocks.delete(message.channelId)
     }
   })
 
