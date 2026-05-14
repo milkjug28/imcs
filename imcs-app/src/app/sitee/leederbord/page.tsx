@@ -399,6 +399,8 @@ export default function LeaderboardPage() {
                   border: '4px solid #000',
                   boxShadow: '8px 8px 0 #000',
                   overflow: 'hidden',
+                  maxWidth: '360px',
+                  margin: '0 auto',
                 }}
               >
                 {rarityImage && (
@@ -406,7 +408,7 @@ export default function LeaderboardPage() {
                   <img
                     src={rarityImage}
                     alt={`#${rarityResult.tokenId}`}
-                    style={{ width: '100%', maxHeight: '350px', objectFit: 'cover', display: 'block' }}
+                    style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', display: 'block' }}
                   />
                 )}
                 <div style={{ padding: '16px' }}>
