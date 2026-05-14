@@ -25,12 +25,34 @@ export function createBot(): Client {
     startCrons(client)
   })
 
+  const respondedTo = new Set<string>()
+  const channelCooldowns = new Map<string, number>()
+  const COOLDOWN_MS = 3_000
+
   client.on('messageCreate', async (message: Message) => {
+    // Skip all bots - check both bot flag and webhook messages
     if (message.author.bot) return
+    if (message.webhookId) return
     if (!message.guild || message.guild.id !== config.guildId) return
 
     const mentioned = message.mentions.has(client.user!)
     if (!mentioned) return
+
+    // Deduplicate - never respond to same message twice
+    if (respondedTo.has(message.id)) return
+    respondedTo.add(message.id)
+    if (respondedTo.size > 200) {
+      const first = respondedTo.values().next().value
+      if (first) respondedTo.delete(first)
+    }
+
+    // Per-channel cooldown - no rapid-fire responses
+    const lastReply = channelCooldowns.get(message.channelId) || 0
+    if (Date.now() - lastReply < COOLDOWN_MS) {
+      log(`[bot] cooldown skip in ${message.channelId}`)
+      return
+    }
+    channelCooldowns.set(message.channelId, Date.now())
 
     try {
       if ('sendTyping' in message.channel) await message.channel.sendTyping()
