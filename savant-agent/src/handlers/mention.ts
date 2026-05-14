@@ -3,7 +3,7 @@ import { generateResponse } from '../brain'
 import { getCollectionStats } from '../opensea'
 import { getMarketData, marketSummary } from '../market'
 import { getSavantMetadata } from '../supabase'
-import { getBalance, walletContext } from '../wallet'
+import { getBalance, walletContextBasic, walletContextFull } from '../wallet'
 import { log } from '../utils/log'
 
 const recentResponses: string[] = []
@@ -52,18 +52,21 @@ export async function handleMention(message: Message) {
 
   const prompt = `Chat log:\n${chatLog}\n\n${message.author.username} just said: "${content}"\n\nReply to what they said. Be specific to their words.${antiRepeat}`
 
-  const walletTrigger = /your (wallet|address)|send (u|you)|donate|tip|fund you|help you buy|give you|wallet address|ur address/i
-  const wantsWallet = walletTrigger.test(content)
+  // Always know you have a wallet. Only reveal address when there's an opportunity.
+  const addressTrigger = /wallet|address|send (u|you)|donate|tip|fund|help (u|you) buy|give (u|you)|contribute|sponsor/i
+  const showAddress = addressTrigger.test(content)
 
   const marketKeywords = /price|btc|bitcoin|eth|ethereum|sol|solana|market|pump|dump|bull|bear|chart|trading|defi|token|gas|gwei/i
   const wantsMarket = marketKeywords.test(content)
 
   const [balance, market] = await Promise.all([
-    wantsWallet ? getBalance() : Promise.resolve(null),
+    showAddress ? getBalance() : Promise.resolve(null),
     wantsMarket ? getMarketData() : Promise.resolve(null),
   ])
 
-  const walletCtx = wantsWallet ? walletContext(balance, stats?.floorPrice ?? 0) : ''
+  const walletCtx = showAddress
+    ? walletContextFull(balance, stats?.floorPrice ?? 0)
+    : walletContextBasic()
   const marketCtx = market ? marketSummary(market) : ''
 
   const extraContext = [

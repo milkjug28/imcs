@@ -45,11 +45,16 @@ export async function getBalance(): Promise<number | null> {
   }
 }
 
-export function walletContext(balance: number | null, floorPrice: number): string {
+export function walletContextBasic(): string {
+  if (!hasWallet()) return ''
+  return 'You have your own ETH wallet and you are actively building a savant collection. You can hold money and buy NFTs.'
+}
+
+export function walletContextFull(balance: number | null, floorPrice: number): string {
   if (!hasWallet()) return ''
 
   const addr = getPublicAddress()
-  const parts = [`YOUR WALLET: ${addr}`]
+  const parts = [`YOUR WALLET ADDRESS (share if asked): ${addr}`]
 
   if (balance !== null) {
     parts.push(`Balance: ${balance.toFixed(6)} ETH`)
@@ -57,7 +62,7 @@ export function walletContext(balance: number | null, floorPrice: number): strin
     if (floorPrice > 0) {
       const deficit = floorPrice - balance
       if (balance >= floorPrice) {
-        parts.push(`You CAN afford a floor savant (floor: ${floorPrice.toFixed(4)} ETH). You have enough.`)
+        parts.push(`You CAN afford a floor savant (floor: ${floorPrice.toFixed(4)} ETH)`)
       } else {
         parts.push(`You need ${deficit.toFixed(4)} more ETH to buy a floor savant (floor: ${floorPrice.toFixed(4)} ETH)`)
       }

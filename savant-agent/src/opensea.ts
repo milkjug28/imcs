@@ -35,12 +35,17 @@ export async function getCollectionStats(): Promise<CollectionStats | null> {
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL) return cached
 
   try {
-    const [listingsData, salesData] = await Promise.all([
+    const [listingsData, salesData, statsData] = await Promise.all([
       fetchJSON(`https://api.opensea.io/api/v2/listings/collection/${config.collectionSlug}/all?limit=50`),
       fetchJSON(`https://api.opensea.io/api/v2/events/collection/${config.collectionSlug}?event_type=sale&limit=50`),
+      fetchJSON(`https://api.opensea.io/api/v2/collections/${config.collectionSlug}/stats`),
     ])
 
     const listings = listingsData?.listings || []
+    const statsFloor = statsData?.total?.floor_price ?? 0
+    const numOwners = statsData?.total?.num_owners ?? 0
+    const dailySales = statsData?.intervals?.[0]?.sales ?? 0
+    const dailyVolume = statsData?.intervals?.[0]?.volume ?? 0
     const sales: SaleEvent[] = (salesData?.asset_events || []).map((e: Record<string, unknown>) => {
       const payment = e.payment as Record<string, unknown> | undefined
       return {
@@ -52,8 +57,9 @@ export async function getCollectionStats(): Promise<CollectionStats | null> {
       }
     })
 
-    let floorPrice = 0
-    if (listings.length > 0) {
+    // Use stats endpoint floor (more accurate than sampling listings)
+    let floorPrice = statsFloor
+    if (!floorPrice && listings.length > 0) {
       const prices = listings
         .map((l: Record<string, unknown>) => {
           const price = l.price as Record<string, unknown> | undefined
@@ -86,7 +92,10 @@ export async function getCollectionStats(): Promise<CollectionStats | null> {
     const parts: string[] = []
     parts.push(`IMCS is MINTED OUT (4269/4269)`)
     if (floorPrice > 0) parts.push(`floor: ${floorPrice.toFixed(4)} ETH`)
-    parts.push(`${listings.length} listed`)
+    const listedLabel = listings.length >= 50 ? '50+' : String(listings.length)
+    parts.push(`${listedLabel} listed`)
+    if (numOwners > 0) parts.push(`${numOwners} owners`)
+    if (dailySales > 0) parts.push(`${dailySales} sales today, ${dailyVolume.toFixed(4)} ETH vol`)
     if (sales.length > 0) {
       const avgPrice = sales.reduce((s, e) => s + e.price, 0) / sales.length
       parts.push(`recent avg sale: ${avgPrice.toFixed(4)} ETH`)
