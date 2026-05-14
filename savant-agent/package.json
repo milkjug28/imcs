@@ -13,6 +13,7 @@
     "@supabase/supabase-js": "^2.49.4",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
+    "ethers": "^6.16.0",
     "ws": "^8.20.1"
   },
   "devDependencies": {
