@@ -15,18 +15,26 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await youtube.playlistItems.list({
-      part: ['snippet', 'contentDetails'],
-      playlistId,
-      maxResults: 50,
-    });
+    const allItems: any[] = [];
+    let pageToken: string | undefined;
 
-    const tracks = response.data.items?.map(item => ({
+    do {
+      const response = await youtube.playlistItems.list({
+        part: ['snippet', 'contentDetails'],
+        playlistId,
+        maxResults: 50,
+        pageToken,
+      });
+      if (response.data.items) allItems.push(...response.data.items);
+      pageToken = response.data.nextPageToken || undefined;
+    } while (pageToken);
+
+    const tracks = allItems.map(item => ({
       id: item.contentDetails?.videoId,
       title: item.snippet?.title,
       artist: (item.snippet?.videoOwnerChannelTitle || 'Various Artists').replace(/ - Topic$/, ''),
       thumbnail: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.default?.url,
-    })) || [];
+    }));
 
     cache.set(playlistId, { tracks, cachedAt: Date.now() });
     return NextResponse.json({ tracks });
