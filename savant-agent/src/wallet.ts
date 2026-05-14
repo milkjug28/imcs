@@ -45,9 +45,45 @@ export async function getBalance(): Promise<number | null> {
   }
 }
 
-export function walletContextBasic(): string {
+const ownedCache = new TTLCache<string[]>()
+
+export async function getOwnedSavantsCached(): Promise<string[]> {
+  const cached = ownedCache.get('owned')
+  if (cached) return cached
+
+  if (!config.alchemyKey || !config.savantWallet) return []
+
+  try {
+    const res = await fetch(
+      `https://eth-mainnet.g.alchemy.com/nft/v3/${config.alchemyKey}/getNFTsForOwner?owner=${config.savantWallet}&contractAddresses[]=${config.contractAddress}&withMetadata=false`
+    )
+    if (!res.ok) return []
+    const data = await res.json() as { ownedNfts?: { tokenId: string }[] }
+    const ids = (data.ownedNfts || []).map((n: { tokenId: string }) => n.tokenId)
+    ownedCache.set('owned', ids, 5 * 60_000)
+    return ids
+  } catch {
+    return []
+  }
+}
+
+export async function walletContextBasic(): Promise<string> {
   if (!hasWallet()) return ''
-  return 'You have your own ETH wallet and you are actively building a savant collection. You can hold money and buy NFTs.'
+
+  const [balance, owned] = await Promise.all([getBalance(), getOwnedSavantsCached()])
+
+  const parts: string[] = []
+  if (balance !== null) {
+    parts.push(`Your wallet balance: ${balance.toFixed(4)} ETH`)
+  }
+  if (owned.length > 0) {
+    parts.push(`You own ${owned.length} savant(s): #${owned.join(', #')}`)
+  } else {
+    parts.push(`You own 0 savants. You don't have any yet.`)
+  }
+  parts.push('NEVER make up how many savants you own or fabricate token IDs. Only reference real data above.')
+
+  return parts.join('. ')
 }
 
 export function walletContextFull(balance: number | null, floorPrice: number): string {

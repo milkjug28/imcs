@@ -68,20 +68,21 @@ export async function handleMention(message: Message) {
   const prompt = `Chat log:\n${chatLog}\n\n${message.author.username} just said: "${content}"\n\nReply to what they said. Be specific to their words.${antiRepeat}`
 
   // Always know you have a wallet. Only reveal address when there's an opportunity.
-  const addressTrigger = /wallet|address|send (u|you)|donate|tip|fund|help (u|you) buy|give (u|you)|contribute|sponsor/i
+  const addressTrigger = /wall[ue]t|addr|addi|send.*(eth|u |you )|donate|tip|fund|help.*(buy|u |you )|give.*(eth|u |you )|contribute|sponsor/i
   const showAddress = addressTrigger.test(content)
 
   const marketKeywords = /price|btc|bitcoin|eth|ethereum|sol|solana|market|pump|dump|bull|bear|chart|trading|defi|token|gas|gwei/i
   const wantsMarket = marketKeywords.test(content)
 
-  const [balance, market] = await Promise.all([
+  const [balance, market, basicWallet] = await Promise.all([
     showAddress ? getBalance() : Promise.resolve(null),
     wantsMarket ? getMarketData() : Promise.resolve(null),
+    walletContextBasic(),
   ])
 
   const walletCtx = showAddress
     ? walletContextFull(balance, stats?.floorPrice ?? 0)
-    : walletContextBasic()
+    : basicWallet
   const marketCtx = market ? marketSummary(market) : ''
 
   const extraContext = [
