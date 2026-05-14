@@ -1,0 +1,1 @@
+/Users/zacharymilo/Documents/savants/imcs-app/opensea-marketplace-2.6.0/opensea-api/scripts/opensea-post.sh
