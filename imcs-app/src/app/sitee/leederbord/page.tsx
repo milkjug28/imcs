@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 type Holder = {
   wallet: string
@@ -14,6 +14,8 @@ type Savant = {
   iq: number
   name: string | null
   holder: string
+  image: string | null
+  traits: { trait_type: string; value: string }[]
 }
 
 type Tab = 'count' | 'iq' | 'savants'
@@ -60,6 +62,9 @@ export default function LeaderboardPage() {
   const [searchWallet, setSearchWallet] = useState('')
   const [searchResult, setSearchResult] = useState<Holder | null>(null)
   const [searchError, setSearchError] = useState('')
+  const [selectedSavant, setSelectedSavant] = useState<Savant | null>(null)
+  const [rarityRank, setRarityRank] = useState<number | null>(null)
+  const [loadingRarity, setLoadingRarity] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -82,6 +87,20 @@ export default function LeaderboardPage() {
       }
     } catch {}
     setLoading(false)
+  }
+
+  const openSavantModal = async (savant: Savant) => {
+    setSelectedSavant(savant)
+    setRarityRank(null)
+    setLoadingRarity(true)
+    try {
+      const res = await fetch(`/api/rarity?tokenId=${savant.tokenId}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.rank) setRarityRank(data.rank)
+      }
+    } catch {}
+    setLoadingRarity(false)
   }
 
   const sortedByCount = [...holders].sort((a, b) => b.count - a.count)
@@ -263,6 +282,7 @@ export default function LeaderboardPage() {
                   animate={{ opacity: 1, x: 0, rotate: getRandomRotation(i) }}
                   transition={{ delay: Math.min(i * 0.03, 1.5), type: 'spring', stiffness: 200 }}
                   whileHover={{ scale: 1.02, rotate: 0, zIndex: 10 }}
+                  onClick={() => openSavantModal(savant)}
                   style={{
                     background: getRandomGradient(i),
                     border: glowColor ? `3px solid ${glowColor}` : '3px solid #000',
@@ -272,6 +292,7 @@ export default function LeaderboardPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
+                    cursor: 'pointer',
                   }}
                 >
                   {getMedalEmoji(rank) && (
@@ -297,14 +318,32 @@ export default function LeaderboardPage() {
                     #{rank}
                   </div>
 
-                  <div style={{ flex: 1 }}>
+                  {savant.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={savant.image}
+                      alt={`#${savant.tokenId}`}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        border: '2px solid #000',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  )}
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontFamily: "'Comic Neue', cursive",
                       fontSize: '14px',
                       fontWeight: 'bold',
                       color: '#000',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}>
-                      {savant.name || `#${savant.tokenId}`}
+                      {savant.name ? `${savant.name} (#${savant.tokenId})` : `#${savant.tokenId}`}
                     </div>
                     <div style={{
                       fontFamily: 'monospace',
@@ -413,6 +452,142 @@ export default function LeaderboardPage() {
           </div>
         )}
       </div>
+
+      {/* Savant Detail Modal */}
+      <AnimatePresence>
+        {selectedSavant && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedSavant(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.7)',
+              zIndex: 10000,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, rotate: -3 }}
+              animate={{ scale: 1, rotate: 0 }}
+              exit={{ scale: 0.8 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff',
+                border: '4px solid #000',
+                boxShadow: '10px 10px 0 #000',
+                borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+                maxWidth: '360px',
+                width: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              {selectedSavant.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={selectedSavant.image}
+                  alt={`#${selectedSavant.tokenId}`}
+                  style={{ width: '100%', maxHeight: '300px', objectFit: 'cover', display: 'block' }}
+                />
+              )}
+              <div style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', margin: 0 }}>
+                    {selectedSavant.name ? `${selectedSavant.name}` : `Savant #${selectedSavant.tokenId}`}
+                  </h3>
+                  <span style={{
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    background: '#000',
+                    color: '#0f0',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    fontWeight: 'bold',
+                  }}>
+                    IQ: {selectedSavant.iq}
+                  </span>
+                </div>
+
+                {selectedSavant.name && (
+                  <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#888', marginBottom: '4px' }}>
+                    #{selectedSavant.tokenId}
+                  </div>
+                )}
+
+                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: '#888', marginBottom: '10px' }}>
+                  held by {truncate(selectedSavant.holder)}
+                </div>
+
+                {/* Rarity */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '10px',
+                }}>
+                  <div style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    background: '#f0f0f0',
+                    border: '2px solid #000',
+                    padding: '4px 10px',
+                  }}>
+                    rarity: {loadingRarity ? '...' : rarityRank ? `#${rarityRank} / 4269` : 'n/a'}
+                  </div>
+                </div>
+
+                {/* Traits */}
+                {selectedSavant.traits && selectedSavant.traits.length > 0 && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '4px',
+                    marginBottom: '12px',
+                  }}>
+                    {selectedSavant.traits.map((t, i) => (
+                      <div key={i} style={{
+                        background: i % 2 === 0 ? '#fff0f5' : '#f0f8ff',
+                        border: '1.5px solid #000',
+                        padding: '4px 6px',
+                        fontFamily: "'Comic Neue', cursive",
+                      }}>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                          {t.trait_type}
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                          {t.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setSelectedSavant(null)}
+                  style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '14px',
+                    padding: '8px 20px',
+                    background: '#ff69b4',
+                    color: '#fff',
+                    border: '2px solid #000',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    width: '100%',
+                  }}
+                >
+                  close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

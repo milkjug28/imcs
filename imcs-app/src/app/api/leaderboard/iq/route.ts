@@ -8,15 +8,6 @@ export const dynamic = 'force-dynamic'
 
 const DEV_WALLET = '0x6878144669e7e558737feb3820410174ceef04e6'
 
-type CachedLeaderboard = {
-  holders: { wallet: string; count: number; totalIQ: number }[]
-  savants: { tokenId: number; iq: number; name: string | null; holder: string }[]
-  fetchedAt: number
-}
-
-let cache: CachedLeaderboard | null = null
-const CACHE_TTL = 120_000
-
 export async function GET(request: NextRequest) {
   const ip = getRequestIP(request)
   const rl = rateLimit(`lb-iq:${ip}`, { limit: 20, windowMs: 60_000 })
@@ -25,13 +16,6 @@ export async function GET(request: NextRequest) {
   }
 
   const view = request.nextUrl.searchParams.get('view') || 'holders'
-
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL) {
-    if (view === 'savants') {
-      return NextResponse.json(cache.savants.slice(0, 100))
-    }
-    return NextResponse.json(cache.holders.slice(0, 100))
-  }
 
   try {
     const pool = getGoldskyPool()
@@ -54,8 +38,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const metaMap = new Map<number, { image: string | null; attributes: { trait_type: string; value: string }[] }>()
+    let metaFrom = 0
+    const META_PAGE = 1000
+    while (true) {
+      const { data: metaRows } = await supabase
+        .from('savant_metadata')
+        .select('token_id, image, attributes')
+        .range(metaFrom, metaFrom + META_PAGE - 1)
+      if (!metaRows || metaRows.length === 0) break
+      for (const row of metaRows) {
+        metaMap.set(row.token_id, { image: row.image || null, attributes: row.attributes || [] })
+      }
+      if (metaRows.length < META_PAGE) break
+      metaFrom += META_PAGE
+    }
+
     const holderMap = new Map<string, { count: number; totalIQ: number }>()
-    const savantList: { tokenId: number; iq: number; name: string | null; holder: string }[] = []
+    const savantList: { tokenId: number; iq: number; name: string | null; holder: string; image: string | null; traits: { trait_type: string; value: string }[] }[] = []
 
     for (const row of ownerRows) {
       const tokenId = parseInt(row.token_id)
@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
       if (!holder || holder === DEV_WALLET) continue
 
       const iqData = iqMap.get(tokenId)
+      const meta = metaMap.get(tokenId)
       const totalIQ = getBaseIQ(tokenId) + (iqData?.allocated || 0)
 
       savantList.push({
@@ -70,6 +71,8 @@ export async function GET(request: NextRequest) {
         iq: totalIQ,
         name: iqData?.name || null,
         holder,
+        image: meta?.image || null,
+        traits: (meta?.attributes || []).filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ'),
       })
 
       const existing = holderMap.get(holder) || { count: 0, totalIQ: 0 }
@@ -79,17 +82,15 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    if (view === 'savants') {
+      savantList.sort((a, b) => b.iq - a.iq)
+      return NextResponse.json(savantList.slice(0, 100))
+    }
+
     const holders = Array.from(holderMap.entries())
       .map(([wallet, data]) => ({ wallet, count: data.count, totalIQ: data.totalIQ }))
       .sort((a, b) => b.count - a.count)
 
-    savantList.sort((a, b) => b.iq - a.iq)
-
-    cache = { holders, savants: savantList, fetchedAt: Date.now() }
-
-    if (view === 'savants') {
-      return NextResponse.json(savantList.slice(0, 100))
-    }
     return NextResponse.json(holders.slice(0, 100))
   } catch (err) {
     console.error('Leaderboard IQ error:', err)

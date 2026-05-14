@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "scripts", "discord-bot"]
+  "exclude": ["node_modules", "scripts", "discord-bot", "opensea-marketplace-2.6.0"]
 }
