@@ -8,3 +8,4 @@
 /imcs-deployment/metadata-nojson/
 /imcs-deployment/config/merkle-*.json
 .vercel/
+/imcs-generation

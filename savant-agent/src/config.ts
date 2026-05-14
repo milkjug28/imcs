@@ -38,6 +38,8 @@ export const config = {
 
   alchemyKey: process.env.ALCHEMY_API_KEY || '',
 
+  openRouterKey: process.env.OPEN_ROUTER_API_KEY || '',
+
   savantWallet: process.env.SAVANT_PUBLIC_WALLET || '',
   savantPrivateKey: process.env.SAVANT_WALLET_PRIVATE_KEY || '',
 

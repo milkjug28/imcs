@@ -177,20 +177,28 @@ async function handleSavantLookup(interaction: import('discord.js').CommandInter
   }
 
   try {
-    const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTMetadata?contractAddress=${SAVANT_TOKEN}&tokenId=${tokenId}&refreshCache=false`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('alchemy error')
+    const [metaRes, rarityRes] = await Promise.all([
+      fetch(`${SITE_URL}/api/metadata/${tokenId}`),
+      fetch(`${SITE_URL}/api/rarity?tokenId=${tokenId}`).then(r => r.ok ? r.json() : null).catch(() => null),
+    ])
+    if (!metaRes.ok) throw new Error(`metadata api ${metaRes.status}`)
 
-    const data = await res.json()
-    const name = data.raw?.metadata?.name || `Savant #${tokenId}`
-    const rawImage = data.raw?.metadata?.image || ''
-    const imageUrl = rawImage.startsWith('ipfs://')
-      ? `https://ipfs.io/ipfs/${rawImage.slice(7)}`
-      : data.image?.originalUrl || data.image?.cachedUrl || rawImage
+    const data = await metaRes.json()
+    const name = data.savant_name ? `${data.savant_name} (${data.name})` : data.name || `Savant #${tokenId}`
+    const imageUrl = data.image || ''
+
+    const iq = data.attributes?.find((a: { trait_type: string }) => a.trait_type === 'IQ')?.value || '?'
+    const rank = rarityRes?.rank ? `#${rarityRes.rank} / 4269` : '?'
+    const isOneOfOne = rarityRes?.isOneOfOne
+
+    const description = isOneOfOne
+      ? `IQ: ${iq} • rarity: ${rank} • **1/1** ✨`
+      : `IQ: ${iq} • rarity: ${rank}`
 
     const embed = new EmbedBuilder()
       .setTitle(name)
-      .setColor(0xff69b4)
+      .setColor(isOneOfOne ? 0xffd700 : 0xff69b4)
+      .setDescription(description)
       .setFooter({ text: `savant #${tokenId} • imaginary magic crypto savants` })
 
     if (imageUrl) {
