@@ -2,6 +2,7 @@ import type { Message, TextChannel } from 'discord.js'
 import { generateResponse } from '../brain'
 import { getCollectionStats } from '../opensea'
 import { getSavantMetadata } from '../supabase'
+import { getBalance, walletContext } from '../wallet'
 import { log } from '../utils/log'
 
 const recentResponses: string[] = []
@@ -50,9 +51,13 @@ export async function handleMention(message: Message) {
 
   const prompt = `Chat log:\n${chatLog}\n\n${message.author.username} just said: "${content}"\n\nReply to what they said. Be specific to their words.${antiRepeat}`
 
+  const balance = await getBalance()
+  const walletCtx = walletContext(balance, stats?.floorPrice ?? 0)
+
   const extraContext = [
     stats?.summary,
     savantContext,
+    walletCtx,
   ].filter(Boolean).join('\n')
 
   const response = await generateResponse(prompt, extraContext || undefined)

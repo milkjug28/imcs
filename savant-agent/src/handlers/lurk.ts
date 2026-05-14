@@ -1,6 +1,7 @@
 import type { Client, TextChannel } from 'discord.js'
 import { generateResponse } from '../brain'
 import { getCollectionStats } from '../opensea'
+import { getBalance, walletContext } from '../wallet'
 import { config } from '../config'
 import { log } from '../utils/log'
 
@@ -64,7 +65,11 @@ export async function scanChannels(client: Client) {
         prompt = `You're lurking in a Discord channel. People are chatting about random stuff. Drop a random savant observation or hot take to stir things up.\n\nRecent chat:\n${chatLog}\n\nSay something funny, provocative, or savant-pilled. React to something someone said or just drop wisdom.${antiRepeat}`
       }
 
-      const response = await generateResponse(prompt, stats?.summary)
+      const balance = await getBalance()
+      const walletCtx = walletContext(balance, stats?.floorPrice ?? 0)
+      const extra = [stats?.summary, walletCtx].filter(Boolean).join('\n')
+
+      const response = await generateResponse(prompt, extra || undefined)
       trackLurk(response)
 
       await textChannel.send(response)

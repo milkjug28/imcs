@@ -36,6 +36,11 @@ export const config = {
   supabaseUrl: required('SUPABASE_URL'),
   supabaseKey: required('SUPABASE_SERVICE_ROLE_KEY'),
 
+  alchemyKey: process.env.ALCHEMY_API_KEY || '',
+
+  savantWallet: process.env.SAVANT_PUBLIC_WALLET || '',
+  savantPrivateKey: process.env.SAVANT_WALLET_PRIVATE_KEY || '',
+
   collectionSlug: 'imaginary-magic-crypto-savants',
   contractAddress: '0x95fa6fc553F5bE3160b191b0133236367A835C63',
   totalSupply: 4269,
