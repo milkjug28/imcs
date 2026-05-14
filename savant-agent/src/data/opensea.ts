@@ -1,5 +1,5 @@
-import { config } from './config'
-import { log, logError } from './utils/log'
+import { config } from '../config'
+import { log, logError } from '../utils/log'
 
 interface SaleEvent {
   price: number
@@ -57,7 +57,6 @@ export async function getCollectionStats(): Promise<CollectionStats | null> {
       }
     })
 
-    // Use stats endpoint floor (more accurate than sampling listings)
     let floorPrice = statsFloor
     if (!floorPrice && listings.length > 0) {
       const prices = listings

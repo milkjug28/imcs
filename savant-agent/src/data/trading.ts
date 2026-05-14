@@ -1,6 +1,6 @@
 import { ethers } from 'ethers'
-import { config } from './config'
-import { log, logError } from './utils/log'
+import { config } from '../config'
+import { log, logError } from '../utils/log'
 import { getBalance } from './wallet'
 
 const OPENSEA_API = 'https://api.opensea.io'
@@ -13,7 +13,7 @@ interface Listing {
   chain: string
 }
 
-interface BuyResult {
+export interface BuyResult {
   success: boolean
   txHash?: string
   tokenId?: string
@@ -94,7 +94,7 @@ export async function buyFloor(): Promise<BuyResult> {
   }
 
   const cheapest = listings[0]
-  const totalCost = cheapest.priceEth + 0.002 // buffer for gas
+  const totalCost = cheapest.priceEth + 0.002
 
   if (balance < totalCost) {
     return {

@@ -1,6 +1,6 @@
-import { config } from './config'
-import { log, logError } from './utils/log'
-import { TTLCache } from './utils/cache'
+import { config } from '../config'
+import { log, logError } from '../utils/log'
+import { TTLCache } from '../utils/cache'
 
 const balanceCache = new TTLCache<number>()
 const BALANCE_CACHE_TTL = 2 * 60_000
@@ -109,8 +109,6 @@ export function walletContextFull(balance: number | null, floorPrice: number): s
 }
 
 // ── PRIVATE KEY SANITIZATION ────────────────────────────────────────
-// This runs on EVERY outgoing message. If the private key somehow
-// leaked into a Gemini response, this strips it before Discord sees it.
 
 const PRIVATE_KEY_PATTERNS: RegExp[] = []
 
@@ -121,7 +119,6 @@ export function initPrivateKeyGuard() {
   PRIVATE_KEY_PATTERNS.push(
     new RegExp(pk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
   )
-  // Also catch with/without 0x prefix
   const stripped = pk.startsWith('0x') ? pk.slice(2) : pk
   if (stripped.length >= 20) {
     PRIVATE_KEY_PATTERNS.push(new RegExp(stripped, 'gi'))

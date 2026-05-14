@@ -1,5 +1,5 @@
 import { startBot } from './bot'
-import { initPrivateKeyGuard } from './wallet'
+import { initPrivateKeyGuard } from './data/wallet'
 import { log, logError } from './utils/log'
 
 log('savant agent starting...')

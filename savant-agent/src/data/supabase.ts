@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import ws from 'ws'
-import { config } from './config'
-import { TTLCache } from './utils/cache'
+import { config } from '../config'
+import { TTLCache } from '../utils/cache'
 
 export const supabase = createClient(config.supabaseUrl, config.supabaseKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -10,7 +10,7 @@ export const supabase = createClient(config.supabaseUrl, config.supabaseKey, {
 
 const metadataCache = new TTLCache<SavantMetadata>()
 
-interface SavantMetadata {
+export interface SavantMetadata {
   tokenId: number
   name: string
   image: string
@@ -68,4 +68,57 @@ export async function searchSavantsByTrait(traitType: string, value: string): Pr
     .limit(20)
 
   return (data || []).map((r: { token_id: number }) => r.token_id)
+}
+
+export interface UserContext {
+  discordUserId: string
+  wallets: string[]
+  tokenCount: number
+  tiers: string[]
+  iqBalance: { totalEarned: number; totalAllocated: number; available: number } | null
+}
+
+export async function getUserContext(discordUserId: string): Promise<UserContext | null> {
+  const { data: verification } = await supabase
+    .from('discord_verifications')
+    .select('wallet_address, token_count, tiers')
+    .eq('discord_user_id', discordUserId)
+    .single()
+
+  if (!verification) return null
+
+  const { data: extraWallets } = await supabase
+    .from('discord_wallets')
+    .select('wallet_address')
+    .eq('discord_user_id', discordUserId)
+
+  const wallets = [verification.wallet_address]
+  if (extraWallets) {
+    for (const w of extraWallets) {
+      if (!wallets.includes(w.wallet_address)) wallets.push(w.wallet_address)
+    }
+  }
+
+  let iqBalance = null
+  const { data: iq } = await supabase
+    .from('wallet_iq_balances')
+    .select('total_earned, total_allocated, available')
+    .eq('wallet', verification.wallet_address)
+    .single()
+
+  if (iq) {
+    iqBalance = {
+      totalEarned: iq.total_earned || 0,
+      totalAllocated: iq.total_allocated || 0,
+      available: iq.available || 0,
+    }
+  }
+
+  return {
+    discordUserId,
+    wallets,
+    tokenCount: verification.token_count || 0,
+    tiers: verification.tiers || [],
+    iqBalance,
+  }
 }

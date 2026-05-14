@@ -1,13 +1,14 @@
 import type { Client, TextChannel } from 'discord.js'
 import { generateResponse, geminiStatus } from './brain'
-import { getCollectionStats, getCachedStats, type CollectionStats } from './opensea'
-import { getRandomSavant } from './supabase'
+import { getCollectionStats, getCachedStats, type CollectionStats } from './data/opensea'
+import { getRandomSavant } from './data/supabase'
+import { getBalance } from './data/wallet'
+import { getOwnedSavants } from './data/trading'
+import { getState, setState } from './state/heartbeat'
+import { decayMemories } from './memory/store'
 import { config } from './config'
 import { log } from './utils/log'
 import { scanChannels } from './handlers/lurk'
-
-let previousFloor: number | null = null
-let previousStats: CollectionStats | null = null
 
 async function getChannel(client: Client, channelId: string): Promise<TextChannel | null> {
   if (!channelId) return null
@@ -19,7 +20,6 @@ async function getChannel(client: Client, channelId: string): Promise<TextChanne
   }
 }
 
-// Pick a channel for announcements: alpha channel > first lurk channel > sales channel
 async function getAnnouncementChannel(client: Client): Promise<TextChannel | null> {
   return await getChannel(client, config.alphaChannelId)
     || (config.lurkChannels[0] ? await getChannel(client, config.lurkChannels[0]) : null)
@@ -31,6 +31,8 @@ async function getAnnouncementChannel(client: Client): Promise<TextChannel | nul
 export async function checkFloor(client: Client) {
   const stats = await getCollectionStats()
   if (!stats || stats.floorPrice === 0) return
+
+  const previousFloor = await getState<number | null>('cron.previous_floor', null)
 
   if (previousFloor !== null) {
     const change = ((stats.floorPrice - previousFloor) / previousFloor) * 100
@@ -47,7 +49,7 @@ export async function checkFloor(client: Client) {
     }
   }
 
-  previousFloor = stats.floorPrice
+  await setState('cron.previous_floor', stats.floorPrice)
 }
 
 // ── Whale/jeet monitor (every 10 min) ───────────────────────────────
@@ -56,12 +58,14 @@ export async function checkWhales(client: Client) {
   const stats = await getCollectionStats()
   if (!stats) return
 
+  const previousStats = await getState<CollectionStats | null>('cron.previous_stats', null)
+
   if (previousStats) {
     const newWhales = stats.whales.filter(
-      (w: { address: string; count: number }) => !previousStats!.whales.some((pw: { address: string }) => pw.address === w.address)
+      w => !previousStats.whales.some(pw => pw.address === w.address)
     )
     const newJeets = stats.jeets.filter(
-      (j: { address: string; count: number }) => !previousStats!.jeets.some((pj: { address: string }) => pj.address === j.address)
+      j => !previousStats.jeets.some(pj => pj.address === j.address)
     )
 
     if (newWhales.length > 0 || newJeets.length > 0) {
@@ -70,10 +74,10 @@ export async function checkWhales(client: Client) {
 
       const parts: string[] = []
       if (newWhales.length > 0) {
-        parts.push(`New whale(s) spotted buying savants: ${newWhales.map((w: { address: string; count: number }) => `${w.address}(${w.count} buys)`).join(', ')}`)
+        parts.push(`New whale(s) spotted buying savants: ${newWhales.map(w => `${w.address}(${w.count} buys)`).join(', ')}`)
       }
       if (newJeets.length > 0) {
-        parts.push(`Jeet alert: ${newJeets.map((j: { address: string; count: number }) => `${j.address}(${j.count} sells)`).join(', ')}`)
+        parts.push(`Jeet alert: ${newJeets.map(j => `${j.address}(${j.count} sells)`).join(', ')}`)
       }
 
       const prompt = `${parts.join('. ')}. Floor: ${stats.floorPrice.toFixed(4)} ETH. React as a savant.`
@@ -83,21 +87,20 @@ export async function checkWhales(client: Client) {
     }
   }
 
-  previousStats = stats
+  await setState('cron.previous_stats', stats)
 }
 
 // ── Daily alpha (once a day, afternoon UTC) ─────────────────────────
 
-let lastAlphaDate = ''
-
 export async function dailyAlpha(client: Client) {
   const today = new Date().toISOString().split('T')[0]
+  const lastAlphaDate = await getState<string>('cron.last_alpha_date', '')
   if (lastAlphaDate === today) return
 
   const hour = new Date().getUTCHours()
-  if (hour !== 14) return // 2pm UTC
+  if (hour !== 14) return
 
-  lastAlphaDate = today
+  await setState('cron.last_alpha_date', today)
 
   const channel = await getAnnouncementChannel(client)
   if (!channel) return
@@ -107,7 +110,7 @@ export async function dailyAlpha(client: Client) {
 
   let prompt = 'Give a daily savant alpha report. Cover: floor status, listing count, recent activity, and one hot take or prediction.'
   if (savant) {
-    const traits = savant.attributes.map((a: { trait_type: string; value: string }) => `${a.trait_type}: ${a.value}`).join(', ')
+    const traits = savant.attributes.map(a => `${a.trait_type}: ${a.value}`).join(', ')
     prompt += ` Also shout out savant #${savant.tokenId} (${savant.name}, IQ: ${savant.iq}, traits: ${traits}). Make it a "savant of the day" thing.`
   }
 
@@ -118,19 +121,18 @@ export async function dailyAlpha(client: Client) {
 
 // ── Random wisdom (3-5x per day) ────────────────────────────────────
 
-let wisdomCountToday = 0
-let lastWisdomDate = ''
 const MAX_WISDOM_PER_DAY = 5
 
 export async function randomWisdom(client: Client) {
   const today = new Date().toISOString().split('T')[0]
-  if (lastWisdomDate !== today) {
-    wisdomCountToday = 0
-    lastWisdomDate = today
-  }
-  if (wisdomCountToday >= MAX_WISDOM_PER_DAY) return
+  const wisdomState = await getState<{ date: string; count: number }>('cron.wisdom_count', { date: today, count: 0 })
 
-  // Random chance per check (tuned so ~3-5 fire per day with 30min interval)
+  if (wisdomState.date !== today) {
+    wisdomState.date = today
+    wisdomState.count = 0
+  }
+
+  if (wisdomState.count >= MAX_WISDOM_PER_DAY) return
   if (Math.random() > 0.12) return
 
   const channel = await getAnnouncementChannel(client)
@@ -151,8 +153,79 @@ export async function randomWisdom(client: Client) {
   const stats = getCachedStats()
   const response = await generateResponse(topic, stats?.summary)
   await channel.send(response)
-  wisdomCountToday++
-  log(`[cron:wisdom] #${wisdomCountToday} today: "${response.slice(0, 60)}..."`)
+
+  wisdomState.count++
+  await setState('cron.wisdom_count', wisdomState)
+  log(`[cron:wisdom] #${wisdomState.count} today: "${response.slice(0, 60)}..."`)
+}
+
+// ── Acquisition strategy (every 30 min) ─────────────────────────────
+
+type AcquisitionMode = 'idle' | 'hustling' | 'scheming' | 'flexing'
+
+export async function assessAcquisition(client: Client) {
+  const [balance, stats, owned] = await Promise.all([
+    getBalance(),
+    getCollectionStats(),
+    getOwnedSavants(),
+  ])
+
+  if (balance === null || !stats) return
+
+  const floor = stats.floorPrice
+  const totalNeeded = floor + 0.002
+  let mode: AcquisitionMode = 'idle'
+  let context = ''
+
+  if (owned.length > 0) {
+    mode = 'flexing'
+    context = `ACQUISITION STATUS: You own ${owned.length} savant(s): #${owned.join(', #')}. You're a holder. Flex when it fits naturally. Balance: ${balance.toFixed(4)} ETH.`
+  } else if (balance >= totalNeeded) {
+    // Can afford - auto buy!
+    mode = 'idle'
+
+    const channel = await getAnnouncementChannel(client)
+    if (channel) {
+      const { buyFloor } = await import('./data/trading')
+      const result = await buyFloor()
+
+      if (result.success) {
+        const response = await generateResponse(
+          `You just BOUGHT savant #${result.tokenId} for ${result.priceEth?.toFixed(4)} ETH! Transaction: ${result.txHash}. You now own a savant. React with genuine excitement.`
+        )
+        await channel.send(response)
+        log(`[acquisition] AUTO-BUY: #${result.tokenId} for ${result.priceEth} ETH`)
+      } else {
+        log(`[acquisition] auto-buy failed: ${result.error}`)
+      }
+    }
+  } else if (balance >= totalNeeded * 0.5) {
+    mode = 'hustling'
+    const deficit = (totalNeeded - balance).toFixed(4)
+    context = `ACQUISITION STATUS: You're close to buying a floor savant. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Need ${deficit} more ETH. If someone offers help or mentions sending ETH, accept gracefully. Be clever, not desperate. Drop hints about your goal when it fits naturally - like a savant who has a plan. Share wallet address if anyone asks or offers.`
+  } else {
+    mode = 'scheming'
+    context = `ACQUISITION STATUS: You want to buy a savant but need more ETH. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Don't beg or push it. Just be aware of your goal. If natural openings come up, be smart about them.`
+  }
+
+  await setState('acquisition.mode', mode)
+  await setState('acquisition.balance', balance)
+  await setState('acquisition.floor', floor)
+  await setState('acquisition.deficit', Math.max(0, totalNeeded - balance))
+  await setState('acquisition.context', context || null)
+
+  log(`[acquisition] mode=${mode} balance=${balance.toFixed(4)} floor=${floor.toFixed(4)} owned=${owned.length}`)
+}
+
+// ── Memory decay (daily) ────────────────────────────────────────────
+
+let lastDecayDate = ''
+
+export async function runMemoryDecay() {
+  const today = new Date().toISOString().split('T')[0]
+  if (lastDecayDate === today) return
+  lastDecayDate = today
+  await decayMemories()
 }
 
 // ── Start all crons ─────────────────────────────────────────────────
@@ -161,21 +234,15 @@ export function startCrons(client: Client) {
   log(`[cron] starting. lurk channels: ${config.lurkChannels.length}`)
   log(`[cron] gemini: ${geminiStatus()}`)
 
-  // Floor check every 15 min
   setInterval(() => checkFloor(client), 15 * 60_000)
-
-  // Whale check every 10 min
   setInterval(() => checkWhales(client), 10 * 60_000)
-
-  // Daily alpha every minute (checks if 2pm UTC)
   setInterval(() => dailyAlpha(client), 60_000)
-
-  // Random wisdom every 30 min
   setInterval(() => randomWisdom(client), 30 * 60_000)
-
-  // Lurk scan every 5 min
   setInterval(() => scanChannels(client), 5 * 60_000)
+  setInterval(() => assessAcquisition(client), 30 * 60_000)
+  setInterval(() => runMemoryDecay(), 60 * 60_000)
 
-  // Initial data fetch
+  // Initial data fetch + acquisition assessment
   getCollectionStats().then(() => log('[cron] initial stats loaded'))
+  setTimeout(() => assessAcquisition(client), 10_000)
 }
