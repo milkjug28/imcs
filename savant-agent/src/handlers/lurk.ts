@@ -60,9 +60,9 @@ export async function scanChannels(client: Client) {
 
       let prompt: string
       if (hasRelevantTopic) {
-        prompt = `You're lurking in a Discord channel and people are talking about something relevant. Jump in naturally with a savant take.\n\nRecent chat:\n${chatLog}\n\nChime in on what they're discussing. Be relevant to the conversation, don't just say random stuff.${antiRepeat}`
+        prompt = `You've been reading this Discord chat and someone said something you have an actual opinion on. Reply to a SPECIFIC person by name about a SPECIFIC thing they said.\n\nRecent chat:\n${chatLog}\n\nPick ONE message to respond to. Be sharp and relevant. If you don't have anything good to add, just react short ("lol", "based", "nah").${antiRepeat}`
       } else {
-        prompt = `You're lurking in a Discord channel. People are chatting about random stuff. Drop a random savant observation or hot take to stir things up.\n\nRecent chat:\n${chatLog}\n\nSay something funny, provocative, or savant-pilled. React to something someone said or just drop wisdom.${antiRepeat}`
+        prompt = `You've been reading this Discord chat. If something is funny or interesting, react to it specifically. If nothing stands out, say nothing.\n\nRecent chat:\n${chatLog}\n\nRespond to something SPECIFIC someone said, or don't respond at all. Generic comments like "nice" or "interesting" are worthless. Either add something or shut up.${antiRepeat}`
       }
 
       const marketRelevant = /price|btc|bitcoin|sol|solana|market|pump|dump|bull|bear|trading|defi|token/i.test(chatLog)
