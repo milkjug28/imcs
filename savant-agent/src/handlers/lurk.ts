@@ -2,7 +2,6 @@ import type { Client, TextChannel } from 'discord.js'
 import { generateResponse } from '../brain'
 import { getCollectionStats } from '../opensea'
 import { getMarketData, marketSummary } from '../market'
-import { getBalance, walletContext } from '../wallet'
 import { config } from '../config'
 import { log } from '../utils/log'
 
@@ -66,10 +65,11 @@ export async function scanChannels(client: Client) {
         prompt = `You're lurking in a Discord channel. People are chatting about random stuff. Drop a random savant observation or hot take to stir things up.\n\nRecent chat:\n${chatLog}\n\nSay something funny, provocative, or savant-pilled. React to something someone said or just drop wisdom.${antiRepeat}`
       }
 
-      const [balance, market] = await Promise.all([getBalance(), getMarketData()])
-      const walletCtx = walletContext(balance, stats?.floorPrice ?? 0)
+      const marketRelevant = /price|btc|bitcoin|sol|solana|market|pump|dump|bull|bear|trading|defi|token/i.test(chatLog)
+
+      const market = marketRelevant ? await getMarketData() : null
       const marketCtx = market ? marketSummary(market) : ''
-      const extra = [stats?.summary, marketCtx, walletCtx].filter(Boolean).join('\n')
+      const extra = [stats?.summary, marketCtx].filter(Boolean).join('\n')
 
       const response = await generateResponse(prompt, extra || undefined)
       trackLurk(response)
