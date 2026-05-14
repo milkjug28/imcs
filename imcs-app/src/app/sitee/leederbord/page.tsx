@@ -18,7 +18,16 @@ type Savant = {
   traits: { trait_type: string; value: string }[]
 }
 
-type Tab = 'count' | 'iq' | 'savants'
+type RarityResult = {
+  tokenId: number
+  rank: number
+  score: number
+  isOneOfOne: boolean
+  traits: { trait_type: string; value: string; count: number; pct: number }[]
+  totalSupply: number
+}
+
+type Tab = 'count' | 'iq' | 'savants' | 'rarity'
 
 const getMedalEmoji = (rank: number) => {
   if (rank === 1) return '\u{1F947}'
@@ -65,6 +74,11 @@ export default function LeaderboardPage() {
   const [selectedSavant, setSelectedSavant] = useState<Savant | null>(null)
   const [rarityRank, setRarityRank] = useState<number | null>(null)
   const [loadingRarity, setLoadingRarity] = useState(false)
+  const [raritySearch, setRaritySearch] = useState('')
+  const [rarityResult, setRarityResult] = useState<RarityResult | null>(null)
+  const [rarityImage, setRarityImage] = useState<string | null>(null)
+  const [rarityLoading, setRarityLoading] = useState(false)
+  const [rarityError, setRarityError] = useState('')
 
   useEffect(() => {
     loadData()
@@ -101,6 +115,41 @@ export default function LeaderboardPage() {
       }
     } catch {}
     setLoadingRarity(false)
+  }
+
+  const handleRaritySearch = async () => {
+    const id = parseInt(raritySearch.trim())
+    if (isNaN(id) || id < 1 || id > 4269) {
+      setRarityError('enter a number between 1 and 4269, dork')
+      setRarityResult(null)
+      setRarityImage(null)
+      return
+    }
+    setRarityError('')
+    setRarityResult(null)
+    setRarityImage(null)
+    setRarityLoading(true)
+    try {
+      const [rarityRes, metaRes] = await Promise.all([
+        fetch(`/api/rarity?tokenId=${id}`),
+        fetch(`/api/metadata/${id}`),
+      ])
+      if (rarityRes.ok) {
+        const data = await rarityRes.json()
+        if (data.rank) {
+          setRarityResult(data)
+        } else {
+          setRarityError('token not found, r u making up numbers?')
+        }
+      }
+      if (metaRes.ok) {
+        const meta = await metaRes.json()
+        if (meta.image) setRarityImage(meta.image)
+      }
+    } catch {
+      setRarityError('something broke, try agen')
+    }
+    setRarityLoading(false)
   }
 
   const sortedByCount = [...holders].sort((a, b) => b.count - a.count)
@@ -155,6 +204,7 @@ export default function LeaderboardPage() {
             { key: 'count' as Tab, label: 'tahp holdurs' },
             { key: 'iq' as Tab, label: 'holdur iq' },
             { key: 'savants' as Tab, label: 'savant iq top 100' },
+            { key: 'rarity' as Tab, label: 'rarity chekkur' },
           ]).map(t => (
             <motion.button
               key={t.key}
@@ -180,7 +230,7 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Search (holders tabs only) */}
-        {tab !== 'savants' && (
+        {tab !== 'savants' && tab !== 'rarity' && (
           <>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', transform: 'rotate(-0.5deg)' }}>
               <input
@@ -268,6 +318,153 @@ export default function LeaderboardPage() {
               ))}
             </div>
             <span style={{ fontFamily: "'Comic Neue', cursive", fontSize: '16px', fontWeight: 'bold' }}>loadin...</span>
+          </div>
+        ) : tab === 'rarity' ? (
+          /* Rarity Checker */
+          <div>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', transform: 'rotate(-0.5deg)' }}>
+              <input
+                type="text"
+                value={raritySearch}
+                onChange={e => setRaritySearch(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleRaritySearch()}
+                placeholder="enter token id..."
+                style={{
+                  flex: 1,
+                  fontFamily: "'Comic Neue', cursive",
+                  fontSize: '14px',
+                  padding: '8px 12px',
+                  border: '3px solid #000',
+                  background: '#fff',
+                  boxShadow: '3px 3px 0 #000',
+                }}
+              />
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9, rotate: 10 }}
+                onClick={handleRaritySearch}
+                style={{
+                  fontFamily: "'Comic Neue', cursive",
+                  fontSize: '14px',
+                  padding: '8px 16px',
+                  background: '#ffff00',
+                  border: '3px solid #000',
+                  cursor: 'pointer',
+                  boxShadow: '3px 3px 0 #000',
+                  fontWeight: 'bold',
+                }}
+              >
+                chekk!
+              </motion.button>
+            </div>
+
+            {rarityError && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px',
+                background: '#ff4444',
+                border: '3px solid #000',
+                color: '#fff',
+                fontFamily: "'Comic Neue', cursive",
+                fontWeight: 'bold',
+                textAlign: 'center',
+                fontSize: '14px',
+              }}>
+                {rarityError}
+              </div>
+            )}
+
+            {rarityLoading && (
+              <div style={{ textAlign: 'center', padding: '30px' }}>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
+                  {['#ff69b4', '#00bfff', '#ffd700'].map((color, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ y: [0, -10, 0] }}
+                      transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.2 }}
+                      style={{ width: '14px', height: '14px', borderRadius: '50%', background: color, border: '2px solid #000' }}
+                    />
+                  ))}
+                </div>
+                <span style={{ fontFamily: "'Comic Neue', cursive", fontSize: '16px', fontWeight: 'bold' }}>analyzin rarity...</span>
+              </div>
+            )}
+
+            {rarityResult && !rarityLoading && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                style={{
+                  background: '#fff',
+                  border: '4px solid #000',
+                  boxShadow: '8px 8px 0 #000',
+                  overflow: 'hidden',
+                }}
+              >
+                {rarityImage && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={rarityImage}
+                    alt={`#${rarityResult.tokenId}`}
+                    style={{ width: '100%', maxHeight: '350px', objectFit: 'cover', display: 'block' }}
+                  />
+                )}
+                <div style={{ padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ fontFamily: "'Comic Neue', cursive", fontSize: '22px', margin: 0 }}>
+                      {rarityResult.isOneOfOne ? `1/1 #${rarityResult.tokenId}` : `savant #${rarityResult.tokenId}`}
+                    </h3>
+                    <div style={{
+                      fontFamily: 'monospace',
+                      fontSize: '14px',
+                      background: rarityResult.rank <= 7 ? 'linear-gradient(135deg, #ffd700, #ff6347)' : rarityResult.rank <= 100 ? '#000' : '#333',
+                      color: rarityResult.rank <= 7 ? '#000' : '#0f0',
+                      padding: '6px 12px',
+                      fontWeight: 'bold',
+                      border: '2px solid #000',
+                    }}>
+                      rank #{rarityResult.rank} / {rarityResult.totalSupply}
+                    </div>
+                  </div>
+
+                  <div style={{
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    color: '#666',
+                    marginBottom: '12px',
+                  }}>
+                    rarity score: {rarityResult.score}
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '4px',
+                  }}>
+                    {rarityResult.traits
+                      .filter(t => t.value !== 'None')
+                      .map((t, i) => (
+                      <div key={i} style={{
+                        background: i % 2 === 0 ? '#fff0f5' : '#f0f8ff',
+                        border: '1.5px solid #000',
+                        padding: '6px 8px',
+                        fontFamily: "'Comic Neue', cursive",
+                      }}>
+                        <div style={{ fontSize: '9px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                          {t.trait_type}
+                        </div>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#000' }}>
+                          {t.value}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#999', fontFamily: 'monospace' }}>
+                          {t.count} / {rarityResult.totalSupply} ({t.pct}%)
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         ) : tab === 'savants' ? (
           /* Savant IQ Top 100 */

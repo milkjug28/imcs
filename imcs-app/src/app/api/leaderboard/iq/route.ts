@@ -3,6 +3,7 @@ import { getGoldskyPool } from '@/lib/goldsky'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
+import { normalizeTrait } from '@/lib/trait-normalize'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,7 +73,9 @@ export async function GET(request: NextRequest) {
         name: iqData?.name || null,
         holder,
         image: meta?.image || null,
-        traits: (meta?.attributes || []).filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ'),
+        traits: (meta?.attributes || [])
+        .filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ')
+        .map(a => ({ trait_type: a.trait_type, value: normalizeTrait(a.trait_type, a.value) })),
       })
 
       const existing = holderMap.get(holder) || { count: 0, totalIQ: 0 }

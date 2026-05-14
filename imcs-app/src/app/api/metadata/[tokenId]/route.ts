@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
+import { normalizeTrait } from '@/lib/trait-normalize'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +37,11 @@ export async function GET(
     const totalIQ = getBaseIQ(tokenId) + allocated
     const savantName = iqResult.data?.savant_name || null
 
-    const attributes = [...(meta.attributes as { trait_type: string; value: string }[] || [])]
+    const rawAttributes = (meta.attributes as { trait_type: string; value: string }[] || [])
+    const attributes = rawAttributes.map(a => ({
+      trait_type: a.trait_type,
+      value: normalizeTrait(a.trait_type, a.value),
+    }))
 
     attributes.push({
       trait_type: 'IQ',
