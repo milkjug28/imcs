@@ -36,7 +36,7 @@ export async function scanChannels(client: Client) {
       }
 
       const chatLog = humanMessages
-        .map(m => `${m.author.username}: ${m.content}`)
+        .map(m => `${m.author.username} (id:${m.author.id}): ${m.content}`)
         .join('\n')
 
       const recentLurkResponses = await getState<string[]>('recent.lurk_responses', [])
@@ -44,7 +44,7 @@ export async function scanChannels(client: Client) {
         ? `\nDo NOT repeat or rephrase these: ${recentLurkResponses.slice(-5).map(r => `"${r}"`).join(', ')}`
         : ''
 
-      const prompt = `You've been reading this Discord chat. If something is interesting or you have a real take, respond to a SPECIFIC person about a SPECIFIC thing they said. If nothing stands out, just react short.\n\nRecent chat:\n${chatLog}\n\nPick ONE message to respond to. Be sharp and relevant.${antiRepeat}`
+      const prompt = `You've been reading this Discord chat. If something is interesting or you have a real take, respond to a SPECIFIC person about a SPECIFIC thing they said. If nothing stands out, just react short.\n\nTo tag someone, use <@their_id> format (e.g. <@123456789>). Always tag who you're responding to.\n\nRecent chat:\n${chatLog}\n\nPick ONE message to respond to. Be sharp and relevant.${antiRepeat}`
 
       const acquisitionCtx = await getState<string | null>('acquisition.context', null)
       const response = await runAgent(prompt, undefined, acquisitionCtx ?? undefined)

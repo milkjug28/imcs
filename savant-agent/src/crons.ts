@@ -121,7 +121,7 @@ export async function dailyAlpha(client: Client) {
 
 // ── Random wisdom (3-5x per day) ────────────────────────────────────
 
-const MAX_WISDOM_PER_DAY = 5
+const MAX_WISDOM_PER_DAY = 3
 
 export async function randomWisdom(client: Client) {
   const today = new Date().toISOString().split('T')[0]
@@ -139,14 +139,12 @@ export async function randomWisdom(client: Client) {
   if (!channel) return
 
   const topics = [
-    'Drop random savant wisdom about crypto, NFTs, or life',
-    'Make a bold prediction about the NFT market this week',
-    'Roast paper hands and hype diamond hands',
-    'Say something philosophical but dumb about blockchain',
-    'Give unsolicited trading advice that sounds wrong but is right',
-    'Compliment a random savant trait combination and explain why its rare',
-    'React to the current state of the NFT market with savant energy',
-    'Tell people why savants are better than every other collection',
+    'Share a genuinely sharp market observation that most people miss. Something a trader would respect. Deliver it like an idiot who accidentally stumbled on alpha.',
+    'Say something about NFT culture that is actually true and cutting. An insight that makes people think "wait... hes right." Like an accidental genius moment.',
+    'Drop a take about crypto/ETH/markets that sounds dumb on the surface but is actually a smart read of current conditions. The kind of thing that ages well.',
+    'Make a specific, contrarian prediction about NFTs or crypto. Not generic "number go up" - something with real reasoning behind it, delivered casually.',
+    'Point out something obvious about the NFT market that nobody is talking about. The elephant in the room. Say it like you barely understand what you just said.',
+    'Give one piece of trading wisdom that sounds like a shitpost but is genuinely good advice. The kind of thing a fund manager would agree with.',
   ]
   const topic = topics[Math.floor(Math.random() * topics.length)]
 

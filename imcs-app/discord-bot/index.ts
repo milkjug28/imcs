@@ -30,6 +30,7 @@ const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 const CRON_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6 hours
 const SALES_CHANNEL_ID = '1503601324670062712'
+const ALPHA_CHANNEL_ID = process.env.ALPHA_CHANNEL_ID
 const OPENSEA_API_KEY = process.env.OPENSEA_API_KEY
 const COLLECTION_SLUG = 'imaginary-magic-crypto-savants'
 
@@ -56,6 +57,30 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { persistSession: false, autoRefreshToken: false } },
 )
+
+// ── Alert Cache ────────────────────────────────────────────────────
+
+interface ListingAlert {
+  discord_user_id: string
+  alert_type: 'price' | 'trait' | 'token'
+  max_price: number | null
+  trait_type: string | null
+  trait_value: string | null
+  token_id: number | null
+}
+
+const alertCache = new Map<string, ListingAlert>()
+let traitValuesCache: Map<string, Set<string>> | null = null
+
+async function loadAlerts() {
+  const { data } = await supabase.from('listing_alerts').select('*')
+  if (!data) return
+  alertCache.clear()
+  for (const row of data) {
+    alertCache.set(row.discord_user_id, row as ListingAlert)
+  }
+  log(`Loaded ${alertCache.size} listing alerts`)
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -107,6 +132,46 @@ client.once('ready', async () => {
             .setMaxValue(4269)
         )
         .toJSON(),
+      new SlashCommandBuilder()
+        .setName('alert')
+        .setDescription('get notified wen a savant u want gets listed')
+        .addSubcommand(sub => sub
+          .setName('price')
+          .setDescription('alert wen any savant listed under a price')
+          .addNumberOption(opt => opt.setName('max_eth').setDescription('max price in ETH').setRequired(true))
+        )
+        .addSubcommand(sub => sub
+          .setName('trait')
+          .setDescription('alert wen savant wit specific trait gets listed')
+          .addStringOption(opt => opt.setName('trait_type').setDescription('trait category').setRequired(true)
+            .addChoices(
+              { name: "bg's", value: "bg's" },
+              { name: 'bods', value: 'bods' },
+              { name: 'cloths', value: 'cloths' },
+              { name: 'ayezz', value: 'ayezz' },
+              { name: 'moufs', value: 'moufs' },
+              { name: 'hatss', value: 'hatss' },
+              { name: 'extruhs', value: 'extruhs' },
+              { name: 'facessories', value: 'facessories' },
+              { name: 'speshul', value: 'speshul' },
+            ))
+          .addStringOption(opt => opt.setName('value').setDescription('trait value').setRequired(true).setAutocomplete(true))
+          .addNumberOption(opt => opt.setName('max_eth').setDescription('max price in ETH (optional)'))
+        )
+        .addSubcommand(sub => sub
+          .setName('token')
+          .setDescription('alert wen a specific savant gets listed')
+          .addIntegerOption(opt => opt.setName('id').setDescription('token id (1-4269)').setRequired(true).setMinValue(1).setMaxValue(4269))
+        )
+        .addSubcommand(sub => sub
+          .setName('clear')
+          .setDescription('remove ur alert')
+        )
+        .addSubcommand(sub => sub
+          .setName('status')
+          .setDescription('check ur current alert')
+        )
+        .toJSON(),
     ])
     log('Slash commands registered')
   }
@@ -118,10 +183,13 @@ client.once('ready', async () => {
   log(`Cron set: re-verify every ${CRON_INTERVAL_MS / 3600000}h`)
   setInterval(runCron, CRON_INTERVAL_MS)
 
+  await loadAlerts()
+
   if (OPENSEA_API_KEY) {
     startSalesStream()
+    startListingStream()
   } else {
-    log('OPENSEA_API_KEY not set - sales feed disabled')
+    log('OPENSEA_API_KEY not set - sales/listing feed disabled')
   }
 })
 
@@ -158,6 +226,14 @@ client.on('interactionCreate', async (interaction: Interaction) => {
 
   if (interaction.isCommand() && interaction.commandName === 'sabant') {
     await handleSavantLookup(interaction)
+  }
+
+  if (interaction.isChatInputCommand() && interaction.commandName === 'alert') {
+    await handleAlert(interaction)
+  }
+
+  if (interaction.isAutocomplete() && interaction.commandName === 'alert') {
+    await handleAlertAutocomplete(interaction)
   }
 })
 
@@ -270,6 +346,209 @@ async function postWidget() {
     components: [row],
   })
   log('Widget posted')
+}
+
+// ── Alert Handlers ─────────────────────────────────────────────────
+
+async function handleAlert(interaction: import('discord.js').ChatInputCommandInteraction) {
+  const sub = interaction.options.getSubcommand()
+  const userId = interaction.user.id
+
+  if (sub === 'clear') {
+    await supabase.from('listing_alerts').delete().eq('discord_user_id', userId)
+    alertCache.delete(userId)
+    await interaction.reply({ content: 'alert removed. u wont get notified no more', flags: MessageFlags.Ephemeral })
+    return
+  }
+
+  if (sub === 'status') {
+    const alert = alertCache.get(userId)
+    if (!alert) {
+      await interaction.reply({ content: 'u dont hav an alert set. use /alert price, /alert trait, or /alert token', flags: MessageFlags.Ephemeral })
+      return
+    }
+    let desc = ''
+    if (alert.alert_type === 'price') desc = `any savant listed under ${alert.max_price} ETH`
+    else if (alert.alert_type === 'trait') desc = `${alert.trait_type}: ${alert.trait_value}${alert.max_price ? ` under ${alert.max_price} ETH` : ''}`
+    else if (alert.alert_type === 'token') desc = `savant #${alert.token_id}`
+    await interaction.reply({ content: `ur alert: ${desc}`, flags: MessageFlags.Ephemeral })
+    return
+  }
+
+  if (sub === 'price') {
+    const maxEth = interaction.options.getNumber('max_eth', true)
+    const alert: ListingAlert = { discord_user_id: userId, alert_type: 'price', max_price: maxEth, trait_type: null, trait_value: null, token_id: null }
+    await supabase.from('listing_alerts').upsert({ ...alert, created_at: new Date().toISOString() }, { onConflict: 'discord_user_id' })
+    alertCache.set(userId, alert)
+    await interaction.reply({ content: `alert set: ill tag u wen any savant lists under ${maxEth} ETH`, flags: MessageFlags.Ephemeral })
+    return
+  }
+
+  if (sub === 'trait') {
+    const traitType = interaction.options.getString('trait_type', true)
+    const traitValue = interaction.options.getString('value', true)
+    const maxEth = interaction.options.getNumber('max_eth') || null
+    const alert: ListingAlert = { discord_user_id: userId, alert_type: 'trait', max_price: maxEth, trait_type: traitType, trait_value: traitValue, token_id: null }
+    await supabase.from('listing_alerts').upsert({ ...alert, created_at: new Date().toISOString() }, { onConflict: 'discord_user_id' })
+    alertCache.set(userId, alert)
+    const priceNote = maxEth ? ` under ${maxEth} ETH` : ''
+    await interaction.reply({ content: `alert set: ill tag u wen a savant wit ${traitType}: ${traitValue}${priceNote} gets listed`, flags: MessageFlags.Ephemeral })
+    return
+  }
+
+  if (sub === 'token') {
+    const tokenId = interaction.options.getInteger('id', true)
+    const alert: ListingAlert = { discord_user_id: userId, alert_type: 'token', max_price: null, trait_type: null, trait_value: null, token_id: tokenId }
+    await supabase.from('listing_alerts').upsert({ ...alert, created_at: new Date().toISOString() }, { onConflict: 'discord_user_id' })
+    alertCache.set(userId, alert)
+    await interaction.reply({ content: `alert set: ill tag u wen savant #${tokenId} gets listed`, flags: MessageFlags.Ephemeral })
+    return
+  }
+}
+
+async function handleAlertAutocomplete(interaction: import('discord.js').AutocompleteInteraction) {
+  const focused = interaction.options.getFocused(true)
+  if (focused.name !== 'value') return
+
+  const traitType = interaction.options.getString('trait_type')
+  if (!traitType) {
+    await interaction.respond([])
+    return
+  }
+
+  if (!traitValuesCache) {
+    const allTraits = new Map<string, Set<string>>()
+    let page = 0
+    const pageSize = 1000
+    while (true) {
+      const { data } = await supabase.from('savant_metadata').select('attributes').range(page * pageSize, (page + 1) * pageSize - 1)
+      if (!data || data.length === 0) break
+      for (const row of data) {
+        const attrs = row.attributes as { trait_type: string; value: string }[] || []
+        for (const a of attrs) {
+          if (!a.value) continue
+          if (!allTraits.has(a.trait_type)) allTraits.set(a.trait_type, new Set())
+          allTraits.get(a.trait_type)!.add(a.value)
+        }
+      }
+      if (data.length < pageSize) break
+      page++
+    }
+    traitValuesCache = allTraits
+    log(`Cached trait values: ${[...allTraits.entries()].map(([k, v]) => `${k}(${v.size})`).join(', ')}`)
+  }
+
+  const values = traitValuesCache.get(traitType) || new Set<string>()
+
+  const query = focused.value.toLowerCase()
+  const filtered = [...values]
+    .filter(v => v.toLowerCase().includes(query))
+    .sort()
+    .slice(0, 25)
+
+  await interaction.respond(filtered.map(v => ({ name: v, value: v })))
+}
+
+// ── Listing Stream (WebSocket) ─────────────────────────────────────
+
+function startListingStream() {
+  if (!ALPHA_CHANNEL_ID) {
+    log('ALPHA_CHANNEL_ID not set - listing alerts disabled')
+    return
+  }
+
+  const osClient = new OpenSeaStreamClient({
+    token: OPENSEA_API_KEY!,
+    connectOptions: { transport: WebSocket },
+    onError: (err) => log(`Listing stream error: ${err}`),
+  })
+
+  osClient.onItemListed(COLLECTION_SLUG, async (event) => {
+    if (alertCache.size === 0) return
+
+    try {
+      const payload = event.payload
+      const tokenId = payload.item?.nft_id?.split('/')?.pop() || '?'
+      const tokenNum = parseInt(tokenId)
+      const priceWei = payload.base_price || '0'
+      const priceEth = Number(priceWei) / 1e18
+      const permalink = payload.item?.permalink || `https://opensea.io/assets/ethereum/${SAVANT_TOKEN}/${tokenId}`
+      const seller = payload.maker?.address
+        ? `${payload.maker.address.slice(0, 6)}...${payload.maker.address.slice(-4)}`
+        : '???'
+
+      let metadata: { name?: string; image?: string; savant_name?: string; attributes?: { trait_type: string; value: string }[] } | null = null
+
+      const matchedUsers: string[] = []
+
+      for (const [userId, alert] of alertCache) {
+        if (alert.alert_type === 'token') {
+          if (tokenNum === alert.token_id) matchedUsers.push(userId)
+          continue
+        }
+
+        if (alert.alert_type === 'price') {
+          if (alert.max_price && priceEth <= alert.max_price) matchedUsers.push(userId)
+          continue
+        }
+
+        if (alert.alert_type === 'trait') {
+          if (!metadata && !isNaN(tokenNum)) {
+            const res = await fetch(`${SITE_URL}/api/metadata/${tokenNum}`)
+            metadata = res.ok ? await res.json() : null
+          }
+          if (!metadata?.attributes) continue
+
+          const hasMatch = metadata.attributes.some(
+            a => a.trait_type === alert.trait_type && a.value === alert.trait_value
+          )
+          if (!hasMatch) continue
+          if (alert.max_price && priceEth > alert.max_price) continue
+          matchedUsers.push(userId)
+        }
+      }
+
+      if (matchedUsers.length === 0) return
+
+      if (!metadata && !isNaN(tokenNum)) {
+        const res = await fetch(`${SITE_URL}/api/metadata/${tokenNum}`)
+        metadata = res.ok ? await res.json() : null
+      }
+
+      const name = metadata?.savant_name
+        ? `${metadata.savant_name} (${metadata.name})`
+        : metadata?.name || `Savant #${tokenId}`
+      const image = metadata?.image || ''
+
+      const embed = new EmbedBuilder()
+        .setTitle(`${name} just listed!`)
+        .setURL(permalink)
+        .setColor(0x00aaff)
+        .addFields(
+          { name: 'price', value: `${priceEth.toFixed(4)} ETH`, inline: true },
+          { name: 'seller', value: seller, inline: true },
+        )
+        .setFooter({ text: '/alert clear to stop alerts' })
+        .setTimestamp(new Date(payload.event_timestamp))
+
+      if (image) embed.setThumbnail(image)
+
+      let alertChannel = client.channels.cache.get(ALPHA_CHANNEL_ID)
+      if (!alertChannel) {
+        alertChannel = await client.channels.fetch(ALPHA_CHANNEL_ID) ?? undefined
+      }
+      if (!alertChannel?.isTextBased()) return
+
+      const tags = matchedUsers.map(id => `<@${id}>`).join(' ')
+      const textChannel = alertChannel as import('discord.js').TextChannel
+      await textChannel.send({ content: `${tags} a savannt u wunt jus gott listud!`, embeds: [embed] })
+      log(`Listing alert: #${tokenId} at ${priceEth.toFixed(4)} ETH -> ${matchedUsers.length} user(s)`)
+    } catch (err) {
+      log(`Listing stream handler error: ${err}`)
+    }
+  })
+
+  log('Listing stream connected (websocket)')
 }
 
 // ── Sales Stream (WebSocket) ────────────────────────────────────────
