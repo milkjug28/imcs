@@ -3,8 +3,6 @@ import { getGoldskyPool } from '@/lib/goldsky'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
-import { normalizeTrait } from '@/lib/trait-normalize'
-
 export const dynamic = 'force-dynamic'
 
 const DEV_WALLET = '0x6878144669e7e558737feb3820410174ceef04e6'
@@ -74,8 +72,7 @@ export async function GET(request: NextRequest) {
         holder,
         image: meta?.image || null,
         traits: (meta?.attributes || [])
-        .filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ')
-        .map(a => ({ trait_type: a.trait_type, value: normalizeTrait(a.trait_type, a.value) })),
+        .filter(a => a.trait_type !== 'Trait Count' && a.trait_type !== 'IQ'),
       })
 
       const existing = holderMap.get(holder) || { count: 0, totalIQ: 0 }

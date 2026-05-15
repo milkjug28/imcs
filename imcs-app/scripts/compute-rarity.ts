@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, readdirSync } from 'fs'
 import { resolve } from 'path'
-import { normalizeTrait } from '../src/lib/trait-normalize'
-
 const envPath = resolve(__dirname, '../.env.local')
 const envContent = readFileSync(envPath, 'utf-8')
 const env: Record<string, string> = {}
@@ -41,8 +39,7 @@ function loadAllMetadata(): TokenTraits[] {
 
     for (const attr of attributes) {
       if (attr.trait_type === '1 of 1') continue
-      const normalized = normalizeTrait(attr.trait_type, attr.value)
-      traits.set(attr.trait_type, normalized)
+      traits.set(attr.trait_type, attr.value)
     }
 
     tokens.push({ tokenId: parseInt(file), traits, isOneOfOne })
