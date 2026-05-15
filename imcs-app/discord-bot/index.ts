@@ -174,6 +174,10 @@ client.once('ready', async () => {
         .toJSON(),
     ])
     log('Slash commands registered')
+
+    // Clear ghost global commands from old frameworks
+    await client.application?.commands.set([])
+    log('Global commands cleared')
   }
 
   // Post verification widget
