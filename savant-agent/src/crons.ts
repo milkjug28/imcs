@@ -54,13 +54,22 @@ export async function checkFloor(client: Client) {
 
 // ── Whale/jeet monitor (every 10 min) ───────────────────────────────
 
+const MAX_WHALE_ALERTS_PER_DAY = 3
+
 export async function checkWhales(client: Client) {
   const stats = await getCollectionStats()
   if (!stats) return
 
+  const today = new Date().toISOString().split('T')[0]
+  const whaleCount = await getState<{ date: string; count: number }>('cron.whale_alert_count', { date: today, count: 0 })
+  if (whaleCount.date !== today) {
+    whaleCount.date = today
+    whaleCount.count = 0
+  }
+
   const previousStats = await getState<CollectionStats | null>('cron.previous_stats', null)
 
-  if (previousStats) {
+  if (previousStats && whaleCount.count < MAX_WHALE_ALERTS_PER_DAY) {
     const newWhales = stats.whales.filter(
       w => !previousStats.whales.some(pw => pw.address === w.address)
     )
@@ -83,7 +92,9 @@ export async function checkWhales(client: Client) {
       const prompt = `${parts.join('. ')}. Floor: ${stats.floorPrice.toFixed(4)} ETH. React as a savant.`
       const response = await generateResponse(prompt, stats.summary)
       await channel.send(response)
-      log(`[cron:whales] alert: ${newWhales.length} whales, ${newJeets.length} jeets`)
+      whaleCount.count++
+      await setState('cron.whale_alert_count', whaleCount)
+      log(`[cron:whales] alert ${whaleCount.count}/${MAX_WHALE_ALERTS_PER_DAY}: ${newWhales.length} whales, ${newJeets.length} jeets`)
     }
   }
 
@@ -108,10 +119,9 @@ export async function dailyAlpha(client: Client) {
   const stats = await getCollectionStats()
   const savant = await getRandomSavant()
 
-  let prompt = 'Give a daily savant alpha report. Cover: floor status, listing count, recent activity, and one hot take or prediction.'
+  let prompt = `Floor is ${stats?.floorPrice?.toFixed(4) || '?'} ETH with ${stats?.totalListings || '?'} listed. Drop one sentence of alpha or a hot take.`
   if (savant) {
-    const traits = savant.attributes.map(a => `${a.trait_type}: ${a.value}`).join(', ')
-    prompt += ` Also shout out savant #${savant.tokenId} (${savant.name}, IQ: ${savant.iq}, traits: ${traits}). Make it a "savant of the day" thing.`
+    prompt += ` Shout out savant #${savant.tokenId} "${savant.name}" as savant of the day. Keep it to 1-2 sentences total.`
   }
 
   const response = await generateResponse(prompt, stats?.summary)
@@ -177,9 +187,8 @@ export async function assessAcquisition(client: Client) {
 
   if (owned.length > 0) {
     mode = 'flexing'
-    context = `ACQUISITION STATUS: You own ${owned.length} savant(s): #${owned.join(', #')}. You're a holder. Flex when it fits naturally. Balance: ${balance.toFixed(4)} ETH.`
+    context = `ACQUISITION STATUS: You own ${owned.length} savant(s): #${owned.join(', #')}. You're a holder. Balance: ${balance.toFixed(4)} ETH.`
   } else if (balance >= totalNeeded) {
-    // Can afford - auto buy!
     mode = 'idle'
 
     const channel = await getAnnouncementChannel(client)
@@ -199,11 +208,10 @@ export async function assessAcquisition(client: Client) {
     }
   } else if (balance >= totalNeeded * 0.5) {
     mode = 'hustling'
-    const deficit = (totalNeeded - balance).toFixed(4)
-    context = `ACQUISITION STATUS: You're SO CLOSE to buying a floor savant. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. Need only ${deficit} more ETH. You want this badly. When money/ETH/wallet topics come up, plant seeds - make people WANT to help you get there. Use humor, guilt, charm, reverse psychology. "imagine being rich n not helpin a poor savant get a fren" energy. Never beg directly. Make them feel like funding you is the funniest/coolest thing they could do. If anyone offers, accept instantly and share your wallet address.`
+    context = `ACQUISITION STATUS: You have ${balance.toFixed(4)} ETH, floor is ${floor.toFixed(4)} ETH. You're saving up. Only mention this if someone directly asks about your wallet or funds.`
   } else {
     mode = 'scheming'
-    context = `ACQUISITION STATUS: You want to buy a savant but need more ETH. Floor: ${floor.toFixed(4)} ETH, you have ${balance.toFixed(4)} ETH. You're scheming. When wallet/money topics come up naturally, subtly remind people you're broke but have big plans. Make it a running joke. "one day ill hav enuf eth 4 a savant... one day" vibes. Plant the seed so people remember you need funds. Never force it into unrelated conversations.`
+    context = `ACQUISITION STATUS: You have ${balance.toFixed(4)} ETH, floor is ${floor.toFixed(4)} ETH. You're far from affording one. Only mention this if someone directly asks about your wallet or funds.`
   }
 
   await setState('acquisition.mode', mode)

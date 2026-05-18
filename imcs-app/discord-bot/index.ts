@@ -537,16 +537,25 @@ function startListingStream() {
 
       if (image) embed.setThumbnail(image)
 
-      let alertChannel = client.channels.cache.get(ALPHA_CHANNEL_ID)
-      if (!alertChannel) {
-        alertChannel = await client.channels.fetch(ALPHA_CHANNEL_ID) ?? undefined
-      }
-      if (!alertChannel?.isTextBased()) return
+      // DM each matched user instead of spamming channel
+      let dmSuccessCount = 0
+      let dmFailCount = 0
+      const guild = client.guilds.cache.get(GUILD_ID)
 
-      const tags = matchedUsers.map(id => `<@${id}>`).join(' ')
-      const textChannel = alertChannel as import('discord.js').TextChannel
-      await textChannel.send({ content: `${tags} a savannt u wunt jus gott listud!`, embeds: [embed] })
-      log(`Listing alert: #${tokenId} at ${priceEth.toFixed(4)} ETH -> ${matchedUsers.length} user(s)`)
+      for (const userId of matchedUsers) {
+        try {
+          const member = guild ? await guild.members.fetch(userId).catch(() => null) : null
+          const user = member?.user || await client.users.fetch(userId).catch(() => null)
+          if (!user) { dmFailCount++; continue }
+
+          await user.send({ content: `a savannt u wunt jus gott listud!`, embeds: [embed] })
+          dmSuccessCount++
+        } catch {
+          dmFailCount++
+        }
+      }
+
+      log(`Listing alert: #${tokenId} at ${priceEth.toFixed(4)} ETH -> ${dmSuccessCount} DM(s) sent, ${dmFailCount} failed`)
     } catch (err) {
       log(`Listing stream handler error: ${err}`)
     }

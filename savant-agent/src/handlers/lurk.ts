@@ -4,12 +4,21 @@ import { getState, setState } from '../state/heartbeat'
 import { config } from '../config'
 import { log } from '../utils/log'
 
-const MIN_LURK_INTERVAL = 10 * 60_000
-const LURK_CHANCE = 0.3
-const MIN_MESSAGES_FOR_LURK = 3
+const MIN_LURK_INTERVAL = 30 * 60_000
+const LURK_CHANCE = 0.12
+const MIN_MESSAGES_FOR_LURK = 5
+const MAX_LURKS_PER_DAY = 6
 
 export async function scanChannels(client: Client) {
   if (config.lurkChannels.length === 0) return
+
+  const today = new Date().toISOString().split('T')[0]
+  const lurkCount = await getState<{ date: string; count: number }>('cron.lurk_count', { date: today, count: 0 })
+  if (lurkCount.date !== today) {
+    lurkCount.date = today
+    lurkCount.count = 0
+  }
+  if (lurkCount.count >= MAX_LURKS_PER_DAY) return
 
   const lastLurkTimes = await getState<Record<string, number>>('cron.last_lurk_times', {})
 
@@ -55,8 +64,10 @@ export async function scanChannels(client: Client) {
 
       await textChannel.send(response)
       lastLurkTimes[channelId] = Date.now()
+      lurkCount.count++
       await setState('cron.last_lurk_times', lastLurkTimes)
-      log(`[lurk] posted in ${textChannel.name}: "${response}"`)
+      await setState('cron.lurk_count', lurkCount)
+      log(`[lurk] posted in ${textChannel.name} (${lurkCount.count}/${MAX_LURKS_PER_DAY} today): "${response}"`)
 
     } catch (err) {
       log(`[lurk] error in channel ${channelId}: ${err}`)
