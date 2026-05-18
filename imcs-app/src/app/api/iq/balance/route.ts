@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'wallet required' }, { status: 400 })
   }
 
-  const [balanceResult, snapshotResult, liveTrading] = await Promise.all([
+  const [balanceResult, snapshotResult, liveTrading, taskResult] = await Promise.all([
     supabase
       .from('wallet_iq_balances')
       .select('total_earned, total_allocated, available, last_snapshot_id, updated_at')
@@ -25,28 +25,33 @@ export async function GET(request: NextRequest) {
       .single(),
     supabase
       .from('wallet_iq_snapshots')
-      .select('leaderboard_iq, trading_iq, snapshot_id')
+      .select('leaderboard_iq, trading_iq, bonus_iq, snapshot_id')
       .eq('wallet', wallet)
       .order('created_at', { ascending: false })
       .limit(1)
       .single(),
     getLiveTradingIQ(wallet),
+    supabase
+      .from('iq_task_completions')
+      .select('iq_awarded')
+      .eq('wallet_address', wallet),
   ])
 
   const balance = balanceResult.data
   const snapshot = snapshotResult.data
+  const taskIQ = (taskResult.data || []).reduce((sum: number, t: { iq_awarded: number }) => sum + t.iq_awarded, 0)
 
   if (!balance || !snapshot) {
     return NextResponse.json({
       wallet,
-      total_earned: 0,
+      total_earned: taskIQ,
       total_allocated: 0,
-      available: 0,
+      available: taskIQ,
       trading: liveTrading,
     })
   }
 
-  const liveTotal = snapshot.leaderboard_iq + liveTrading.tradingIQ
+  const liveTotal = snapshot.leaderboard_iq + (snapshot.bonus_iq || 0) + liveTrading.tradingIQ + taskIQ
 
   if (liveTotal !== balance.total_earned) {
     const newEarned = liveTotal
