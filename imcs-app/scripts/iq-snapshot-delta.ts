@@ -77,10 +77,12 @@ async function run() {
   const prevSnapshot = snapshots[0]
   const prevDate = new Date(prevSnapshot.taken_at)
   const now = new Date()
-  const daysSince = (now.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+  const actualDays = (now.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+  const daysOverride = process.argv.find(a => a.startsWith('--days='))
+  const daysSince = daysOverride ? Number(daysOverride.split('=')[1]) : actualDays
 
   console.log(`  Previous: "${prevSnapshot.label}" taken ${prevDate.toISOString().split('T')[0]}`)
-  console.log(`  Days since: ${daysSince.toFixed(1)}`)
+  console.log(`  Actual days: ${actualDays.toFixed(1)}${daysOverride ? `, overridden to ${daysSince}` : ''}`)
   console.log(`  Previous holders: ${prevSnapshot.total_holders}`)
 
   // 2. Load snapshot 1 wallet data
@@ -297,26 +299,29 @@ async function run() {
   }
   console.log(`  ${snapshotRows.length} wallet snapshots written`)
 
-  // Fetch existing balances so we preserve allocations and only ADD bonus delta
-  const existingBalances = new Map<string, { total_earned: number; total_allocated: number }>()
-  let balPage = 0
+  // Fetch existing allocations so we don't zero them out
+  const existingAllocations = new Map<string, number>()
+  let allocPage = 0
   while (true) {
     const { data } = await supabase
       .from('wallet_iq_balances')
-      .select('wallet, total_earned, total_allocated')
-      .range(balPage * BATCH, (balPage + 1) * BATCH - 1)
+      .select('wallet, total_allocated')
+      .range(allocPage * BATCH, (allocPage + 1) * BATCH - 1)
     if (!data || data.length === 0) break
-    for (const row of data) existingBalances.set(row.wallet, row)
+    for (const row of data) existingAllocations.set(row.wallet, row.total_allocated)
     if (data.length < BATCH) break
-    balPage++
+    allocPage++
   }
 
+  // Compute total_earned from snapshot 1 base + new bonus (not from current balance)
+  // This makes re-runs idempotent. Balance route self-heals trading IQ on next access.
   const balanceRows = results.map(r => {
-    const existing = existingBalances.get(r.wallet)
+    const prev = prevWallets.get(r.wallet)
+    const baseTotalFromSnapshot1 = prev?.total_iq_points ?? 0
     return {
       wallet: r.wallet,
-      total_earned: (existing?.total_earned ?? 0) + r.totalBonus,
-      total_allocated: existing?.total_allocated ?? 0,
+      total_earned: baseTotalFromSnapshot1 + r.totalBonus,
+      total_allocated: existingAllocations.get(r.wallet) ?? 0,
       last_snapshot_id: snapshot.id,
       updated_at: new Date().toISOString(),
     }
