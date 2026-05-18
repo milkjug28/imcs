@@ -255,6 +255,15 @@ export default function ProfilePage() {
   const [namingError, setNamingError] = useState<string | null>(null)
   const [namingSuccess, setNamingSuccess] = useState(false)
 
+  const [activeTab, setActiveTab] = useState<'profil' | 'eern-iq'>('profil')
+  const [tasks, setTasks] = useState<Array<{
+    id: string; name: string; description: string; iq_reward: number
+    icon: string; action_label: string; action_type: string
+    completed: boolean; completed_at: string | null
+    metadata: { x_username?: string } | null
+  }>>([])
+  const [xLinkSuccess, setXLinkSuccess] = useState(false)
+
   const { data: balanceRaw } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
     abi: SAVANT_TOKEN_ABI,
@@ -269,11 +278,12 @@ export default function ProfilePage() {
     setLoading(true)
 
     const nc = { cache: 'no-store' as RequestCache }
-    const [holderRes, profileRes, usernameRes, iqRes] = await Promise.all([
+    const [holderRes, profileRes, usernameRes, iqRes, tasksRes] = await Promise.all([
       fetch(`/api/holder?wallet=${address}`, nc).catch(() => null),
       fetch(`/api/profile/${address}`, nc).catch(() => null),
       fetch(`/api/chat/username?wallet=${address}`).catch(() => null),
       fetch(`/api/iq/balance?wallet=${address}`, nc).catch(() => null),
+      fetch(`/api/iq/tasks?wallet=${address}`, nc).catch(() => null),
     ])
 
     if (holderRes?.ok) {
@@ -294,6 +304,11 @@ export default function ProfilePage() {
     if (iqRes?.ok) {
       const data = await iqRes.json()
       setIqBalance(data)
+    }
+
+    if (tasksRes?.ok) {
+      const data = await tasksRes.json()
+      setTasks(data.tasks || [])
     }
 
     setLoading(false)
@@ -317,9 +332,22 @@ export default function ProfilePage() {
       setIqBalance(null)
       setAllocations({})
       setShowAllocator(false)
+      setTasks([])
+      setActiveTab('profil')
       setLoading(false)
     }
   }, [isConnected, address, fetchData])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === 'eern-iq') {
+      setActiveTab('eern-iq')
+    }
+    if (params.get('x_linked') === 'true') {
+      setXLinkSuccess(true)
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   const saveUsername = async () => {
     if (!usernameInput.trim() || !address) return
@@ -568,6 +596,42 @@ export default function ProfilePage() {
             {legacyProfile?.rank && <StatBox label="legacy rank" value={`#${legacyProfile.rank}`} />}
           </div>
         </div>
+
+        {/* Tab Bar */}
+        <div style={{
+          display: 'flex',
+          gap: '0',
+          marginBottom: '20px',
+          border: '3px solid #000',
+          boxShadow: '4px 4px 0 #000',
+          overflow: 'hidden',
+        }}>
+          {(['profil', 'eern-iq'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: 1,
+                fontFamily: "'Comic Neue', cursive",
+                fontSize: '16px',
+                fontWeight: 'bold',
+                padding: '12px 16px',
+                background: activeTab === tab
+                  ? (tab === 'eern-iq' ? 'linear-gradient(135deg, #ff6b9d, #ffd700)' : '#000')
+                  : '#fff',
+                color: activeTab === tab ? (tab === 'eern-iq' ? '#000' : '#0f0') : '#333',
+                border: 'none',
+                borderRight: tab === 'profil' ? '2px solid #000' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {tab === 'profil' ? 'profil' : 'eern iq'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'profil' ? (<>
 
         {/* IQ Allocation Banner */}
         {iqBalance && iqBalance.available > 0 && isHolder && !showAllocator && (
@@ -942,6 +1006,180 @@ export default function ProfilePage() {
             </div>
           </div>
         )}
+
+        </>) : (
+          /* Eern IQ Tab */
+          <div>
+            <h3 style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '22px',
+              marginBottom: '4px',
+              textShadow: '1px 1px 0 #ff69b4',
+            }}>
+              eern iq points
+            </h3>
+            <p style={{
+              fontFamily: "'Comic Neue', cursive",
+              fontSize: '14px',
+              color: '#666',
+              marginBottom: '20px',
+            }}>
+              complete tasks 2 eern iq 4 ur savants. each task can only b completed once.
+            </p>
+
+            {xLinkSuccess && (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                style={{
+                  background: '#00ff87',
+                  border: '3px solid #000',
+                  boxShadow: '4px 4px 0 #000',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  fontFamily: "'Comic Neue', cursive",
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  fontSize: '16px',
+                }}
+              >
+                x account linked! +5 IQ earned
+              </motion.div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {tasks.map(task => (
+                <motion.div
+                  key={task.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: task.completed
+                      ? 'linear-gradient(135deg, #e8ffe8, #c8ffc8)'
+                      : 'linear-gradient(135deg, #fff, #f5f5f5)',
+                    border: `3px solid ${task.completed ? '#00aa00' : '#000'}`,
+                    borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
+                    boxShadow: `6px 6px 0 ${task.completed ? '#00aa00' : '#000'}`,
+                    padding: '20px',
+                    transform: `rotate(${task.completed ? 0 : -0.5}deg)`,
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '6px',
+                      }}>
+                        <span style={{ fontSize: '24px' }}>{task.icon}</span>
+                        <span style={{
+                          fontFamily: "'Comic Neue', cursive",
+                          fontSize: '18px',
+                          fontWeight: 'bold',
+                          color: '#000',
+                        }}>
+                          {task.name}
+                        </span>
+                        {task.completed && (
+                          <span style={{
+                            background: '#00aa00',
+                            color: '#fff',
+                            fontFamily: "'Comic Neue', cursive",
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                          }}>
+                            done
+                          </span>
+                        )}
+                      </div>
+                      <p style={{
+                        fontFamily: "'Comic Neue', cursive",
+                        fontSize: '14px',
+                        color: '#555',
+                        margin: 0,
+                      }}>
+                        {task.completed && task.metadata?.x_username
+                          ? `linked as @${task.metadata.x_username}`
+                          : task.description}
+                      </p>
+                    </div>
+
+                    <div style={{
+                      background: task.completed ? '#00aa00' : '#000',
+                      color: task.completed ? '#fff' : '#0f0',
+                      fontFamily: 'monospace',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}>
+                      +{task.iq_reward} IQ
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '12px' }}>
+                    {task.completed ? (
+                      <div style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: '#888',
+                      }}>
+                        completed {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ''}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (task.action_type === 'oauth_x' && address) {
+                            window.location.href = `/api/auth/x?wallet=${address}`
+                          }
+                        }}
+                        disabled={!address}
+                        style={{
+                          fontFamily: "'Comic Neue', cursive",
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          padding: '10px 20px',
+                          background: address ? 'linear-gradient(135deg, #ff6b9d, #ffd700)' : '#ccc',
+                          color: '#000',
+                          border: '2px solid #000',
+                          boxShadow: '3px 3px 0 #000',
+                          cursor: address ? 'pointer' : 'not-allowed',
+                          width: '100%',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {task.action_label}
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            {tasks.length === 0 && (
+              <div style={{
+                fontFamily: "'Comic Neue', cursive",
+                fontSize: '16px',
+                color: '#999',
+                textAlign: 'center',
+                padding: '40px 20px',
+              }}>
+                loading tasks...
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* IQ Info Popup */}

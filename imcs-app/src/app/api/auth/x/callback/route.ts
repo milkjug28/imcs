@@ -78,36 +78,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/sitee?error=no_username', request.nextUrl.origin))
     }
 
-    // Store X link in whitelist table
-    const { data: existing } = await supabase
-      .from('whitelist')
-      .select('id')
-      .eq('wallet_address', wallet)
-      .single()
+    // Record task completion for IQ reward
+    await supabase
+      .from('iq_task_completions')
+      .upsert({
+        wallet_address: wallet,
+        task_type: 'link_x',
+        iq_awarded: 5,
+        metadata: { x_username: xUsername, x_user_id: xUserId },
+      }, { onConflict: 'wallet_address,task_type' })
 
-    if (existing) {
-      await supabase
-        .from('whitelist')
-        .update({
-          x_username: xUsername,
-          x_user_id: xUserId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('wallet_address', wallet)
-    } else {
-      await supabase
-        .from('whitelist')
-        .insert({
-          wallet_address: wallet,
-          x_username: xUsername,
-          x_user_id: xUserId,
-          status: 'pending',
-        })
-    }
-
-    // Clear cookies and redirect to claim page
     const response = NextResponse.redirect(
-      new URL(`/site?x_linked=true&x_username=${encodeURIComponent(xUsername)}`, request.nextUrl.origin)
+      new URL(`/sitee/profil?tab=eern-iq&x_linked=true&x_username=${encodeURIComponent(xUsername)}`, request.nextUrl.origin)
     )
     response.cookies.delete('x_code_verifier')
     response.cookies.delete('x_oauth_state')

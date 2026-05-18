@@ -122,3 +122,12 @@ export type CommunityClaim = {
   signature: string
   claimed_at: string
 }
+
+export type IQTaskCompletion = {
+  id: string
+  wallet_address: string
+  task_type: string
+  iq_awarded: number
+  metadata: Record<string, unknown>
+  completed_at: string
+}
