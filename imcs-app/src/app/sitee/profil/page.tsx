@@ -260,7 +260,7 @@ export default function ProfilePage() {
     id: string; name: string; description: string; iq_reward: number
     icon: string; action_label: string; action_type: string
     claimable_label?: string
-    engagement?: { campaign_id: string; target_tweet_url: string; engagement_type: string }
+    engagement?: { campaign_id: string; target_tweet_url?: string; intent_url?: string; engagement_type: string }
     requires_x?: boolean
     status: 'not_started' | 'claimable' | 'completed'
     completed_at: string | null
@@ -1271,7 +1271,7 @@ export default function ProfilePage() {
                         ) : (
                           <>
                             <a
-                              href={task.engagement.target_tweet_url}
+                              href={task.engagement.intent_url || task.engagement.target_tweet_url || '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{
@@ -1280,8 +1280,10 @@ export default function ProfilePage() {
                                 fontSize: '14px',
                                 fontWeight: 'bold',
                                 padding: '10px 20px',
-                                background: 'linear-gradient(135deg, #1da1f2, #0d8bd9)',
-                                color: '#fff',
+                                background: task.engagement.intent_url
+                                  ? 'linear-gradient(135deg, #ff6b9d, #ffd700)'
+                                  : 'linear-gradient(135deg, #1da1f2, #0d8bd9)',
+                                color: task.engagement.intent_url ? '#000' : '#fff',
                                 border: '2px solid #000',
                                 boxShadow: '3px 3px 0 #000',
                                 textAlign: 'center',
@@ -1289,7 +1291,7 @@ export default function ProfilePage() {
                                 marginBottom: '8px',
                               }}
                             >
-                              open tweet on x
+                              {task.engagement.intent_url ? 'post da copypasta on x' : 'open tweet on x'}
                             </a>
                             <div style={{ display: 'flex', gap: '6px' }}>
                               <input

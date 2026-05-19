@@ -9,8 +9,9 @@ export type IQTaskDefinition = {
   claimable_label?: string
   engagement?: {
     campaign_id: string
-    target_tweet_url: string
-    engagement_type: 'quote_repost' | 'reply'
+    target_tweet_url?: string
+    intent_url?: string
+    engagement_type: 'quote_repost' | 'reply' | 'post_copypasta'
   }
 }
 
@@ -40,9 +41,10 @@ export type EngagementCampaign = {
   id: string
   name: string
   description: string
-  target_tweet_id: string
-  target_tweet_url: string
-  engagement_type: 'quote_repost' | 'reply'
+  target_tweet_id: string | null
+  target_tweet_url: string | null
+  engagement_type: 'quote_repost' | 'reply' | 'post_copypasta'
+  required_text: string | null
   iq_reward: number
   active: boolean
   created_at: string
@@ -50,18 +52,35 @@ export type EngagementCampaign = {
 }
 
 export function campaignToTask(campaign: EngagementCampaign): IQTaskDefinition {
-  const typeLabel = campaign.engagement_type === 'quote_repost' ? 'quote repost' : 'reply 2'
+  const typeLabels = {
+    quote_repost: 'quote repost dis tweet',
+    reply: 'reply 2 dis tweet',
+    post_copypasta: 'post da copypasta',
+  }
+
+  const icons = {
+    quote_repost: '🔁',
+    reply: '💬',
+    post_copypasta: '📜',
+  }
+
+  let intentUrl: string | undefined
+  if (campaign.engagement_type === 'post_copypasta' && campaign.required_text) {
+    intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(campaign.required_text)}`
+  }
+
   return {
     id: `engagement_${campaign.id}`,
     name: campaign.name,
     description: campaign.description,
     iq_reward: campaign.iq_reward,
-    icon: '🔁',
-    action_label: `${typeLabel} dis tweet`,
+    icon: icons[campaign.engagement_type],
+    action_label: typeLabels[campaign.engagement_type],
     action_type: 'verify_engagement',
     engagement: {
       campaign_id: campaign.id,
-      target_tweet_url: campaign.target_tweet_url,
+      target_tweet_url: campaign.target_tweet_url || undefined,
+      intent_url: intentUrl,
       engagement_type: campaign.engagement_type,
     },
   }

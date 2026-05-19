@@ -139,7 +139,7 @@ function VerifyContent() {
     } finally {
       setVerifying(false)
     }
-  }, [address, signMessageAsync])
+  }, [address, signMessageAsync, fromIqTask])
 
   useEffect(() => {
     if (linked && isConnected && address && !result && !verifying && !verifyError && !autoVerifyAttempted) {

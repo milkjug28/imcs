@@ -10,6 +10,22 @@ function extractTweetId(url: string): string | null {
   return match ? match[1] : null
 }
 
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/…/g, '...')
+    .trim()
+}
+
+function textsMatch(actual: string, required: string): boolean {
+  const a = normalizeText(actual)
+  const b = normalizeText(required)
+  return a.includes(b) || b.includes(a)
+}
+
 export async function POST(request: NextRequest) {
   const ip = getRequestIP(request)
   const rl = rateLimit(`engagement-verify:${ip}`, { limit: 10, windowMs: 60_000 })
@@ -30,7 +46,6 @@ export async function POST(request: NextRequest) {
   const walletLower = wallet.toLowerCase()
   const taskType = `engagement_${campaign_id}`
 
-  // Check not already completed
   const { data: existing } = await supabase
     .from('iq_task_completions')
     .select('id')
@@ -42,7 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'already claimed dis one' }, { status: 409 })
   }
 
-  // Fetch campaign
   const { data: campaign } = await supabase
     .from('x_engagement_campaigns')
     .select('*')
@@ -58,7 +72,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'campaign expired' }, { status: 410 })
   }
 
-  // Get user's linked X account
   const { data: xLink } = await supabase
     .from('iq_task_completions')
     .select('metadata')
@@ -72,20 +85,25 @@ export async function POST(request: NextRequest) {
 
   const linkedXUserId = xLink.metadata.x_user_id
 
-  // Extract tweet ID from pasted URL
   const userTweetId = extractTweetId(tweet_url)
   if (!userTweetId) {
     return NextResponse.json({ error: 'invalid tweet url' }, { status: 400 })
   }
 
-  // Verify via X API
   const bearerToken = process.env.X_BEARER_TOKEN
   if (!bearerToken) {
     console.error('X_BEARER_TOKEN not configured')
     return NextResponse.json({ error: 'verification unavailable' }, { status: 503 })
   }
 
-  const xApiUrl = `https://api.x.com/2/tweets/${userTweetId}?expansions=referenced_tweets&tweet.fields=author_id`
+  const fields = campaign.engagement_type === 'post_copypasta'
+    ? 'author_id,text'
+    : 'author_id'
+  const expansions = campaign.engagement_type === 'post_copypasta'
+    ? ''
+    : '&expansions=referenced_tweets'
+
+  const xApiUrl = `https://api.x.com/2/tweets/${userTweetId}?tweet.fields=${fields}${expansions}`
 
   const xRes = await fetch(xApiUrl, {
     headers: { 'Authorization': `Bearer ${bearerToken}` },
@@ -107,27 +125,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'tweet not found' }, { status: 400 })
   }
 
-  // Verify author matches linked X account
   if (tweet.author_id !== linkedXUserId) {
     return NextResponse.json({ error: 'dat tweet not from ur linked x account' }, { status: 403 })
   }
 
-  // Verify engagement type
-  const refs = tweet.referenced_tweets || []
-
-  if (campaign.engagement_type === 'quote_repost') {
-    const quotedRef = refs.find((r: { type: string; id: string }) => r.type === 'quoted' && r.id === campaign.target_tweet_id)
-    if (!quotedRef) {
-      return NextResponse.json({ error: 'dis tweet doesnt quote repost da target tweet' }, { status: 400 })
+  // Verify by engagement type
+  if (campaign.engagement_type === 'post_copypasta') {
+    if (!campaign.required_text) {
+      return NextResponse.json({ error: 'campaign misconfigured' }, { status: 500 })
     }
-  } else if (campaign.engagement_type === 'reply') {
-    const replyRef = refs.find((r: { type: string; id: string }) => r.type === 'replied_to' && r.id === campaign.target_tweet_id)
-    if (!replyRef) {
-      return NextResponse.json({ error: 'dis tweet doesnt reply 2 da target tweet' }, { status: 400 })
+    if (!textsMatch(tweet.text, campaign.required_text)) {
+      return NextResponse.json({ error: 'tweet text doesnt match da copypasta. post da exact text, no changes' }, { status: 400 })
+    }
+  } else {
+    const refs = tweet.referenced_tweets || []
+
+    if (campaign.engagement_type === 'quote_repost') {
+      const quotedRef = refs.find((r: { type: string; id: string }) => r.type === 'quoted' && r.id === campaign.target_tweet_id)
+      if (!quotedRef) {
+        return NextResponse.json({ error: 'dis tweet doesnt quote repost da target tweet' }, { status: 400 })
+      }
+    } else if (campaign.engagement_type === 'reply') {
+      const replyRef = refs.find((r: { type: string; id: string }) => r.type === 'replied_to' && r.id === campaign.target_tweet_id)
+      if (!replyRef) {
+        return NextResponse.json({ error: 'dis tweet doesnt reply 2 da target tweet' }, { status: 400 })
+      }
     }
   }
 
-  // Award IQ
   const { error: insertError } = await supabase
     .from('iq_task_completions')
     .insert({
