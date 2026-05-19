@@ -46,7 +46,8 @@ function VerifyContent() {
   const linked = searchParams.get('linked') === 'true'
   const discordUser = searchParams.get('discord_user')
   const error = searchParams.get('error')
-  const fromIqTask = searchParams.get('from') === 'iq-task'
+  const fromIqTask = searchParams.get('from') === 'iq-task' ||
+    (typeof document !== 'undefined' && document.cookie.includes('verify_from=iq-task'))
 
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [discordSession, setDiscordSession] = useState<{ username: string } | null>(null)
@@ -87,10 +88,13 @@ function VerifyContent() {
   const handleDiscordLink = useCallback(() => {
     const state = crypto.randomUUID()
     document.cookie = `discord_oauth_state=${state}; path=/; max-age=600; samesite=lax`
+    if (fromIqTask) {
+      document.cookie = `verify_from=iq-task; path=/; max-age=600; samesite=lax`
+    }
     const redirectUri = encodeURIComponent(`${SITE_URL}/api/discord/callback`)
     const url = `https://discord.com/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=identify&state=${state}`
     window.location.href = url
-  }, [])
+  }, [fromIqTask])
 
   const handleVerify = useCallback(async () => {
     if (!address) return
@@ -117,6 +121,7 @@ function VerifyContent() {
           wallets: data.wallets || [],
         })
         if (fromIqTask) {
+          document.cookie = 'verify_from=; path=/; max-age=0'
           setTimeout(() => {
             window.location.href = '/sitee/profil?tab=eern-iq'
           }, 2000)
