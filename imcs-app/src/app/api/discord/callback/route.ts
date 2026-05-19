@@ -24,9 +24,18 @@ export async function GET(request: NextRequest) {
     const tokenData = await exchangeCode(code, redirectUri)
     const user = await getDiscordUser(tokenData.access_token)
 
-    const cookieStore = await cookies()
+    const params = new URLSearchParams({
+      linked: 'true',
+      discord_user: user.username,
+      discord_id: user.id,
+    })
 
-    cookieStore.set('discord_access_token', tokenData.access_token, {
+    // Cookies must be set on the returned response. Mutating the next/headers
+    // cookie store and then returning a fresh NextResponse.redirect() drops the
+    // Set-Cookie header, so discord_access_token never reaches the browser.
+    const response = NextResponse.redirect(`${SITE_URL}/sitee/verify?${params}`)
+
+    response.cookies.set('discord_access_token', tokenData.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -34,15 +43,9 @@ export async function GET(request: NextRequest) {
       path: '/',
     })
 
-    cookieStore.delete('discord_oauth_state')
+    response.cookies.delete('discord_oauth_state')
 
-    const params = new URLSearchParams({
-      linked: 'true',
-      discord_user: user.username,
-      discord_id: user.id,
-    })
-
-    return NextResponse.redirect(`${SITE_URL}/sitee/verify?${params}`)
+    return response
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('Discord callback error:', msg)
