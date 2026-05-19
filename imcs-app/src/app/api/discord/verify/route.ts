@@ -151,19 +151,7 @@ export async function POST(request: NextRequest) {
 
     await assignTierRoles(GUILD_ID, discordUser.id, total)
 
-    if (accessToken) {
-      cookieStore.delete('discord_access_token')
-    }
-
-    cookieStore.set('discord_session', discordUser.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 604800,
-    })
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: total >= 51
         ? 'ABSULUT CHED SAVANAT!!! u ar da goat'
@@ -184,6 +172,22 @@ export async function POST(request: NextRequest) {
         username: discordUser.username,
       },
     })
+
+    // Set cookies on the returned response, not the next/headers store, so the
+    // Set-Cookie header actually persists (the session fallback depends on it).
+    if (accessToken) {
+      response.cookies.delete('discord_access_token')
+    }
+
+    response.cookies.set('discord_session', discordUser.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 604800,
+    })
+
+    return response
   } catch (err) {
     console.error('Discord verify error:', err)
     return NextResponse.json({ error: 'verification failed' }, { status: 500 })
