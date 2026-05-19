@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { IQ_TASKS } from '@/lib/iq-tasks'
+import { IQ_TASKS, campaignToTask, EngagementCampaign } from '@/lib/iq-tasks'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
 import { getAddress } from 'viem'
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'wallet required' }, { status: 400 })
   }
 
-  const [completionsResult, discordResult] = await Promise.all([
+  const [completionsResult, discordResult, campaignsResult] = await Promise.all([
     supabase
       .from('iq_task_completions')
       .select('task_type, iq_awarded, metadata, completed_at')
@@ -28,6 +28,11 @@ export async function GET(request: NextRequest) {
       .select('discord_user_id')
       .eq('wallet_address', getAddress(wallet))
       .single(),
+    supabase
+      .from('x_engagement_campaigns')
+      .select('*')
+      .eq('active', true)
+      .order('created_at', { ascending: false }),
   ])
 
   const completionMap = new Map(
@@ -47,7 +52,11 @@ export async function GET(request: NextRequest) {
     discordUsername = verification?.discord_username || null
   }
 
-  const tasks = IQ_TASKS.map(task => {
+  // Check if X is linked (needed for engagement task eligibility)
+  const xLinked = completionMap.has('link_x')
+
+  // Build static tasks
+  const staticTasks = IQ_TASKS.map(task => {
     const completion = completionMap.get(task.id)
 
     if (completion) {
@@ -75,6 +84,36 @@ export async function GET(request: NextRequest) {
       metadata: null,
     }
   })
+
+  // Build engagement campaign tasks
+  const campaigns = (campaignsResult.data || []) as EngagementCampaign[]
+  const now = new Date()
+
+  const engagementTasks = campaigns
+    .filter(c => !c.expires_at || new Date(c.expires_at) > now)
+    .map(campaign => {
+      const taskDef = campaignToTask(campaign)
+      const completion = completionMap.get(taskDef.id)
+
+      if (completion) {
+        return {
+          ...taskDef,
+          status: 'completed' as const,
+          completed_at: completion.completed_at,
+          metadata: completion.metadata,
+        }
+      }
+
+      return {
+        ...taskDef,
+        status: 'not_started' as const,
+        completed_at: null,
+        metadata: null,
+        requires_x: !xLinked,
+      }
+    })
+
+  const tasks = [...staticTasks, ...engagementTasks]
 
   return NextResponse.json({ tasks, discord: discordLinked ? { username: discordUsername } : null })
 }

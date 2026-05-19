@@ -260,13 +260,19 @@ export default function ProfilePage() {
     id: string; name: string; description: string; iq_reward: number
     icon: string; action_label: string; action_type: string
     claimable_label?: string
+    engagement?: { campaign_id: string; target_tweet_url: string; engagement_type: string }
+    requires_x?: boolean
     status: 'not_started' | 'claimable' | 'completed'
     completed_at: string | null
-    metadata: { x_username?: string; discord_username?: string; discord_user_id?: string } | null
+    metadata: { x_username?: string; discord_username?: string; discord_user_id?: string; tweet_url?: string } | null
   }>>([])
   const [xLinkSuccess, setXLinkSuccess] = useState(false)
   const [discordUsername, setDiscordUsername] = useState<string | null>(null)
   const [claimingTask, setClaimingTask] = useState<string | null>(null)
+  const [engagementInputs, setEngagementInputs] = useState<Record<string, string>>({})
+  const [verifyingTask, setVerifyingTask] = useState<string | null>(null)
+  const [verifyError, setVerifyError] = useState<Record<string, string>>({})
+  const [verifySuccess, setVerifySuccess] = useState<Record<string, boolean>>({})
 
   const { data: balanceRaw } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
@@ -463,6 +469,35 @@ export default function ProfilePage() {
       setNamingError(err instanceof Error ? err.message : 'signature rejected')
     }
     setNamingToken(false)
+  }
+
+  const handleVerifyEngagement = async (taskId: string, campaignId: string) => {
+    if (!address || verifyingTask) return
+    const tweetUrl = engagementInputs[taskId]?.trim()
+    if (!tweetUrl) return
+
+    setVerifyingTask(taskId)
+    setVerifyError(prev => ({ ...prev, [taskId]: '' }))
+    setVerifySuccess(prev => ({ ...prev, [taskId]: false }))
+
+    try {
+      const res = await fetch('/api/iq/engagement/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: address, campaign_id: campaignId, tweet_url: tweetUrl }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setVerifySuccess(prev => ({ ...prev, [taskId]: true }))
+        setEngagementInputs(prev => ({ ...prev, [taskId]: '' }))
+        fetchData()
+      } else {
+        setVerifyError(prev => ({ ...prev, [taskId]: data.error || 'verification failed' }))
+      }
+    } catch {
+      setVerifyError(prev => ({ ...prev, [taskId]: 'verification failed' }))
+    }
+    setVerifyingTask(null)
   }
 
   const balance = balanceRaw !== undefined ? Number(balanceRaw) : (holderData?.balance ?? null)
@@ -1072,6 +1107,8 @@ export default function ProfilePage() {
                   ? `linked as @${task.metadata.x_username}`
                   : isCompleted && task.metadata?.discord_username
                     ? `linked as ${task.metadata.discord_username}`
+                    : isCompleted && task.metadata?.tweet_url
+                      ? 'verified! ur a real one'
                     : isClaimable && task.metadata?.discord_username
                       ? `${task.metadata.discord_username} detected! claim ur iq`
                       : task.description
@@ -1217,13 +1254,109 @@ export default function ProfilePage() {
                       >
                         {claimingTask === task.id ? 'claiming...' : (task.claimable_label || `claim +${task.iq_reward} iq`)}
                       </button>
+                    ) : task.action_type === 'verify_engagement' && task.engagement ? (
+                      <div>
+                        {task.requires_x ? (
+                          <div style={{
+                            fontFamily: "'Comic Neue', cursive",
+                            fontSize: '13px',
+                            color: '#cc0000',
+                            background: '#ffe0e0',
+                            border: '2px solid #cc0000',
+                            padding: '10px',
+                            textAlign: 'center',
+                          }}>
+                            link ur x account first (task above)
+                          </div>
+                        ) : (
+                          <>
+                            <a
+                              href={task.engagement.target_tweet_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'block',
+                                fontFamily: "'Comic Neue', cursive",
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                padding: '10px 20px',
+                                background: 'linear-gradient(135deg, #1da1f2, #0d8bd9)',
+                                color: '#fff',
+                                border: '2px solid #000',
+                                boxShadow: '3px 3px 0 #000',
+                                textAlign: 'center',
+                                textDecoration: 'none',
+                                marginBottom: '8px',
+                              }}
+                            >
+                              open tweet on x
+                            </a>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <input
+                                value={engagementInputs[task.id] || ''}
+                                onChange={e => setEngagementInputs(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                placeholder="paste ur tweet url here..."
+                                style={{
+                                  flex: 1,
+                                  fontFamily: "'Comic Neue', cursive",
+                                  fontSize: '13px',
+                                  padding: '10px',
+                                  border: '2px solid #000',
+                                  background: '#fff',
+                                }}
+                              />
+                              <button
+                                onClick={() => handleVerifyEngagement(task.id, task.engagement!.campaign_id)}
+                                disabled={verifyingTask === task.id || !engagementInputs[task.id]?.trim()}
+                                style={{
+                                  fontFamily: "'Comic Neue', cursive",
+                                  fontSize: '14px',
+                                  fontWeight: 'bold',
+                                  padding: '10px 16px',
+                                  background: engagementInputs[task.id]?.trim()
+                                    ? 'linear-gradient(135deg, #00ff87, #60efff)'
+                                    : '#ccc',
+                                  color: '#000',
+                                  border: '2px solid #000',
+                                  boxShadow: '3px 3px 0 #000',
+                                  cursor: engagementInputs[task.id]?.trim() ? 'pointer' : 'not-allowed',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {verifyingTask === task.id ? 'checkin...' : 'verify'}
+                              </button>
+                            </div>
+                            {verifyError[task.id] && (
+                              <div style={{
+                                fontFamily: "'Comic Neue', cursive",
+                                fontSize: '12px',
+                                color: '#cc0000',
+                                marginTop: '6px',
+                              }}>
+                                {verifyError[task.id]}
+                              </div>
+                            )}
+                            {verifySuccess[task.id] && (
+                              <div style={{
+                                fontFamily: "'Comic Neue', cursive",
+                                fontSize: '12px',
+                                color: '#00aa00',
+                                fontWeight: 'bold',
+                                marginTop: '6px',
+                              }}>
+                                verified! +{task.iq_reward} iq earned
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     ) : (
                       <button
                         onClick={() => {
                           if (task.action_type === 'oauth_x' && address) {
                             window.location.href = `/api/auth/x?wallet=${address}`
                           } else if (task.action_type === 'link_discord') {
-                            window.location.href = '/sitee/verify'
+                            window.location.href = '/sitee/verify?from=iq-task'
                           }
                         }}
                         disabled={!address}

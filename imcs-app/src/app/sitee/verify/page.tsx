@@ -46,6 +46,7 @@ function VerifyContent() {
   const linked = searchParams.get('linked') === 'true'
   const discordUser = searchParams.get('discord_user')
   const error = searchParams.get('error')
+  const fromIqTask = searchParams.get('from') === 'iq-task'
 
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [discordSession, setDiscordSession] = useState<{ username: string } | null>(null)
@@ -115,9 +116,11 @@ function VerifyContent() {
           tiers: data.tiers,
           wallets: data.wallets || [],
         })
-        setTimeout(() => {
-          window.location.href = '/sitee/profil?tab=eern-iq'
-        }, 2000)
+        if (fromIqTask) {
+          setTimeout(() => {
+            window.location.href = '/sitee/profil?tab=eern-iq'
+          }, 2000)
+        }
       } else {
         setVerifyError(data.message || data.error || 'verification failed')
       }
