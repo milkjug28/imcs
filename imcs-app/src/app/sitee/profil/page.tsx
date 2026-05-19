@@ -259,10 +259,14 @@ export default function ProfilePage() {
   const [tasks, setTasks] = useState<Array<{
     id: string; name: string; description: string; iq_reward: number
     icon: string; action_label: string; action_type: string
-    completed: boolean; completed_at: string | null
-    metadata: { x_username?: string } | null
+    claimable_label?: string
+    status: 'not_started' | 'claimable' | 'completed'
+    completed_at: string | null
+    metadata: { x_username?: string; discord_username?: string; discord_user_id?: string } | null
   }>>([])
   const [xLinkSuccess, setXLinkSuccess] = useState(false)
+  const [discordUsername, setDiscordUsername] = useState<string | null>(null)
+  const [claimingTask, setClaimingTask] = useState<string | null>(null)
 
   const { data: balanceRaw } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
@@ -309,6 +313,9 @@ export default function ProfilePage() {
     if (tasksRes?.ok) {
       const data = await tasksRes.json()
       setTasks(data.tasks || [])
+      if (data.discord?.username) {
+        setDiscordUsername(data.discord.username)
+      }
     }
 
     setLoading(false)
@@ -334,6 +341,8 @@ export default function ProfilePage() {
       setShowAllocator(false)
       setTasks([])
       setActiveTab('profil')
+      setDiscordUsername(null)
+      setClaimingTask(null)
       setLoading(false)
     }
   }, [isConnected, address, fetchData])
@@ -581,9 +590,16 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <p style={{ fontFamily: 'monospace', fontSize: '12px', color: 'rgba(0,0,0,0.6)', marginBottom: '16px' }}>
-            {truncatedAddress}
-          </p>
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontFamily: 'monospace', fontSize: '12px', color: 'rgba(0,0,0,0.6)', margin: 0 }}>
+              {truncatedAddress}
+            </p>
+            {discordUsername && (
+              <p style={{ fontFamily: "'Comic Neue', cursive", fontSize: '13px', color: 'rgba(0,0,0,0.7)', margin: '4px 0 0 0' }}>
+                💬 {discordUsername}
+              </p>
+            )}
+          </div>
 
           {/* Stats Row */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -1048,20 +1064,34 @@ export default function ProfilePage() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {tasks.map(task => (
+              {tasks.map(task => {
+                const isCompleted = task.status === 'completed'
+                const isClaimable = task.status === 'claimable'
+
+                const descriptionText = isCompleted && task.metadata?.x_username
+                  ? `linked as @${task.metadata.x_username}`
+                  : isCompleted && task.metadata?.discord_username
+                    ? `linked as ${task.metadata.discord_username}`
+                    : isClaimable && task.metadata?.discord_username
+                      ? `${task.metadata.discord_username} detected! claim ur iq`
+                      : task.description
+
+                return (
                 <motion.div
                   key={task.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   style={{
-                    background: task.completed
+                    background: isCompleted
                       ? 'linear-gradient(135deg, #e8ffe8, #c8ffc8)'
-                      : 'linear-gradient(135deg, #fff, #f5f5f5)',
-                    border: `3px solid ${task.completed ? '#00aa00' : '#000'}`,
+                      : isClaimable
+                        ? 'linear-gradient(135deg, #fff8e1, #ffe082)'
+                        : 'linear-gradient(135deg, #fff, #f5f5f5)',
+                    border: `3px solid ${isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
                     borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
-                    boxShadow: `6px 6px 0 ${task.completed ? '#00aa00' : '#000'}`,
+                    boxShadow: `6px 6px 0 ${isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
                     padding: '20px',
-                    transform: `rotate(${task.completed ? 0 : -0.5}deg)`,
+                    transform: `rotate(${isCompleted ? 0 : -0.5}deg)`,
                   }}
                 >
                   <div style={{
@@ -1086,7 +1116,7 @@ export default function ProfilePage() {
                         }}>
                           {task.name}
                         </span>
-                        {task.completed && (
+                        {isCompleted && (
                           <span style={{
                             background: '#00aa00',
                             color: '#fff',
@@ -1099,6 +1129,20 @@ export default function ProfilePage() {
                             done
                           </span>
                         )}
+                        {isClaimable && (
+                          <span style={{
+                            background: '#ff8f00',
+                            color: '#fff',
+                            fontFamily: "'Comic Neue', cursive",
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            animation: 'pulse 2s infinite',
+                          }}>
+                            claimable!
+                          </span>
+                        )}
                       </div>
                       <p style={{
                         fontFamily: "'Comic Neue', cursive",
@@ -1106,15 +1150,13 @@ export default function ProfilePage() {
                         color: '#555',
                         margin: 0,
                       }}>
-                        {task.completed && task.metadata?.x_username
-                          ? `linked as @${task.metadata.x_username}`
-                          : task.description}
+                        {descriptionText}
                       </p>
                     </div>
 
                     <div style={{
-                      background: task.completed ? '#00aa00' : '#000',
-                      color: task.completed ? '#fff' : '#0f0',
+                      background: isCompleted ? '#00aa00' : '#000',
+                      color: isCompleted ? '#fff' : '#0f0',
                       fontFamily: 'monospace',
                       fontSize: '14px',
                       fontWeight: 'bold',
@@ -1128,7 +1170,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div style={{ marginTop: '12px' }}>
-                    {task.completed ? (
+                    {isCompleted ? (
                       <div style={{
                         fontFamily: 'monospace',
                         fontSize: '11px',
@@ -1136,11 +1178,52 @@ export default function ProfilePage() {
                       }}>
                         completed {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ''}
                       </div>
+                    ) : isClaimable ? (
+                      <button
+                        onClick={async () => {
+                          if (!address || claimingTask) return
+                          setClaimingTask(task.id)
+                          try {
+                            const res = await fetch('/api/iq/tasks/claim', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ wallet: address, task_type: task.id }),
+                            })
+                            const data = await res.json()
+                            if (data.ok) {
+                              fetchData()
+                            } else {
+                              alert(data.error || 'claim failed')
+                            }
+                          } catch {
+                            alert('claim failed')
+                          }
+                          setClaimingTask(null)
+                        }}
+                        disabled={claimingTask === task.id}
+                        style={{
+                          fontFamily: "'Comic Neue', cursive",
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          padding: '10px 20px',
+                          background: 'linear-gradient(135deg, #00ff87, #60efff)',
+                          color: '#000',
+                          border: '2px solid #000',
+                          boxShadow: '3px 3px 0 #000',
+                          cursor: 'pointer',
+                          width: '100%',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {claimingTask === task.id ? 'claiming...' : (task.claimable_label || `claim +${task.iq_reward} iq`)}
+                      </button>
                     ) : (
                       <button
                         onClick={() => {
                           if (task.action_type === 'oauth_x' && address) {
                             window.location.href = `/api/auth/x?wallet=${address}`
+                          } else if (task.action_type === 'link_discord') {
+                            window.location.href = '/sitee/verify'
                           }
                         }}
                         disabled={!address}
@@ -1163,7 +1246,8 @@ export default function ProfilePage() {
                     )}
                   </div>
                 </motion.div>
-              ))}
+                )
+              })}
             </div>
 
             {tasks.length === 0 && (

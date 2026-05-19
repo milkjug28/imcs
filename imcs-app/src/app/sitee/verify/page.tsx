@@ -115,6 +115,9 @@ function VerifyContent() {
           tiers: data.tiers,
           wallets: data.wallets || [],
         })
+        setTimeout(() => {
+          window.location.href = '/sitee/profil?tab=eern-iq'
+        }, 2000)
       } else {
         setVerifyError(data.message || data.error || 'verification failed')
       }
@@ -138,29 +141,33 @@ function VerifyContent() {
   }, [linked, isConnected, address, result, verifying, verifyError, autoVerifyAttempted, handleVerify])
 
   const handleUnlink = useCallback(async (walletAddress: string) => {
-    if (!address) return
     setUnlinking(walletAddress)
     setVerifyError(null)
     try {
-      if (address.toLowerCase() !== walletAddress.toLowerCase()) {
-        setVerifyError('connect dat wallet first 2 unlink it')
-        setUnlinking(null)
-        return
-      }
+      const isConnectedWallet = address?.toLowerCase() === walletAddress.toLowerCase()
 
-      const timestamp = Date.now()
-      const message = `Unlink wallet from IMCS Discord\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`
-      const signature = await signMessageAsync({ message })
+      let body: Record<string, string>
+
+      if (isConnectedWallet) {
+        const timestamp = Date.now()
+        const message = `Unlink wallet from IMCS Discord\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`
+        const signature = await signMessageAsync({ message })
+        body = { wallet: walletAddress, signature, message }
+      } else {
+        body = { wallet: walletAddress }
+      }
 
       const res = await fetch('/api/discord/wallets', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: walletAddress, signature, message }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (res.ok && data.success) {
         if (data.wallets.length === 0) {
           setProfile(null)
+          setDiscordSession(null)
+          setResult(null)
         } else {
           setProfile(prev => prev ? {
             ...prev,
@@ -238,20 +245,18 @@ function VerifyContent() {
                 <span>{w.address.slice(0, 6)}...{w.address.slice(-4)}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>{w.count} savant{w.count !== 1 ? 's' : ''}</span>
-                  {address?.toLowerCase() === w.address.toLowerCase() && (
-                    <button
-                      onClick={() => handleUnlink(w.address)}
-                      disabled={unlinking === w.address}
-                      style={unlinkBtn}
-                    >
-                      {unlinking === w.address ? '...' : 'unlink'}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleUnlink(w.address)}
+                    disabled={unlinking === w.address}
+                    style={unlinkBtn}
+                  >
+                    {unlinking === w.address ? '...' : 'unlink'}
+                  </button>
                 </div>
               </div>
             ))}
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '11px', marginTop: '8px', textAlign: 'center' }}>
-              switch wallet 2 link or unlink others
+              switch wallet 2 link more
             </p>
           </div>
 

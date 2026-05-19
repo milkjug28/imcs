@@ -21,7 +21,7 @@ export const AGENT_TOOLS = [
       },
       {
         name: 'get_market_data',
-        description: 'Get live crypto market prices for BTC, ETH, SOL, LINK, UNI, AAVE, LDO, ARB, OP, POL, PEPE, DOGE and ETH gas price. Use when someone asks about crypto prices, market conditions, whether something is pumping or dumping, or trading.',
+        description: 'Get live crypto market prices for BTC, ETH, SOL, LINK, UNI, AAVE, LDO, ARB, OP, POL, PEPE, DOGE and ETH gas price. Use when someone asks about crypto prices, market conditions, gains, alpha, market analysis, whether something is pumping or dumping, trading, or any general market question. This is your go-to tool for being helpful about crypto.',
         parameters: {
           type: 'OBJECT',
           properties: {},

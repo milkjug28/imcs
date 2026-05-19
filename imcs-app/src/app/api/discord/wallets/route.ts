@@ -89,21 +89,8 @@ export async function DELETE(request: NextRequest) {
     if (!wallet || !isAddress(wallet)) {
       return NextResponse.json({ error: 'invalid wallet' }, { status: 400 })
     }
-    if (!signature || !message) {
-      return NextResponse.json({ error: 'signature required' }, { status: 400 })
-    }
 
     const checksummed = getAddress(wallet)
-
-    const recovered = await recoverMessageAddress({ message, signature })
-    if (getAddress(recovered) !== checksummed) {
-      return NextResponse.json({ error: 'signature doesnt match wallet' }, { status: 401 })
-    }
-
-    const tsMatch = message.match(/Timestamp: (\d+)/)
-    if (!tsMatch || Math.abs(Date.now() - Number(tsMatch[1])) > 300_000) {
-      return NextResponse.json({ error: 'signature expired' }, { status: 401 })
-    }
 
     const { data: walletRecord } = await supabase
       .from('discord_wallets')
@@ -113,6 +100,24 @@ export async function DELETE(request: NextRequest) {
 
     if (!walletRecord) {
       return NextResponse.json({ error: 'wallet not linked' }, { status: 404 })
+    }
+
+    if (signature && message) {
+      const recovered = await recoverMessageAddress({ message, signature })
+      if (getAddress(recovered) !== checksummed) {
+        return NextResponse.json({ error: 'signature doesnt match wallet' }, { status: 401 })
+      }
+
+      const tsMatch = message.match(/Timestamp: (\d+)/)
+      if (!tsMatch || Math.abs(Date.now() - Number(tsMatch[1])) > 300_000) {
+        return NextResponse.json({ error: 'signature expired' }, { status: 401 })
+      }
+    } else {
+      const cookieStore = await cookies()
+      const sessionUserId = cookieStore.get('discord_session')?.value
+      if (!sessionUserId || sessionUserId !== walletRecord.discord_user_id) {
+        return NextResponse.json({ error: 'signature or discord session required' }, { status: 401 })
+      }
     }
 
     const discordUserId = walletRecord.discord_user_id
@@ -142,7 +147,7 @@ export async function DELETE(request: NextRequest) {
 
     await assignTierRoles(GUILD_ID, discordUserId, newTotal)
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       tokenCount: newTotal,
       tiers: tierNames,
@@ -151,6 +156,13 @@ export async function DELETE(request: NextRequest) {
         count: w.token_count,
       })),
     })
+
+    if ((remaining || []).length === 0) {
+      response.cookies.delete('discord_session')
+      response.cookies.delete('discord_access_token')
+    }
+
+    return response
   } catch (err) {
     console.error('Wallet unlink error:', err)
     return NextResponse.json({ error: 'unlink failed' }, { status: 500 })

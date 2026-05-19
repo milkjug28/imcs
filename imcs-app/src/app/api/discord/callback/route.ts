@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(`${SITE_URL}/sitee/verify?${params}`)
   } catch (err) {
-    console.error('Discord callback error:', err)
-    return NextResponse.redirect(`${SITE_URL}/sitee/verify?error=oauth_failed`)
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('Discord callback error:', msg)
+    return NextResponse.redirect(`${SITE_URL}/sitee/verify?error=oauth_failed&reason=${encodeURIComponent(msg)}`)
   }
 }
