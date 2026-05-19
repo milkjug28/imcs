@@ -262,6 +262,7 @@ export default function ProfilePage() {
     claimable_label?: string
     engagement?: { campaign_id: string; target_tweet_url?: string; intent_url?: string; engagement_type: string }
     requires_x?: boolean
+    paused?: boolean
     status: 'not_started' | 'claimable' | 'completed'
     completed_at: string | null
     metadata: { x_username?: string; discord_username?: string; discord_user_id?: string; tweet_url?: string } | null
@@ -1102,11 +1103,14 @@ export default function ProfilePage() {
               {tasks.map(task => {
                 const isCompleted = task.status === 'completed'
                 const isClaimable = task.status === 'claimable'
+                const isPaused = !!task.paused && !isCompleted
 
-                const descriptionText = isCompleted && task.metadata?.x_username
-                  ? `linked as @${task.metadata.x_username}`
+                const descriptionText = isPaused
+                  ? 'kumin suun...'
+                  : isCompleted && task.metadata?.x_username
+                  ? `leenkt az @${task.metadata.x_username}`
                   : isCompleted && task.metadata?.discord_username
-                    ? `linked as ${task.metadata.discord_username}`
+                    ? `leenkt az ${task.metadata.discord_username}`
                     : isCompleted && task.metadata?.tweet_url
                       ? 'verified! ur a real one'
                     : isClaimable && task.metadata?.discord_username
@@ -1119,16 +1123,19 @@ export default function ProfilePage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   style={{
-                    background: isCompleted
-                      ? 'linear-gradient(135deg, #e8ffe8, #c8ffc8)'
-                      : isClaimable
-                        ? 'linear-gradient(135deg, #fff8e1, #ffe082)'
-                        : 'linear-gradient(135deg, #fff, #f5f5f5)',
-                    border: `3px solid ${isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
+                    background: isPaused
+                      ? 'linear-gradient(135deg, #e0e0e0, #ccc)'
+                      : isCompleted
+                        ? 'linear-gradient(135deg, #e8ffe8, #c8ffc8)'
+                        : isClaimable
+                          ? 'linear-gradient(135deg, #fff8e1, #ffe082)'
+                          : 'linear-gradient(135deg, #fff, #f5f5f5)',
+                    border: `3px solid ${isPaused ? '#999' : isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
                     borderRadius: '15px 225px 15px 255px / 225px 15px 225px 15px',
-                    boxShadow: `6px 6px 0 ${isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
+                    boxShadow: `6px 6px 0 ${isPaused ? '#999' : isCompleted ? '#00aa00' : isClaimable ? '#ff8f00' : '#000'}`,
                     padding: '20px',
                     transform: `rotate(${isCompleted ? 0 : -0.5}deg)`,
+                    opacity: isPaused ? 0.6 : 1,
                   }}
                 >
                   <div style={{
@@ -1207,13 +1214,24 @@ export default function ProfilePage() {
                   </div>
 
                   <div style={{ marginTop: '12px' }}>
-                    {isCompleted ? (
+                    {isPaused ? (
+                      <div style={{
+                        fontFamily: "'Comic Neue', cursive",
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: '#999',
+                        textAlign: 'center',
+                        padding: '10px',
+                      }}>
+                        kumin suun...
+                      </div>
+                    ) : isCompleted ? (
                       <div style={{
                         fontFamily: 'monospace',
                         fontSize: '11px',
                         color: '#888',
                       }}>
-                        completed {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ''}
+                        kummpleeted {task.completed_at ? new Date(task.completed_at).toLocaleDateString() : ''}
                       </div>
                     ) : isClaimable ? (
                       <button
@@ -1291,13 +1309,13 @@ export default function ProfilePage() {
                                 marginBottom: '8px',
                               }}
                             >
-                              {task.engagement.intent_url ? 'post da copypasta on x' : 'open tweet on x'}
+                              {task.engagement.intent_url ? 'pohst da kahpipastah onn x' : 'open tweet on x'}
                             </a>
                             <div style={{ display: 'flex', gap: '6px' }}>
                               <input
                                 value={engagementInputs[task.id] || ''}
                                 onChange={e => setEngagementInputs(prev => ({ ...prev, [task.id]: e.target.value }))}
-                                placeholder="paste ur tweet url here..."
+                                placeholder="payst ur x url post heer"
                                 style={{
                                   flex: 1,
                                   fontFamily: "'Comic Neue', cursive",

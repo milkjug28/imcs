@@ -66,7 +66,14 @@ export function campaignToTask(campaign: EngagementCampaign): IQTaskDefinition {
 
   let intentUrl: string | undefined
   if (campaign.engagement_type === 'post_copypasta' && campaign.required_text) {
-    intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(campaign.required_text)}`
+    const cleaned = campaign.required_text
+      .replace(/\r/g, '')
+      .replace(/\n\n/g, '<<BREAK>>')
+      .replace(/\n/g, ' ')
+      .replace(/<<BREAK>>/g, '\n\n')
+      .replace(/ {2,}/g, ' ')
+      .trim()
+    intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(cleaned)}`
   }
 
   return {

@@ -31,7 +31,6 @@ export async function GET(request: NextRequest) {
     supabase
       .from('x_engagement_campaigns')
       .select('*')
-      .eq('active', true)
       .order('created_at', { ascending: false }),
   ])
 
@@ -101,6 +100,7 @@ export async function GET(request: NextRequest) {
           status: 'completed' as const,
           completed_at: completion.completed_at,
           metadata: completion.metadata,
+          paused: false,
         }
       }
 
@@ -110,6 +110,7 @@ export async function GET(request: NextRequest) {
         completed_at: null,
         metadata: null,
         requires_x: !xLinked,
+        paused: !campaign.active,
       }
     })
 
