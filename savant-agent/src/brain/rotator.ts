@@ -44,8 +44,8 @@ function nextMidnightUTC(): number {
 
 // ── OpenRouter adapter (OpenAI format <-> Gemini format) ────────────
 
-const OPENROUTER_MODEL = 'deepseek/deepseek-v4-flash:free'
-const OPENROUTER_VISION_MODEL = 'google/gemma-4-27b-it:free'
+const OPENROUTER_MODEL = 'deepseek/deepseek-chat'
+const OPENROUTER_VISION_MODEL = 'deepseek/deepseek-chat'
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool'
@@ -366,11 +366,13 @@ export class GeminiRotator {
     // Fallback to OpenRouter
     if (config.openRouterKey) {
       try {
-        log('[rotator] all Gemini buckets exhausted, falling back to OpenRouter')
+        log(`[rotator] all Gemini buckets exhausted (last error: ${lastError}), falling back to OpenRouter`)
         return await callOpenRouterSimple(prompt, systemPrompt)
       } catch (err) {
-        logError('[rotator] OpenRouter fallback failed', err)
+        logError('[rotator] OpenRouter fallback also failed', err)
       }
+    } else {
+      log('[rotator] no OpenRouter key configured, no fallback available')
     }
 
     throw lastError || new Error('All Gemini buckets exhausted')
@@ -455,11 +457,13 @@ export class GeminiRotator {
     // Fallback to OpenRouter
     if (config.openRouterKey) {
       try {
-        log('[rotator] all Gemini buckets exhausted, falling back to OpenRouter')
+        log(`[rotator] all Gemini buckets exhausted (last error: ${lastError}), falling back to OpenRouter`)
         return await callOpenRouter(contents, systemInstruction, tools)
       } catch (err) {
-        logError('[rotator] OpenRouter fallback failed', err)
+        logError('[rotator] OpenRouter fallback also failed', err)
       }
+    } else {
+      log('[rotator] no OpenRouter key configured, no fallback available')
     }
 
     throw lastError || new Error('All buckets exhausted (Gemini + OpenRouter)')
