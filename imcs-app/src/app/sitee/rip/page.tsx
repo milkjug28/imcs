@@ -436,7 +436,7 @@ function BoosterPack({ onRip, isStretchedGag, onGagSqueaked }: {
         <img
           src="/assets/card-pack.png"
           alt="IMCS Trait Booster Pack"
-          style={{ width: '260px', height: 'auto', display: 'block', filter: 'drop-shadow(8px 8px 0 rgba(0,0,0,0.35))' }}
+          style={{ height: '420px', width: 'auto', display: 'block', filter: 'drop-shadow(8px 8px 0 rgba(0,0,0,0.35))' }}
           draggable={false}
         />
 
@@ -481,7 +481,7 @@ function BoosterPack({ onRip, isStretchedGag, onGagSqueaked }: {
             display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10,
           }}>
             <div style={{ position: 'relative', height: '80px', display: 'flex', justifyContent: 'center' }}>
-              <div style={{ width: '6px', height: '100%', background: 'rgba(255,255,255,0.4)', borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.6)' }} />
+              <div style={{ width: '8px', height: '100%', background: 'rgba(0,0,0,0.5)', borderRadius: '9999px', border: '2px solid rgba(255,255,255,0.8)', boxShadow: '0 0 6px rgba(0,0,0,0.4)' }} />
               <motion.div
                 drag="y"
                 dragConstraints={{ top: 0, bottom: 120 }}
@@ -622,7 +622,7 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
     <motion.div
       initial={{ opacity: 0, scale: 0.4, y: 70, rotate: -15 + index * 12 }}
       animate={{ opacity: 1, scale: 1, y: 0, rotate: 0, transition: { type: 'spring', damping: 11, stiffness: 90, delay: index * 0.15 } }}
-      style={{ position: 'relative', width: '210px', userSelect: 'none', perspective: '1000px' }}
+      style={{ position: 'relative', width: '225px', userSelect: 'none', perspective: '1000px' }}
     >
       <div
         ref={cardRef}
@@ -736,7 +736,7 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
           margin: '8px 0', padding: '8px', background: '#fcf9f2',
           borderRadius: '10px 4px 12px 6px / 4px 10px 6px 12px',
           border: '2px dashed rgba(69,26,3,0.4)',
-          aspectRatio: '1', width: '100%',
+          aspectRatio: '5/4', width: '100%',
           display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)',
           position: 'relative', overflow: 'hidden',
@@ -807,23 +807,26 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
             </span>
           </div>
 
-          {/* Description */}
-          <p style={{
-            fontSize: '10px', fontWeight: 500, color: '#451a03',
-            fontFamily: "'Comic Neue', cursive", letterSpacing: '-0.025em',
-            lineHeight: 1.3, marginTop: '4px', fontStyle: 'italic',
-          }}>
-            &quot;{getTraitDescription(trait.name)}&quot;
-          </p>
-
-          {/* Trivia footer */}
+          {/* Description + Trivia panel */}
           <div style={{
-            marginTop: '4px', background: 'rgba(69,26,3,0.05)',
-            borderTop: '1px solid rgba(69,26,3,0.15)', paddingTop: '6px',
-            fontSize: '9px', fontFamily: 'monospace', color: 'rgba(120,53,15,0.8)',
-            lineHeight: 1.3,
+            background: 'rgba(255,255,255,0.75)', borderRadius: '6px 3px 6px 3px / 3px 6px 3px 6px',
+            padding: '6px 8px', marginTop: '6px',
           }}>
-            <span style={{ fontWeight: 700, color: '#451a03' }}>TRIVIA:</span> supplai of {getSupply(trait.name)} in da collekshun. {trait.rarity === 'Legendary' ? 'super rayr!!' : trait.rarity === 'Epic' ? 'preetty rayr!' : trait.rarity === 'Rare' ? 'sumwut rayr.' : 'preetty commun.'}
+            <p style={{
+              fontSize: '10px', fontWeight: 500, color: '#451a03',
+              fontFamily: "'Comic Neue', cursive", letterSpacing: '-0.025em',
+              lineHeight: 1.3, fontStyle: 'italic',
+            }}>
+              &quot;{getTraitDescription(trait.name)}&quot;
+            </p>
+
+            <div style={{
+              marginTop: '4px', borderTop: '1px solid rgba(69,26,3,0.15)', paddingTop: '4px',
+              fontSize: '9px', fontFamily: 'monospace', color: 'rgba(69,26,3,0.7)',
+              lineHeight: 1.3,
+            }}>
+              <span style={{ fontWeight: 700, color: '#451a03' }}>TRIVIA:</span> supplai of {getSupply(trait.name)} in da collekshun. {trait.rarity === 'Legendary' ? 'super rayr!!' : trait.rarity === 'Epic' ? 'preetty rayr!' : trait.rarity === 'Rare' ? 'sumwut rayr.' : 'preetty commun.'}
+            </div>
           </div>
         </div>
       </div>
