@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
   if (!wallet || !isAddress(wallet)) {
     return NextResponse.json({ error: 'invalid wallet' }, { status: 400 })
   }
-  if (!campaign_id || !tweet_url) {
-    return NextResponse.json({ error: 'campaign_id and tweet_url required' }, { status: 400 })
+  if (!campaign_id) {
+    return NextResponse.json({ error: 'campaign_id required' }, { status: 400 })
   }
 
   const walletLower = wallet.toLowerCase()
@@ -85,23 +85,76 @@ export async function POST(request: NextRequest) {
 
   const linkedXUserId = xLink.metadata.x_user_id
 
-  const userTweetId = extractTweetId(tweet_url)
-  if (!userTweetId) {
-    return NextResponse.json({ error: 'invalid tweet url' }, { status: 400 })
-  }
-
   const bearerToken = process.env.X_BEARER_TOKEN
   if (!bearerToken) {
     console.error('X_BEARER_TOKEN not configured')
     return NextResponse.json({ error: 'verification unavailable' }, { status: 503 })
   }
 
-  const fields = campaign.engagement_type === 'post_copypasta'
-    ? 'author_id,text'
-    : 'author_id'
-  const expansions = campaign.engagement_type === 'post_copypasta'
-    ? ''
-    : '&expansions=referenced_tweets'
+  // Repost verification: check user's recent tweets for a retweet of the target
+  if (campaign.engagement_type === 'repost') {
+    if (!campaign.target_tweet_id) {
+      return NextResponse.json({ error: 'campaign misconfigured' }, { status: 500 })
+    }
+
+    const timelineUrl = `https://api.x.com/2/users/${linkedXUserId}/tweets?tweet.fields=referenced_tweets&max_results=50`
+    const tlRes = await fetch(timelineUrl, {
+      headers: { 'Authorization': `Bearer ${bearerToken}` },
+    })
+
+    if (!tlRes.ok) {
+      const errText = await tlRes.text()
+      console.error('X API timeline error:', tlRes.status, errText)
+      return NextResponse.json({ error: 'x api verification failed' }, { status: 502 })
+    }
+
+    const tlData = await tlRes.json()
+    const tweets = tlData.data || []
+    const foundRetweet = tweets.some((t: { referenced_tweets?: { type: string; id: string }[] }) =>
+      t.referenced_tweets?.some(r => r.type === 'retweeted' && r.id === campaign.target_tweet_id)
+    )
+
+    if (!foundRetweet) {
+      return NextResponse.json({ error: 'repost not found. did u repost da tweet?' }, { status: 400 })
+    }
+
+    const { error: insertError } = await supabase
+      .from('iq_task_completions')
+      .insert({
+        wallet_address: walletLower,
+        task_type: taskType,
+        iq_awarded: campaign.iq_reward,
+        metadata: {
+          campaign_id: campaign.id,
+          engagement_type: 'repost',
+        },
+      })
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        return NextResponse.json({ error: 'already claimed' }, { status: 409 })
+      }
+      console.error('insert error:', insertError)
+      return NextResponse.json({ error: 'verification failed' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true, iq_awarded: campaign.iq_reward })
+  }
+
+  // All other types require a tweet URL
+  if (!tweet_url) {
+    return NextResponse.json({ error: 'tweet_url required' }, { status: 400 })
+  }
+
+  const userTweetId = extractTweetId(tweet_url)
+  if (!userTweetId) {
+    return NextResponse.json({ error: 'invalid tweet url' }, { status: 400 })
+  }
+
+  const needsText = campaign.engagement_type === 'post_copypasta' ||
+    (campaign.engagement_type === 'quote_repost' && campaign.required_text)
+  const fields = needsText ? 'author_id,text' : 'author_id'
+  const expansions = campaign.engagement_type === 'post_copypasta' ? '' : '&expansions=referenced_tweets'
 
   const xApiUrl = `https://api.x.com/2/tweets/${userTweetId}?tweet.fields=${fields}${expansions}`
 
@@ -129,7 +182,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'dat tweet not from ur linked x account' }, { status: 403 })
   }
 
-  // Verify by engagement type
   if (campaign.engagement_type === 'post_copypasta') {
     if (!campaign.required_text) {
       return NextResponse.json({ error: 'campaign misconfigured' }, { status: 500 })
@@ -144,6 +196,9 @@ export async function POST(request: NextRequest) {
       const quotedRef = refs.find((r: { type: string; id: string }) => r.type === 'quoted' && r.id === campaign.target_tweet_id)
       if (!quotedRef) {
         return NextResponse.json({ error: 'dis tweet doesnt quote repost da target tweet' }, { status: 400 })
+      }
+      if (campaign.required_text && !textsMatch(tweet.text, campaign.required_text)) {
+        return NextResponse.json({ error: `ur quote must include "${campaign.required_text}"` }, { status: 400 })
       }
     } else if (campaign.engagement_type === 'reply') {
       const replyRef = refs.find((r: { type: string; id: string }) => r.type === 'replied_to' && r.id === campaign.target_tweet_id)

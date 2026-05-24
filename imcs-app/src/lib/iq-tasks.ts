@@ -11,7 +11,7 @@ export type IQTaskDefinition = {
     campaign_id: string
     target_tweet_url?: string
     intent_url?: string
-    engagement_type: 'quote_repost' | 'reply' | 'post_copypasta'
+    engagement_type: 'repost' | 'quote_repost' | 'reply' | 'post_copypasta'
   }
 }
 
@@ -43,7 +43,7 @@ export type EngagementCampaign = {
   description: string
   target_tweet_id: string | null
   target_tweet_url: string | null
-  engagement_type: 'quote_repost' | 'reply' | 'post_copypasta'
+  engagement_type: 'repost' | 'quote_repost' | 'reply' | 'post_copypasta'
   required_text: string | null
   iq_reward: number
   active: boolean
@@ -53,19 +53,23 @@ export type EngagementCampaign = {
 
 export function campaignToTask(campaign: EngagementCampaign): IQTaskDefinition {
   const typeLabels = {
+    repost: 'repost dis tweet',
     quote_repost: 'quote repost dis tweet',
     reply: 'reply 2 dis tweet',
     post_copypasta: 'post da copypasta',
   }
 
   const icons = {
+    repost: '🔄',
     quote_repost: '🔁',
     reply: '💬',
     post_copypasta: '📜',
   }
 
   let intentUrl: string | undefined
-  if (campaign.engagement_type === 'post_copypasta' && campaign.required_text) {
+  if (campaign.engagement_type === 'repost' && campaign.target_tweet_id) {
+    intentUrl = `https://x.com/intent/retweet?tweet_id=${campaign.target_tweet_id}`
+  } else if (campaign.engagement_type === 'post_copypasta' && campaign.required_text) {
     const cleaned = campaign.required_text
       .replace(/\r/g, '')
       .replace(/\n\n/g, '<<BREAK>>')

@@ -439,10 +439,10 @@ export default function ProfilePage() {
     setNamingToken(false)
   }
 
-  const handleVerifyEngagement = async (taskId: string, campaignId: string) => {
+  const handleVerifyEngagement = async (taskId: string, campaignId: string, isRepost?: boolean) => {
     if (!address || verifyingTask) return
-    const tweetUrl = engagementInputs[taskId]?.trim()
-    if (!tweetUrl) return
+    const tweetUrl = isRepost ? undefined : engagementInputs[taskId]?.trim()
+    if (!isRepost && !tweetUrl) return
 
     setVerifyingTask(taskId)
     setVerifyError(prev => ({ ...prev, [taskId]: '' }))
@@ -1216,10 +1216,12 @@ export default function ProfilePage() {
                                 fontSize: '14px',
                                 fontWeight: 'bold',
                                 padding: '10px 20px',
-                                background: task.engagement.intent_url
-                                  ? 'linear-gradient(135deg, #ff6b9d, #ffd700)'
-                                  : 'linear-gradient(135deg, #1da1f2, #0d8bd9)',
-                                color: task.engagement.intent_url ? '#000' : '#fff',
+                                background: task.engagement.engagement_type === 'repost'
+                                  ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                                  : task.engagement.intent_url
+                                    ? 'linear-gradient(135deg, #ff6b9d, #ffd700)'
+                                    : 'linear-gradient(135deg, #1da1f2, #0d8bd9)',
+                                color: task.engagement.intent_url && task.engagement.engagement_type !== 'repost' ? '#000' : '#fff',
                                 border: '2px solid #000',
                                 boxShadow: '3px 3px 0 #000',
                                 textAlign: 'center',
@@ -1227,8 +1229,32 @@ export default function ProfilePage() {
                                 marginBottom: '8px',
                               }}
                             >
-                              {task.engagement.intent_url ? 'pohst da kahpipastah onn x' : 'open tweet on x'}
+                              {task.engagement.engagement_type === 'repost'
+                                ? '🔄 repost on x'
+                                : task.engagement.intent_url
+                                  ? 'pohst da kahpipastah onn x'
+                                  : 'open tweet on x'}
                             </a>
+                            {task.engagement.engagement_type === 'repost' ? (
+                              <button
+                                onClick={() => handleVerifyEngagement(task.id, task.engagement!.campaign_id, true)}
+                                disabled={verifyingTask === task.id}
+                                style={{
+                                  fontFamily: "'Comic Neue', cursive",
+                                  fontSize: '14px',
+                                  fontWeight: 'bold',
+                                  padding: '10px 20px',
+                                  background: 'linear-gradient(135deg, #00ff87, #60efff)',
+                                  color: '#000',
+                                  border: '2px solid #000',
+                                  boxShadow: '3px 3px 0 #000',
+                                  cursor: 'pointer',
+                                  width: '100%',
+                                }}
+                              >
+                                {verifyingTask === task.id ? 'checkin...' : 'i reposted it, verify!'}
+                              </button>
+                            ) : (
                             <div style={{ display: 'flex', gap: '6px' }}>
                               <input
                                 value={engagementInputs[task.id] || ''}
@@ -1264,6 +1290,7 @@ export default function ProfilePage() {
                                 {verifyingTask === task.id ? 'checkin...' : 'verify'}
                               </button>
                             </div>
+                            )}
                             {verifyError[task.id] && (
                               <div style={{
                                 fontFamily: "'Comic Neue', cursive",
