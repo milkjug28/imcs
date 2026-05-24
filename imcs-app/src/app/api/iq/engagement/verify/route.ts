@@ -153,10 +153,13 @@ export async function POST(request: NextRequest) {
 
   const needsText = campaign.engagement_type === 'post_copypasta' ||
     (campaign.engagement_type === 'quote_repost' && campaign.required_text)
-  const fields = needsText ? 'author_id,text' : 'author_id'
-  const expansions = campaign.engagement_type === 'post_copypasta' ? '' : '&expansions=referenced_tweets'
+  const needsRefs = campaign.engagement_type !== 'post_copypasta'
 
-  const xApiUrl = `https://api.x.com/2/tweets/${userTweetId}?tweet.fields=${fields}${expansions}`
+  const fieldParts = ['author_id']
+  if (needsText) fieldParts.push('text')
+  if (needsRefs) fieldParts.push('referenced_tweets')
+
+  const xApiUrl = `https://api.x.com/2/tweets/${userTweetId}?tweet.fields=${fieldParts.join(',')}`
 
   const xRes = await fetch(xApiUrl, {
     headers: { 'Authorization': `Bearer ${bearerToken}` },
