@@ -15,15 +15,15 @@ contract SavantEquipManagerTest is Test {
     address user1 = address(0xCAFE);
     address user2 = address(0xBEEF);
 
-    // Trait IDs matching our scheme: layer * 1000 + index
-    uint256 constant HAT_PARTI = 7023;   // HATSS slot (7), optional
-    uint256 constant HAT_WIZZARD = 7035; // HATSS slot (7), optional
-    uint256 constant EYES_ENTENCE = 4004; // AYEZZ slot (4), required
-    uint256 constant EYES_CHADD = 4001;   // AYEZZ slot (4), required
-    uint256 constant BG_BLU = 1;         // BGS slot (0), required
-    uint256 constant BOD_DERK = 1001;    // BODS slot (1), required
-    uint256 constant CLOTH_FSHERT = 2011; // CLOTHS slot (2), optional
-    uint256 constant MOUF_MEEH = 5005;   // MOUFS slot (5), required
+    // Trait IDs matching our scheme: layer * 1000 + index + 1
+    uint256 constant HAT_PARTI = 7024;   // HATSS slot (7), optional
+    uint256 constant HAT_WIZZARD = 7036; // HATSS slot (7), optional
+    uint256 constant EYES_ENTENCE = 4005; // AYEZZ slot (4), required
+    uint256 constant EYES_CHADD = 4002;   // AYEZZ slot (4), required
+    uint256 constant BG_BLU = 2;         // BGS slot (0), required
+    uint256 constant BOD_DERK = 1002;    // BODS slot (1), required
+    uint256 constant CLOTH_FSHERT = 2012; // CLOTHS slot (2), optional
+    uint256 constant MOUF_MEEH = 5006;   // MOUFS slot (5), required
 
     function setUp() public {
         signer = vm.addr(signerPk);
@@ -209,11 +209,12 @@ contract SavantEquipManagerTest is Test {
         vm.expectRevert("Required slot");
         manager.unequip(1, 4, fakeHash, sig, block.timestamp + 1 hours, 1);
 
-        // Slot 5 (MOUFS) is required
-        sig = _signUnequip(1, 5, fakeHash, user1, block.timestamp + 1 hours, 2);
+        // Slot 5 (MOUFS) is NOT contract-required (backend enforces via trait links)
+        // Slot 1 (BODS) is required
+        sig = _signUnequip(1, 1, fakeHash, user1, block.timestamp + 1 hours, 2);
         vm.prank(user1);
         vm.expectRevert("Required slot");
-        manager.unequip(1, 5, fakeHash, sig, block.timestamp + 1 hours, 2);
+        manager.unequip(1, 1, fakeHash, sig, block.timestamp + 1 hours, 2);
     }
 
     // ──────── Equip Tests ────────
@@ -583,6 +584,88 @@ contract SavantEquipManagerTest is Test {
         vm.prank(user1);
         vm.expectRevert("Required slot");
         manager.batchModify(1, modSlots, modTraits, fakeHash, sig, block.timestamp + 1 hours, 0);
+    }
+
+    // ──────── Edge Case Tests ────────
+
+    function test_SwapEmptySlotReverts() public {
+        uint256[10] memory slots = [BG_BLU, BOD_DERK, uint256(0), uint256(0), EYES_ENTENCE, MOUF_MEEH, uint256(0), uint256(0), uint256(0), uint256(0)];
+        bytes32 oldHash = keccak256(abi.encodePacked(slots[0], slots[1], slots[2], slots[3], slots[4], slots[5], slots[6], slots[7], slots[8], slots[9]));
+
+        _seedToken(1, slots, oldHash);
+        _mintTraitToUser(user1, HAT_PARTI, 1);
+        _enableClaims();
+
+        bytes32 fakeHash = keccak256("fake");
+        bytes memory sig = _signSwap(1, 7, HAT_PARTI, fakeHash, user1, block.timestamp + 1 hours, 0);
+
+        vm.startPrank(user1);
+        equipment.setApprovalForAll(address(manager), true);
+        vm.expectRevert("Slot empty");
+        manager.swap(1, 7, HAT_PARTI, fakeHash, sig, block.timestamp + 1 hours, 0);
+        vm.stopPrank();
+    }
+
+    function test_EquipZeroTraitIdReverts() public {
+        uint256[10] memory slots = [BG_BLU, BOD_DERK, uint256(0), uint256(0), EYES_ENTENCE, MOUF_MEEH, uint256(0), uint256(0), uint256(0), uint256(0)];
+        bytes32 oldHash = keccak256(abi.encodePacked(slots[0], slots[1], slots[2], slots[3], slots[4], slots[5], slots[6], slots[7], slots[8], slots[9]));
+
+        _seedToken(1, slots, oldHash);
+        _enableClaims();
+
+        bytes32 fakeHash = keccak256("fake");
+        bytes memory sig = _signEquip(1, 7, 0, fakeHash, user1, block.timestamp + 1 hours, 0);
+
+        vm.prank(user1);
+        vm.expectRevert("Invalid trait");
+        manager.equip(1, 7, 0, fakeHash, sig, block.timestamp + 1 hours, 0);
+    }
+
+    function test_SeedZeroComboHashReverts() public {
+        uint256[] memory tokenIds = new uint256[](1);
+        tokenIds[0] = 1;
+        bytes32[] memory hashes = new bytes32[](1);
+        hashes[0] = bytes32(0);
+
+        vm.prank(deployer);
+        vm.expectRevert("Invalid combo hash");
+        manager.seedComboHashes(tokenIds, hashes);
+    }
+
+    function test_SeedDuplicateComboHashReverts() public {
+        bytes32 hash = keccak256("combo");
+
+        uint256[] memory ids1 = new uint256[](1);
+        ids1[0] = 1;
+        bytes32[] memory hashes1 = new bytes32[](1);
+        hashes1[0] = hash;
+
+        vm.prank(deployer);
+        manager.seedComboHashes(ids1, hashes1);
+
+        uint256[] memory ids2 = new uint256[](1);
+        ids2[0] = 2;
+        bytes32[] memory hashes2 = new bytes32[](1);
+        hashes2[0] = hash;
+
+        vm.prank(deployer);
+        vm.expectRevert("Duplicate combo hash");
+        manager.seedComboHashes(ids2, hashes2);
+    }
+
+    function test_ZeroComboHashInUpdateReverts() public {
+        uint256[10] memory slots = [BG_BLU, BOD_DERK, uint256(0), uint256(0), EYES_ENTENCE, MOUF_MEEH, uint256(0), HAT_PARTI, uint256(0), uint256(0)];
+        bytes32 oldHash = keccak256(abi.encodePacked(slots[0], slots[1], slots[2], slots[3], slots[4], slots[5], slots[6], slots[7], slots[8], slots[9]));
+
+        _seedToken(1, slots, oldHash);
+        _mintTraitToManager(HAT_PARTI, 1);
+        _enableClaims();
+
+        bytes memory sig = _signUnequip(1, 7, bytes32(0), user1, block.timestamp + 1 hours, 0);
+
+        vm.prank(user1);
+        vm.expectRevert("Invalid combo hash");
+        manager.unequip(1, 7, bytes32(0), sig, block.timestamp + 1 hours, 0);
     }
 
     // ──────── Full Flow Test ────────

@@ -10,7 +10,7 @@ const config = JSON.parse(readFileSync(join(GEN_DIR, 'config.json'), 'utf-8'));
 
 const EQUIPPABLE_LAYERS = 10; // skip noise (layer 10)
 const SLOT_NAMES = ['BGS', 'BODS', 'CLOTHS', 'SPESHUL', 'AYEZZ', 'MOUFS', 'FACESSORIES', 'HATSS', 'EXTRUHS', 'TEXTUH'];
-const REQUIRED_SLOTS = [0, 1, 4, 5]; // BGS, BODS, AYEZZ, MOUFS
+const REQUIRED_SLOTS = [0, 1, 4]; // BGS, BODS, AYEZZ
 
 const layers = [];
 const traits = {};
@@ -32,7 +32,7 @@ for (let i = 0; i < EQUIPPABLE_LAYERS; i++) {
 
   for (let j = 0; j < layer.traits.length; j++) {
     const trait = layer.traits[j];
-    const traitId = i * 1000 + j;
+    const traitId = i * 1000 + j + 1;
 
     traits[traitId] = {
       traitId,
@@ -63,7 +63,7 @@ function findTraitId(layerName, traitName) {
     t => t.displayName === traitName || t.filename === traitName || t.filename === traitName + '.png'
   );
   if (traitIndex === -1) return null;
-  return layerIndex * 1000 + traitIndex;
+  return layerIndex * 1000 + traitIndex + 1;
 }
 
 const traitLinks = (config.traitLinks || []).map(link => {

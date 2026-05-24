@@ -29,7 +29,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   const navRef = useRef<HTMLElement>(null)
   const [isMobile, setIsMobile] = useState(false)
 
-  const allowedPaths = ['/sitee', '/sitee/leederbord', '/sitee/profil', '/sitee/verify', '/sitee/tuulz']
+  const allowedPaths = ['/sitee', '/sitee/leederbord', '/sitee/profil', '/sitee/verify', '/sitee/tuulz', '/sitee/ekwip', '/sitee/rip']
   useEffect(() => {
     if (!allowedPaths.includes(pathname)) {
       router.replace('/sitee')

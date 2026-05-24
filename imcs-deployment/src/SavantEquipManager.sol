@@ -21,8 +21,9 @@ contract SavantEquipManager is Ownable, ReentrancyGuard, EIP712, ERC1155Holder {
     uint256 public constant NUM_SLOTS = 10;
     uint256 public constant MAX_TOKEN_ID = 4269;
 
-    // Bitmask: slots 0 (BGS), 1 (BODS), 4 (AYEZZ), 5 (MOUFS) are required
-    uint256 public constant REQUIRED_SLOTS_MASK = (1 << 0) | (1 << 1) | (1 << 4) | (1 << 5);
+    // Bitmask: slots 0 (BGS), 1 (BODS), 4 (AYEZZ) are required
+    // MOUFS (5) is conditionally required - backend enforces via trait links
+    uint256 public constant REQUIRED_SLOTS_MASK = (1 << 0) | (1 << 1) | (1 << 4);
 
     mapping(uint256 => uint256[10]) private _equipped;
     mapping(bytes32 => uint256) public comboToToken;
@@ -77,6 +78,11 @@ contract SavantEquipManager is Ownable, ReentrancyGuard, EIP712, ERC1155Holder {
     ) external onlyOwner {
         require(tokenIds.length == hashes.length, "Length mismatch");
         for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(hashes[i] != bytes32(0), "Invalid combo hash");
+            require(
+                comboToToken[hashes[i]] == 0 || comboToToken[hashes[i]] == tokenIds[i],
+                "Duplicate combo hash"
+            );
             comboToToken[hashes[i]] = tokenIds[i];
             tokenToCombo[tokenIds[i]] = hashes[i];
             emit ComboHashSeeded(tokenIds[i], hashes[i]);
@@ -275,6 +281,8 @@ contract SavantEquipManager is Ownable, ReentrancyGuard, EIP712, ERC1155Holder {
     }
 
     function _updateCombo(uint256 tokenId, bytes32 newComboHash) internal {
+        require(newComboHash != bytes32(0), "Invalid combo hash");
+
         bytes32 oldHash = tokenToCombo[tokenId];
 
         if (oldHash != bytes32(0)) {

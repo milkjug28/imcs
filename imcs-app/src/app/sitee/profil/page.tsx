@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
 import { useReadContract, useSignMessage } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
@@ -231,6 +232,7 @@ function IQInfoPopup({ onClose }: { onClose: () => void }) {
 }
 
 export default function ProfilePage() {
+  const router = useRouter()
   const { address, isConnected, truncatedAddress } = useWallet()
   const { signMessageAsync } = useSignMessage()
   const [holderData, setHolderData] = useState<HolderData | null>(null)
@@ -284,8 +286,29 @@ export default function ProfilePage() {
     query: { enabled: !!address },
   })
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (forceRefresh = false) => {
     if (!address) { setLoading(false); return }
+
+    const cacheKey = `savant_profil_${address}`
+    if (!forceRefresh) {
+      try {
+        const cached = sessionStorage.getItem(cacheKey)
+        if (cached) {
+          const { data: cachedData, ts } = JSON.parse(cached)
+          if (Date.now() - ts < 120_000) {
+            setHolderData(cachedData.holder)
+            setLegacyProfile(cachedData.legacy)
+            setUsername(cachedData.username)
+            setIqBalance(cachedData.iq)
+            setTasks(cachedData.tasks || [])
+            if (cachedData.discord) setDiscordUsername(cachedData.discord)
+            setLoading(false)
+            return
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
     setLoading(true)
 
     const nc = { cache: 'no-store' as RequestCache }
@@ -297,24 +320,30 @@ export default function ProfilePage() {
       fetch(`/api/iq/tasks?wallet=${address}`, nc).catch(() => null),
     ])
 
+    const cacheData: Record<string, unknown> = {}
+
     if (holderRes?.ok) {
       const data = await holderRes.json()
       setHolderData(data)
+      cacheData.holder = data
     }
 
     if (profileRes?.ok) {
       const data = await profileRes.json()
       setLegacyProfile(data)
+      cacheData.legacy = data
     }
 
     if (usernameRes?.ok) {
       const data = await usernameRes.json()
       setUsername(data.username || null)
+      cacheData.username = data.username || null
     }
 
     if (iqRes?.ok) {
       const data = await iqRes.json()
       setIqBalance(data)
+      cacheData.iq = data
     }
 
     if (tasksRes?.ok) {
@@ -322,8 +351,14 @@ export default function ProfilePage() {
       setTasks(data.tasks || [])
       if (data.discord?.username) {
         setDiscordUsername(data.discord.username)
+        cacheData.discord = data.discord.username
       }
+      cacheData.tasks = data.tasks || []
     }
+
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({ data: cacheData, ts: Date.now() }))
+    } catch { /* full storage */ }
 
     setLoading(false)
   }, [address])
@@ -417,7 +452,7 @@ export default function ProfilePage() {
         setAllocateSuccess(`allocated ${totalAllocating} IQ points!`)
         setAllocations({})
         setShowAllocator(false)
-        fetchData()
+        fetchData(true)
       } else {
         setAllocateError(data.error || 'allocation failed')
       }
@@ -491,7 +526,7 @@ export default function ProfilePage() {
       if (data.ok) {
         setVerifySuccess(prev => ({ ...prev, [taskId]: true }))
         setEngagementInputs(prev => ({ ...prev, [taskId]: '' }))
-        fetchData()
+        fetchData(true)
       } else {
         setVerifyError(prev => ({ ...prev, [taskId]: data.error || 'verification failed' }))
       }
@@ -564,6 +599,22 @@ export default function ProfilePage() {
           marginBottom: '20px',
           position: 'relative',
         }}>
+          {/* Pack ripper link */}
+          <div
+            onClick={() => router.push('/sitee/rip')}
+            style={{
+              position: 'absolute', top: '12px', right: '12px', cursor: 'pointer',
+              background: '#fff', border: '2px solid #000', borderRadius: '8px',
+              padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '3px 3px 0 #000', transition: 'transform 0.1s',
+              fontFamily: "'Comic Neue', cursive", fontSize: '11px', fontWeight: 700,
+            }}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05) rotate(-2deg)')}
+            onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
+          >
+            <span style={{ fontSize: '16px' }}>📦</span>
+            rip a pak 4 trayts
+          </div>
           {/* Username / Name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <h2 style={{
@@ -1246,7 +1297,7 @@ export default function ProfilePage() {
                             })
                             const data = await res.json()
                             if (data.ok) {
-                              fetchData()
+                              fetchData(true)
                             } else {
                               alert(data.error || 'claim failed')
                             }
@@ -1576,6 +1627,23 @@ export default function ProfilePage() {
                 </div>
 
                 <button
+                  onClick={() => { window.location.href = `/sitee/ekwip?tokenId=${selectedToken.tokenId}` }}
+                  style={{
+                    fontFamily: "'Comic Neue', cursive",
+                    fontSize: '14px',
+                    padding: '8px 20px',
+                    background: '#00cc88',
+                    color: '#000',
+                    border: '2px solid #000',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    marginTop: '14px',
+                    width: '100%',
+                  }}
+                >
+                  ekwip / unekwip traits
+                </button>
+                <button
                   onClick={() => { setSelectedToken(null); setSavantNameInput(''); setNamingError(null); setNamingSuccess(false) }}
                   style={{
                     fontFamily: "'Comic Neue', cursive",
@@ -1586,7 +1654,7 @@ export default function ProfilePage() {
                     border: '2px solid #000',
                     cursor: 'pointer',
                     fontWeight: 'bold',
-                    marginTop: '14px',
+                    marginTop: '6px',
                     width: '100%',
                   }}
                 >

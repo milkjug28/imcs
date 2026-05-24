@@ -8,6 +8,7 @@ const METADATA_DIR = join(ROOT, '..', 'imcs-generation', 'OUTPUT', 'metadata');
 
 const traitMap = JSON.parse(readFileSync(join(ROOT, 'data', 'trait-map.json'), 'utf-8'));
 const EQUIPPABLE_LAYERS = 10;
+const REQUIRED_SLOTS = new Set([0, 1, 4]); // BGS, BODS, AYEZZ
 
 const files = readdirSync(METADATA_DIR).filter(f => f.endsWith('.json'));
 console.log(`Processing ${files.length} metadata files...`);
@@ -23,10 +24,10 @@ for (const file of files) {
   const slots = new Array(EQUIPPABLE_LAYERS);
   for (let layer = 0; layer < EQUIPPABLE_LAYERS; layer++) {
     const traitIndex = dna[layer];
-    const traitId = layer * 1000 + traitIndex;
+    const traitId = layer * 1000 + traitIndex + 1;
     const trait = traitMap.traits[traitId];
 
-    if (trait && trait.hidden) {
+    if (trait && trait.hidden && !REQUIRED_SLOTS.has(layer)) {
       slots[layer] = 0;
     } else {
       slots[layer] = traitId;
