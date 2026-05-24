@@ -237,10 +237,6 @@ export default function ProfilePage() {
   const { signMessageAsync } = useSignMessage()
   const [holderData, setHolderData] = useState<HolderData | null>(null)
   const [legacyProfile, setLegacyProfile] = useState<ProfileData | null>(null)
-  const [username, setUsername] = useState<string | null>(null)
-  const [usernameInput, setUsernameInput] = useState('')
-  const [editingName, setEditingName] = useState(false)
-  const [savingName, setSavingName] = useState(false)
   const [loading, setLoading] = useState(true)
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
 
@@ -298,7 +294,6 @@ export default function ProfilePage() {
           if (Date.now() - ts < 120_000) {
             setHolderData(cachedData.holder)
             setLegacyProfile(cachedData.legacy)
-            setUsername(cachedData.username)
             setIqBalance(cachedData.iq)
             setTasks(cachedData.tasks || [])
             if (cachedData.discord) setDiscordUsername(cachedData.discord)
@@ -312,10 +307,9 @@ export default function ProfilePage() {
     setLoading(true)
 
     const nc = { cache: 'no-store' as RequestCache }
-    const [holderRes, profileRes, usernameRes, iqRes, tasksRes] = await Promise.all([
+    const [holderRes, profileRes, iqRes, tasksRes] = await Promise.all([
       fetch(`/api/holder?wallet=${address}`, nc).catch(() => null),
       fetch(`/api/profile/${address}`, nc).catch(() => null),
-      fetch(`/api/chat/username?wallet=${address}`).catch(() => null),
       fetch(`/api/iq/balance?wallet=${address}`, nc).catch(() => null),
       fetch(`/api/iq/tasks?wallet=${address}`, nc).catch(() => null),
     ])
@@ -334,11 +328,7 @@ export default function ProfilePage() {
       cacheData.legacy = data
     }
 
-    if (usernameRes?.ok) {
-      const data = await usernameRes.json()
-      setUsername(data.username || null)
-      cacheData.username = data.username || null
-    }
+
 
     if (iqRes?.ok) {
       const data = await iqRes.json()
@@ -375,9 +365,7 @@ export default function ProfilePage() {
     } else {
       setHolderData(null)
       setLegacyProfile(null)
-      setUsername(null)
       setSelectedToken(null)
-      setEditingName(false)
       setIqBalance(null)
       setAllocations({})
       setShowAllocator(false)
@@ -399,27 +387,6 @@ export default function ProfilePage() {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
-
-  const saveUsername = async () => {
-    if (!usernameInput.trim() || !address) return
-    setSavingName(true)
-    try {
-      const res = await fetch('/api/chat/username', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: address, username: usernameInput.trim() }),
-      })
-      const data = await res.json()
-      if (data.ok) {
-        setUsername(data.username)
-        setEditingName(false)
-        setUsernameInput('')
-      } else {
-        alert(data.error || 'name taken or invalid')
-      }
-    } catch {}
-    setSavingName(false)
-  }
 
   const totalAllocating = Object.values(allocations).reduce((s, v) => s + (v || 0), 0)
   const canAllocate = totalAllocating > 0 && totalAllocating <= (iqBalance?.available || 0)
@@ -624,58 +591,9 @@ export default function ProfilePage() {
               textShadow: '2px 2px 0 #fff',
               margin: 0,
             }}>
-              {username || legacyProfile?.name || truncatedAddress}
+              {legacyProfile?.name || truncatedAddress}
             </h2>
-            <button
-              onClick={() => setEditingName(!editingName)}
-              style={{
-                fontFamily: "'Comic Neue', cursive",
-                fontSize: '11px',
-                padding: '2px 10px',
-                background: '#000',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              {username ? 'change name' : 'set name'}
-            </button>
           </div>
-
-          {editingName && (
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-              <input
-                value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
-                placeholder="enter username..."
-                maxLength={20}
-                style={{
-                  flex: 1,
-                  fontFamily: "'Comic Neue', cursive",
-                  fontSize: '14px',
-                  padding: '6px 10px',
-                  border: '2px solid #000',
-                  background: '#fff',
-                }}
-              />
-              <button
-                onClick={saveUsername}
-                disabled={savingName}
-                style={{
-                  fontFamily: "'Comic Neue', cursive",
-                  fontSize: '14px',
-                  padding: '6px 14px',
-                  background: '#00ff00',
-                  border: '2px solid #000',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                }}
-              >
-                {savingName ? '...' : 'save'}
-              </button>
-            </div>
-          )}
 
           <div style={{ marginBottom: '16px' }}>
             <p style={{ fontFamily: 'monospace', fontSize: '12px', color: 'rgba(0,0,0,0.6)', margin: 0 }}>

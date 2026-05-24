@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import SavantRadioWidget from '@/components/SavantRadioWidget'
 import PopupSavants from '@/components/PopupSavants'
 import ConnectWallet from '@/components/ConnectWallet'
-import ChatWidget from '@/components/ChatWidget'
 
 type NavButton = {
   id: string
@@ -198,9 +197,6 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
 
       {/* Popup Savant Characters */}
       <PopupSavants />
-
-      {/* Live Chat */}
-      <ChatWidget />
     </div>
   )
 }
