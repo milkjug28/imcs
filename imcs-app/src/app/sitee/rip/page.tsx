@@ -246,11 +246,16 @@ function Whiteboard() {
     const canvas = canvasRef.current
     if (!canvas) return null
     const rect = canvas.getBoundingClientRect()
+    // map CSS pixels -> backing-store pixels; the two diverge when the canvas
+    // is displayed at a different size than canvas.width/height (layout shift,
+    // DPR), which otherwise offsets the stroke from the cursor.
+    const scaleX = rect.width ? canvas.width / rect.width : 1
+    const scaleY = rect.height ? canvas.height / rect.height : 1
     if ('touches' in e) {
       if (e.touches.length === 0) return null
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
+      return { x: (e.touches[0].clientX - rect.left) * scaleX, y: (e.touches[0].clientY - rect.top) * scaleY }
     }
-    return { x: (e as React.MouseEvent).clientX - rect.left, y: (e as React.MouseEvent).clientY - rect.top }
+    return { x: ((e as React.MouseEvent).clientX - rect.left) * scaleX, y: ((e as React.MouseEvent).clientY - rect.top) * scaleY }
   }
 
   const startDraw = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1340,6 +1345,19 @@ export default function RipPage() {
       }}>
         IMCS NFT Krafting Stayshun v1.42
       </div>
+
+      <a
+        href="https://opensea.io/collection/0x5ab1ff0118197ae118199ffe2a8fa6f8b8102ec3"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          marginBottom: '12px', fontSize: '11px', fontFamily: 'monospace',
+          color: '#78350f', fontWeight: 700, textDecoration: 'underline',
+          zIndex: 10, textAlign: 'center', cursor: 'pointer', alignSelf: 'center',
+        }}
+      >
+        veew trayts on opinsee
+      </a>
 
       <BuyPackModal open={showBuyModal} onClose={() => setShowBuyModal(false)} onBought={refetchBalance} />
     </div>
