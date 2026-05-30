@@ -14,15 +14,18 @@ remappings = [
     "solmate/=lib/seadrop/lib/solmate/src/",
     "murky/=lib/seadrop/lib/murky/src/",
     "utility-contracts/=lib/seadrop/lib/utility-contracts/src/",
-    "create2-helpers/=lib/seadrop/lib/create2-helpers/src/"
+    "create2-helpers/=lib/seadrop/lib/create2-helpers/src/",
+    "@chainlink/contracts/=lib/chainlink/contracts/"
 ]
 
 [rpc_endpoints]
 mainnet = "${RPC_URL_MAINNET}"
 base = "${RPC_URL_BASE}"
 sepolia = "${RPC_URL_SEPOLIA}"
+base_sepolia = "${RPC_URL_BASE_SEPOLIA}"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }
 base = { key = "${ETHERSCAN_API_KEY}", url = "https://api.basescan.org/api" }
 sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.io/api" }
+base_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }

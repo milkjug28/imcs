@@ -195,7 +195,7 @@ body {
   overflow-x: hidden;
 }
 
-header {
+#main-site header {
   background: linear-gradient(90deg, #ff6b9d, #ffd700, #00ff00, #00bfff, #ff00ff);
   padding: 20px;
   text-align: center;
@@ -204,7 +204,7 @@ header {
   z-index: 100;
 }
 
-h1 {
+#main-site h1 {
   font-family: 'Comic Neue', cursive;
   font-size: 48px;
   color: #fff;
@@ -213,7 +213,7 @@ h1 {
   transform: rotate(-1deg);
 }
 
-nav {
+#main-site nav {
   background: #ff00ff;
   padding: 15px;
   display: flex;
@@ -502,7 +502,7 @@ nav {
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1 {
+  #main-site h1 {
     font-size: 24px;
     letter-spacing: 0.5px;
     font-weight: 700;
@@ -510,12 +510,12 @@ nav {
     text-shadow: none;
   }
 
-  header {
+  #main-site header {
     padding: 12px 10px;
   }
 
   /* Nav bar - VERTICAL stack on mobile */
-  nav {
+  #main-site nav {
     min-height: auto;
     padding: 10px;
     display: flex;
@@ -680,7 +680,7 @@ nav {
 
 /* Extra small screens */
 @media (max-width: 480px) {
-  h1 {
+  #main-site h1 {
     font-size: 18px;
     font-weight: 700;
   }

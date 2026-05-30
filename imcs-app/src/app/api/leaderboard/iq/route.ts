@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGoldskyPool } from '@/lib/goldsky'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
+import { boostPctFromAttributes } from '@/lib/trait-boosters'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
@@ -63,7 +64,8 @@ export async function GET(request: NextRequest) {
 
       const iqData = iqMap.get(tokenId)
       const meta = metaMap.get(tokenId)
-      const totalIQ = getBaseIQ(tokenId) + (iqData?.allocated || 0)
+      const boostPct = boostPctFromAttributes(meta?.attributes || [])
+      const totalIQ = Math.round((getBaseIQ(tokenId) + (iqData?.allocated || 0)) * (1 + boostPct / 100))
 
       savantList.push({
         tokenId,

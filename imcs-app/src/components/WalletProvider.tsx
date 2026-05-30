@@ -7,7 +7,7 @@ import {
   darkTheme,
 } from '@rainbow-me/rainbowkit'
 import { WagmiProvider } from 'wagmi'
-import { mainnet, base } from 'wagmi/chains'
+import { mainnet, base, baseSepolia } from 'wagmi/chains'
 import { http } from 'wagmi'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { ReactNode, useState } from 'react'
@@ -15,10 +15,11 @@ import { ReactNode, useState } from 'react'
 const config = getDefaultConfig({
   appName: 'Imaginary Magic Crypto Savants',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'demo',
-  chains: [mainnet, base],
+  chains: [mainnet, base, baseSepolia],
   transports: {
     [mainnet.id]: http(),
     [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
   ssr: true,
 })

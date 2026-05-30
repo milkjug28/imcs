@@ -1,15 +1,18 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 
 type Tool = {
   id: string
   name: string
   description: string
   path: string
-  emoji: string
+  emoji?: string
+  image?: string
   color: string
-  requiresHolding: number
+  badge: string
+  external?: boolean
 }
 
 const tools: Tool[] = [
@@ -20,11 +23,22 @@ const tools: Tool[] = [
     path: '/spinor',
     emoji: '🎉',
     color: '#FF595E',
-    requiresHolding: 1,
+    badge: 'hold 1+ savant',
+    external: true,
+  },
+  {
+    id: 'pak-rippur',
+    name: 'pak rippur',
+    description: 'rip open mystree paks 2 get ekskloosiv trayts 4 ur savants. eech pak haz 3 random trayts!',
+    path: '/sitee/rip',
+    image: '/assets/card-pack.png',
+    color: '#1dd1a1',
+    badge: '+80 savant IQ',
   },
 ]
 
 export default function ToolesPage() {
+  const router = useRouter()
 
   return (
     <div className="page active" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
@@ -59,7 +73,7 @@ export default function ToolesPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            onClick={() => window.open(tool.path, '_blank')}
+            onClick={() => tool.external ? window.open(tool.path, '_blank') : router.push(tool.path)}
             style={{
               background: '#fff',
               border: '4px solid #000',
@@ -91,7 +105,10 @@ export default function ToolesPage() {
             }} />
 
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>
-              {tool.emoji}
+              {tool.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={tool.image} alt={tool.name} style={{ width: '56px', height: 'auto', filter: 'drop-shadow(2px 2px 0 rgba(0,0,0,0.2))' }} />
+              ) : tool.emoji}
             </div>
 
             <h3 style={{
@@ -125,7 +142,7 @@ export default function ToolesPage() {
               borderRadius: '4px',
               boxShadow: '2px 2px 0 #000',
             }}>
-              hold {tool.requiresHolding}+ savant
+              {tool.badge}
             </div>
           </motion.div>
         ))}

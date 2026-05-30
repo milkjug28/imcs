@@ -149,21 +149,29 @@ export async function POST(request: NextRequest) {
       })
       .eq('discord_user_id', discordUser.id)
 
-    await assignTierRoles(GUILD_ID, discordUser.id, total)
+    const roleResult = await assignTierRoles(GUILD_ID, discordUser.id, total)
+
+    const tierMessage = total >= 51
+      ? 'ABSULUT CHED SAVANAT!!! u ar da goat'
+      : total >= 25
+      ? 'CHED SAVANT DETECTED!!! u ar legend'
+      : total >= 6
+      ? 'supa savants status achieved. respekt'
+      : total >= 2
+      ? 'reel sabant energy. nice'
+      : total >= 1
+      ? 'simpul sabant detected. welcum 2 savant wurld'
+      : 'u dont hold any savants across ur wallets, dummie'
+
+    const rolesOk = roleResult.failed.length === 0
+    const resultMessage = rolesOk
+      ? tierMessage
+      : `${tierMessage} (but ${roleResult.failed.length} role(s) failed to assign - try /verify in discord or contact mods)`
 
     const response = NextResponse.json({
       success: true,
-      message: total >= 51
-        ? 'ABSULUT CHED SAVANAT!!! u ar da goat'
-        : total >= 25
-        ? 'CHED SAVANT DETECTED!!! u ar legend'
-        : total >= 6
-        ? 'supa savants status achieved. respekt'
-        : total >= 2
-        ? 'reel sabant energy. nice'
-        : total >= 1
-        ? 'simpul sabant detected. welcum 2 savant wurld'
-        : 'u dont hold any savants across ur wallets, dummie',
+      rolesAssigned: rolesOk,
+      message: resultMessage,
       tokenCount: total,
       tiers: tierNames,
       wallets,

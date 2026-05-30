@@ -9,3 +9,4 @@
 /imcs-deployment/config/merkle-*.json
 .vercel/
 /imcs-generation
+/arweave-key
