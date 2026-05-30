@@ -191,7 +191,9 @@ function EkwipPage() {
     const newImages = { ...pendingImages }
     delete newImages[slotIndex]
     setPendingImages(newImages)
-    if (pendingChanges[slotIndex] === 0) {
+    // Unequipping a slot that's already empty on-chain nets to no change:
+    // drop the pending entry rather than queue a 0 (contract reverts "Slot empty").
+    if (pendingChanges[slotIndex] === 0 || currentEquipped === 0) {
       const newChanges = { ...pendingChanges }
       delete newChanges[slotIndex]
       setPendingChanges(newChanges)
@@ -230,7 +232,12 @@ function EkwipPage() {
         setConfirmError('new trayts not ekwipabul yet (cumming soon)')
         return
       }
-      changes.push({ slot: Number(slotStr), newTraitId: traitId })
+      // Skip no-ops: a change equal to the on-chain value (e.g. unequipping an
+      // already-empty slot) reverts "Slot empty" / "Same trait" on the contract.
+      const slot = Number(slotStr)
+      const original = equipped?.equipment[slot]?.traitId ?? 0
+      if (traitId === original) continue
+      changes.push({ slot, newTraitId: traitId })
     }
     if (changes.length === 0) return
     if (!address) {
