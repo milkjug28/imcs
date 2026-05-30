@@ -83,21 +83,21 @@ async function main() {
   //    wallet whose savants are ALL "just 69" (no 1/1, zero allocated IQ = no
   //    participation) gets a flat 1 "come get interested" pack, regardless of
   //    how many they hold. This caps non-participant multi-holders at 1.
-  let knockedDown = 0 // all-69 multi-holders that qualified but were capped to 1
-  const recipients: { wallet: string; packs: number; savantCount: number; walletIQ: number }[] = []
+  let knockedDown = 0 // all-69 multi-holders that qualified for >1 but capped to 1
+  const recipients: { wallet: string; packs: number; savantCount: number; walletIQ: number; tier: string }[] = []
   for (const [wallet, iqs] of holderSavantIQs) {
     const walletIQ = iqs.reduce((s, iq) => s + iq, 0)
-    // 80-IQ gate first (single OR cumulative). packsFor returns 0 below 80.
-    let packs = packsFor(walletIQ) // cap 7 via tier table
-    // reduction filter: qualified, but every savant is base 69 (no 1/1, zero
-    // allocated = no participation) -> floor to a single "go participate" pack.
+    let packs = packsFor(walletIQ) // tier table, cap 7, 0 below 80
     const allJust69 = iqs.every(iq => iq === 69)
-    if (packs > 1 && allJust69) {
-      knockedDown++
-      packs = 1
-    }
-    if (packs > 0) recipients.push({ wallet, packs, savantCount: iqs.length, walletIQ })
+    let tier: string
+    if (packs > 1 && allJust69) { knockedDown++; packs = 1; tier = 'CAPPED' }
+    else if (packs >= 1) tier = 'TIERED'
+    else { packs = 1; tier = 'FLAT1' } // everyone-included floor: sub-80 -> 1
+    recipients.push({ wallet, packs, savantCount: iqs.length, walletIQ, tier })
   }
+  // dev hold: mint a reserve to the dev wallet (excluded from holder grant above)
+  const DEV_HOLD = 50
+  recipients.push({ wallet: DEV, packs: DEV_HOLD, savantCount: 0, walletIQ: 0, tier: 'DEV' })
   // Deterministic ordering: highest packs first, then wallet address
   recipients.sort((a, b) => b.packs - a.packs || (a.wallet < b.wallet ? -1 : 1))
 
@@ -115,7 +115,7 @@ async function main() {
 
   const output = {
     generatedAt: new Date().toISOString(),
-    grantRule: 'summed-iq-tier-80gate-all69-capped-1',
+    grantRule: 'everyone-min1-summed-iq-tier-all69-capped-1',
     totalWallets: recipients.length,
     totalPacks,
     recipients,
@@ -127,11 +127,15 @@ async function main() {
 
   // 6. summary
   console.log(`\n${'='.repeat(60)}`)
-  console.log(`GRANT RULE: 80-IQ gate, summed tier (cap 7), all-69 qualifiers capped to 1`)
-  console.log(`qualifying wallets (packs > 0): ${recipients.length}`)
+  console.log(`GRANT RULE: everyone >=1; summed tier (cap 7); all-69 capped to 1`)
+  console.log(`total wallets (all holders):    ${recipients.length}`)
   console.log(`total packs to airdrop:         ${totalPacks}`)
-  console.log(`all-69 qualifiers capped to 1:  ${knockedDown}`)
+  console.log(`all-69 capped to 1:             ${knockedDown}`)
   console.log(`batches (size ${BATCH_SIZE}):              ${batches.length}`)
+  const tc: Record<string, { w: number; p: number }> = {}
+  for (const r of recipients) { tc[r.tier] = tc[r.tier] || { w: 0, p: 0 }; tc[r.tier].w++; tc[r.tier].p += r.packs }
+  console.log(`\nTIERS:`)
+  for (const t of Object.keys(tc)) console.log(`  ${t.padEnd(8)} wallets=${tc[t].w}  packs=${tc[t].p}`)
 
   const dist = new Map<number, number>()
   for (const r of recipients) dist.set(r.packs, (dist.get(r.packs) || 0) + 1)

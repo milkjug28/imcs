@@ -76,8 +76,25 @@ if (owner.toLowerCase() !== wallet.address.toLowerCase()) {
   throw new Error(`sender is not pack owner; airdropPacks is onlyOwner`)
 }
 
+// pre-flight: simulate every batch via staticCall before broadcasting anything.
+// catches any recipient that would revert the mint (e.g. ERC1155 receiver) for
+// free, so we never spend gas on a batch that can't land.
+const allBatches = chunk(recipients, BATCH)
+console.log(`simulating ${allBatches.length} batches before send...`)
+for (let i = 0; i < allBatches.length; i++) {
+  const b = allBatches[i]
+  try {
+    await pack.airdropPacks.staticCall(b.map(r => r.wallet), b.map(r => BigInt(r.amount)))
+    process.stdout.write(`  sim batch ${i + 1} ok\n`)
+  } catch (e) {
+    console.error(`  sim batch ${i + 1} REVERTS: ${e.shortMessage || e.message}`)
+    throw new Error(`batch ${i + 1} would revert; aborting before any send`)
+  }
+}
+console.log('all batches simulate clean.')
+
 let batchNo = 0
-for (const batch of chunk(recipients, BATCH)) {
+for (const batch of allBatches) {
   batchNo++
   const tos = batch.map(r => r.wallet)
   const amts = batch.map(r => BigInt(r.amount))
