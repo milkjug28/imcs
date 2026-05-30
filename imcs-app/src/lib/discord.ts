@@ -69,7 +69,12 @@ export async function addRole(guildId: string, userId: string, roleId: string): 
     method: 'PUT',
     headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
   })
-  return res.ok || res.status === 204
+  if (!res.ok && res.status !== 204) {
+    const body = await res.text().catch(() => '')
+    console.error(`[discord] addRole FAILED: user=${userId} role=${roleId} status=${res.status} body=${body}`)
+    return false
+  }
+  return true
 }
 
 export async function removeRole(guildId: string, userId: string, roleId: string): Promise<boolean> {
@@ -77,24 +82,48 @@ export async function removeRole(guildId: string, userId: string, roleId: string
     method: 'DELETE',
     headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
   })
-  return res.ok || res.status === 204
+  if (!res.ok && res.status !== 204) {
+    const body = await res.text().catch(() => '')
+    console.error(`[discord] removeRole FAILED: user=${userId} role=${roleId} status=${res.status} body=${body}`)
+    return false
+  }
+  return true
 }
 
-export async function assignTierRoles(guildId: string, userId: string, tokenCount: number): Promise<string[]> {
+export async function assignTierRoles(guildId: string, userId: string, tokenCount: number): Promise<{ assigned: string[]; failed: string[] }> {
   const earned = getTiersForCount(tokenCount)
   const earnedRoleIds = getRoleIds(earned)
   const allRoleIds = getAllRoleIds()
 
+  if (allRoleIds.length === 0) {
+    console.error('[discord] assignTierRoles: NO role IDs resolved from env vars. Check SIMPUL_SABANT, REEL_SABANT, etc.')
+  }
+
+  if (!process.env.DISCORD_BOT_TOKEN) {
+    console.error('[discord] assignTierRoles: DISCORD_BOT_TOKEN not set')
+  }
+
   const assigned: string[] = []
+  const failed: string[] = []
 
   for (const roleId of allRoleIds) {
     if (earnedRoleIds.includes(roleId)) {
-      await addRole(guildId, userId, roleId)
-      assigned.push(roleId)
+      const ok = await addRole(guildId, userId, roleId)
+      if (ok) {
+        assigned.push(roleId)
+      } else {
+        failed.push(roleId)
+      }
     } else {
       await removeRole(guildId, userId, roleId)
     }
   }
 
-  return assigned
+  if (failed.length > 0) {
+    console.error(`[discord] assignTierRoles: ${failed.length}/${earnedRoleIds.length} role assignments failed for user=${userId}`)
+  }
+
+  console.log(`[discord] assignTierRoles: user=${userId} tokens=${tokenCount} assigned=${assigned.length} failed=${failed.length} earnedRoles=${earnedRoleIds.length} totalConfigured=${allRoleIds.length}`)
+
+  return { assigned, failed }
 }

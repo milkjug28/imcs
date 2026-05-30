@@ -85,6 +85,21 @@ async function run() {
   console.log(`  Actual days: ${actualDays.toFixed(1)}${daysOverride ? `, overridden to ${daysSince}` : ''}`)
   console.log(`  Previous holders: ${prevSnapshot.total_holders}`)
 
+  // Find the FIRST (original) snapshot — diamond hands = held since day 1
+  const { data: firstSnaps, error: firstErr } = await supabase
+    .from('iq_snapshots')
+    .select('id, label, taken_at')
+    .order('taken_at', { ascending: true })
+    .limit(1)
+
+  if (firstErr || !firstSnaps?.length) {
+    console.error('No first snapshot found:', firstErr)
+    return
+  }
+  const firstSnapshot = firstSnaps[0]
+  const isChained = firstSnapshot.id !== prevSnapshot.id
+  console.log(`  First (day-1): "${firstSnapshot.label}" taken ${new Date(firstSnapshot.taken_at).toISOString().split('T')[0]}`)
+
   // 2. Load snapshot 1 wallet data
   console.log('\nLoading previous snapshot wallet data...')
   const prevWallets = new Map<string, SnapshotWallet>()
@@ -104,6 +119,31 @@ async function run() {
     page++
   }
   console.log(`  ${prevWallets.size} wallets in previous snapshot`)
+
+  // Load the first snapshot's holder set (wallets present on day 1 with tokens)
+  const firstSnapshotHolders = new Set<string>()
+  if (isChained) {
+    let fp = 0
+    while (true) {
+      const { data } = await supabase
+        .from('wallet_iq_snapshots')
+        .select('wallet, tokens_held')
+        .eq('snapshot_id', firstSnapshot.id)
+        .range(fp * pageSize, (fp + 1) * pageSize - 1)
+      if (!data || data.length === 0) break
+      for (const row of data) {
+        if (row.tokens_held > 0) firstSnapshotHolders.add(row.wallet)
+      }
+      if (data.length < pageSize) break
+      fp++
+    }
+  } else {
+    // Only one prior snapshot exists; it IS the first snapshot
+    for (const [wallet, w] of prevWallets) {
+      if (w.tokens_held > 0) firstSnapshotHolders.add(wallet)
+    }
+  }
+  console.log(`  ${firstSnapshotHolders.size} wallets held in the first snapshot`)
 
   // 3. Get current holdings from Goldsky
   console.log('\nFetching current holdings from Goldsky...')
@@ -158,7 +198,7 @@ async function run() {
   for (const [wallet, tokensHeld] of currentHoldings) {
     const prev = prevWallets.get(wallet)
     const holdReward = getHoldReward(tokensHeld, daysSince)
-    const isDiamondHands = prev !== undefined && prev.tokens_held > 0
+    const isDiamondHands = firstSnapshotHolders.has(wallet)
     const diamondBonus = isDiamondHands ? DIAMOND_HANDS_BONUS : 0
     const totalBonus = holdReward + diamondBonus
     const isNewHolder = prev === undefined
@@ -193,8 +233,8 @@ async function run() {
   console.log(`DELTA SNAPSHOT: ${daysSince.toFixed(1)} days since "${prevSnapshot.label}"`)
   console.log(`${'='.repeat(130)}`)
   console.log(`  Current holders:    ${currentHoldings.size}`)
-  console.log(`  Diamond hands:      ${diamondHandsCount} (held since snapshot 1)`)
-  console.log(`  New holders:        ${newHolderCount} (not in snapshot 1)`)
+  console.log(`  Diamond hands:      ${diamondHandsCount} (held since first snapshot, day 1)`)
+  console.log(`  New holders:        ${newHolderCount} (not in previous snapshot)`)
   console.log(`  Total hold reward:  ${totalHoldReward} IQ`)
   console.log(`  Total diamond bonus:${totalDiamondBonus} IQ`)
   console.log(`  Total new IQ:       ${totalHoldReward + totalDiamondBonus} IQ`)
@@ -242,9 +282,11 @@ async function run() {
     console.log(`  ${tier.padEnd(14)} | ${g.count.toString().padStart(5)} holders | ${g.totalReward.toString().padStart(7)} total IQ`)
   }
 
-  // Wallets that left since snapshot 1
+  // Paper hands: in previous snapshot but no longer holding
   const leftCount = Array.from(prevWallets.keys()).filter(w => !currentHoldings.has(w)).length
-  console.log(`\n  Wallets that left since snapshot 1: ${leftCount}`)
+  console.log(`\n  Paper hands (left since previous snapshot): ${leftCount}`)
+  const ogLeftCount = Array.from(firstSnapshotHolders).filter(w => !currentHoldings.has(w)).length
+  console.log(`  Day-1 wallets that paper-handed out: ${ogLeftCount}`)
 
   // Save
   const shouldSave = process.argv.includes('--save')

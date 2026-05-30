@@ -10,6 +10,8 @@ export type TraitInfo = {
   filename: string
   rarity: number
   hidden: boolean
+  isNew?: boolean
+  newPath?: string
 }
 
 export type TraitLink = {

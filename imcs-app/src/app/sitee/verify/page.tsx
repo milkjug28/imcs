@@ -57,6 +57,8 @@ function VerifyContent() {
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [autoVerifyAttempted, setAutoVerifyAttempted] = useState(false)
   const [unlinking, setUnlinking] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshResult, setRefreshResult] = useState<string | null>(null)
 
   const walletReady = isConnected && !!address
   const discordReady = linked || !!discordSession
@@ -147,6 +149,46 @@ function VerifyContent() {
       handleVerify()
     }
   }, [linked, isConnected, address, result, verifying, verifyError, autoVerifyAttempted, handleVerify])
+
+  const handleRefreshRoles = useCallback(async () => {
+    if (!address) return
+    setRefreshing(true)
+    setRefreshResult(null)
+    setVerifyError(null)
+    try {
+      const timestamp = Date.now()
+      const message = `Verify wallet ownership for IMCS Discord\nWallet: ${address}\nTimestamp: ${timestamp}`
+      const signature = await signMessageAsync({ message })
+
+      const res = await fetch('/api/discord/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: address, signature, message }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setProfile({
+          found: true,
+          discord: data.discord,
+          tokenCount: data.tokenCount,
+          tiers: data.tiers,
+          wallets: data.wallets || [],
+        })
+        setRefreshResult(data.rolesAssigned === false
+          ? 'roles failed 2 assign - contact mods'
+          : 'roles refreshed!')
+      } else {
+        setVerifyError(data.message || data.error || 'refresh failed')
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      if (!msg.includes('User rejected') && !msg.includes('user rejected')) {
+        setVerifyError('something broke. try agen')
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [address, signMessageAsync])
 
   const handleUnlink = useCallback(async (walletAddress: string) => {
     setUnlinking(walletAddress)
@@ -268,7 +310,21 @@ function VerifyContent() {
             </p>
           </div>
 
-          <button onClick={() => { disconnect(); setTimeout(() => openConnectModal?.(), 100) }} style={btnStyle}>
+          <button
+            onClick={handleRefreshRoles}
+            disabled={refreshing}
+            style={{ ...btnStyle, marginBottom: '10px' }}
+          >
+            {refreshing ? 'checkin bags...' : 'refresh roles'}
+          </button>
+
+          {refreshResult && (
+            <p style={{ color: '#aaffaa', textAlign: 'center', marginBottom: '10px', fontWeight: 'bold' }}>
+              {refreshResult}
+            </p>
+          )}
+
+          <button onClick={() => { disconnect(); setTimeout(() => openConnectModal?.(), 100) }} style={{ ...btnStyle, background: '#444' }}>
             + link another wallet
           </button>
 

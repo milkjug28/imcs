@@ -63,9 +63,18 @@ export async function GET(request: NextRequest) {
     } while (pageKey)
 
     const tokenIds = nfts.map(n => parseInt(n.tokenId))
-    const { data: iqRows } = tokenIds.length > 0
-      ? await supabase.from('savant_iq').select('token_id, iq_points, savant_name').in('token_id', tokenIds)
-      : { data: [] }
+    // Alchemy gives us ownership (token IDs) but its cached metadata image lags
+    // every equip. Our savant_metadata table is the source of truth (the contract
+    // tokenURI points at our /api/metadata), so pull image/name/attributes from it
+    // and only fall back to Alchemy's raw metadata when a row is missing.
+    const [iqResult, metaResult] = tokenIds.length > 0
+      ? await Promise.all([
+          supabase.from('savant_iq').select('token_id, iq_points, savant_name').in('token_id', tokenIds),
+          supabase.from('savant_metadata').select('token_id, name, image, attributes').in('token_id', tokenIds),
+        ])
+      : [{ data: [] }, { data: [] }]
+    const iqRows = iqResult.data
+    const metaRows = metaResult.data
 
     const iqMap = new Map<number, { allocated: number; savantName: string | null }>()
     if (iqRows) {
@@ -74,15 +83,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    type MetaRow = { name: string | null; image: string | null; attributes: { trait_type: string; value: string | number }[] | null }
+    const metaMap = new Map<number, MetaRow>()
+    if (metaRows) {
+      for (const row of metaRows as (MetaRow & { token_id: number })[]) {
+        metaMap.set(row.token_id, { name: row.name, image: row.image, attributes: row.attributes })
+      }
+    }
+
     const tokens = nfts.map(nft => {
       const id = parseInt(nft.tokenId)
       const iqData = iqMap.get(id)
+      const meta = metaMap.get(id)
       const totalIQ = getBaseIQ(id) + (iqData?.allocated ?? 0)
-      const attrs = nft.raw?.metadata?.attributes || []
+      const attrs = meta?.attributes || nft.raw?.metadata?.attributes || []
       return {
         tokenId: nft.tokenId,
-        name: nft.raw?.metadata?.name || `#${nft.tokenId}`,
-        image: resolveImage(nft),
+        name: meta?.name || nft.raw?.metadata?.name || `#${nft.tokenId}`,
+        image: meta?.image || resolveImage(nft),
         iq: totalIQ,
         savantName: iqData?.savantName || null,
         traits: attrs.filter(a => a.trait_type !== 'IQ' && a.trait_type !== 'Trait Count').map(a => ({

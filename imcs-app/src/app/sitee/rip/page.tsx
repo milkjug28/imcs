@@ -4,6 +4,38 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react'
 import { SFX } from '@/lib/sound-effects'
 import { useRouter } from 'next/navigation'
+import { useAccount } from 'wagmi'
+import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { formatEther } from 'viem'
+import { usePackRip, type RipSlot } from '@/hooks/usePackRip'
+import { traits as TRAIT_DATA, type TraitInfo } from '@/lib/trait-data'
+import { PACK_OPENSEA_URL } from '@/config/pack'
+import BuyPackModal from '@/components/BuyPackModal'
+
+function traitImageUrlFromData(t: TraitInfo): string {
+  if (t.isNew && t.newPath) {
+    const parts = t.newPath.split('/')
+    const layer = parts[0]
+    if (parts.length === 3) {
+      return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&sub=${encodeURIComponent(parts[1])}&file=${encodeURIComponent(parts[2])}`
+    }
+    return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&file=${encodeURIComponent(parts[1])}`
+  }
+  return `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&file=${encodeURIComponent(t.filename)}`
+}
+
+// real VRF traitId -> display card the existing TraitCard understands
+function packTraitFromId(traitId: number): PackTrait {
+  const t = TRAIT_DATA[traitId]
+  if (!t) {
+    return { id: String(traitId), name: `trayt #${traitId}`, layerName: '', layer: 0,
+      imageUrl: '', rarity: 'Common', isNew: true }
+  }
+  return {
+    id: String(traitId), name: t.name, layerName: t.layerName, layer: t.layer,
+    imageUrl: traitImageUrlFromData(t), rarity: rarityFromSupply(t.name), isNew: true,
+  }
+}
 
 type Rarity = 'Common' | 'Rare' | 'Epic' | 'Legendary'
 
@@ -763,27 +795,6 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
             }}
           />
 
-          {/* Corner sticker badges */}
-          <div style={{
-            position: 'absolute', bottom: '6px', left: '6px',
-            background: '#fce7f3', color: '#9f1239', fontFamily: 'monospace',
-            fontSize: '8px', fontWeight: 900, letterSpacing: '-0.025em',
-            border: '1px solid rgba(159,18,57,0.4)', padding: '1px 4px',
-            borderRadius: '2px', transform: 'rotate(-12deg)',
-            display: 'flex', alignItems: 'center', gap: '2px',
-          }}>
-            🔥 CHRY
-          </div>
-          <div style={{
-            position: 'absolute', bottom: '6px', right: '6px',
-            background: '#cffafe', color: '#155e75', fontFamily: 'monospace',
-            fontSize: '8px', fontWeight: 900, letterSpacing: '-0.025em',
-            border: '1px solid rgba(21,94,117,0.4)', padding: '1px 4px',
-            borderRadius: '2px', transform: 'rotate(6deg)',
-            display: 'flex', alignItems: 'center', gap: '2px',
-          }}>
-            🏆 INT
-          </div>
         </div>
 
         {/* Bottom stats section */}
@@ -803,7 +814,7 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
               background: '#fcf8e3', padding: '1px 6px',
               border: '1px dashed rgba(120,53,15,0.3)', borderRadius: '2px',
             }}>
-              #{String(getSupply(trait.name)).padStart(5, '0')}
+              #{String(trait.id).padStart(5, '0')}
             </span>
           </div>
 
@@ -834,14 +845,160 @@ function TraitCard({ trait, index, isGlitchReverse = false }: {
   )
 }
 
+function BoosterCard({ iq, index }: { iq: number; index: number }) {
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [coords, setCoords] = useState({ x: 0, y: 0 })
+  const [isHovered, setIsHovered] = useState(false)
+
+  useEffect(() => { SFX.playCardPop(index) }, [index])
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const x = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2)
+    const y = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2)
+    setCoords({ x: x * 15, y: -y * 15 })
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.4, y: 70, rotate: -15 + index * 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotate: 0, transition: { type: 'spring', damping: 11, stiffness: 90, delay: index * 0.15 } }}
+      style={{ position: 'relative', width: '225px', userSelect: 'none', perspective: '1000px' }}
+    >
+      <div
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={() => { setIsHovered(true); if (Math.random() < 0.4) SFX.playScribble() }}
+        onMouseLeave={() => { setIsHovered(false); setCoords({ x: 0, y: 0 }) }}
+        style={{
+          width: '100%', height: 'auto',
+          borderRadius: '12px 4px 14px 6px / 4px 14px 6px 12px',
+          padding: '14px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          border: '4px solid #000',
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, #fde68a, #f59e0b)',
+          transform: isHovered
+            ? `rotateX(${coords.y}deg) rotateY(${coords.x}deg) scale(1.05) translateZ(10px)`
+            : 'rotateX(0deg) rotateY(0deg) scale(1) translateZ(0px)',
+          boxShadow: isHovered ? '12px 12px 0 rgba(0,0,0,1)' : '6px 6px 0 rgba(0,0,0,1)',
+          transition: 'transform 0.1s, box-shadow 0.2s',
+          position: 'relative',
+        }}
+      >
+        {/* Header - masking tape label */}
+        <div style={{ position: 'relative' }}>
+          <div style={{
+            width: '100%', background: '#fcf8e3', border: '2px solid #000',
+            padding: '6px 10px', transform: 'rotate(-2deg) translateY(-4px)',
+            borderRadius: '4px 8px 3px 6px',
+            backgroundImage: 'repeating-linear-gradient(45deg, rgba(230,220,180,0.15) 0px, rgba(230,220,180,0.15) 4px, transparent 4px, transparent 8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{
+              color: '#451a03', fontWeight: 800, fontSize: '13px', letterSpacing: '-0.025em',
+              fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              IQ BOOSTR
+            </span>
+            <span style={{
+              fontSize: '9px', fontFamily: 'monospace', fontWeight: 700,
+              background: '#451a03', color: '#fffbeb', padding: '1px 4px',
+              borderRadius: '2px', textTransform: 'uppercase', flexShrink: 0, marginLeft: '6px',
+            }}>
+              BRANE
+            </span>
+          </div>
+          <div style={{ position: 'absolute', top: '-14px', right: '-4px', fontSize: '16px' }}>✨</div>
+        </div>
+
+        {/* Illustration viewport */}
+        <div style={{
+          margin: '8px 0', padding: '8px', background: '#fcf9f2',
+          borderRadius: '10px 4px 12px 6px / 4px 10px 6px 12px',
+          border: '2px dashed rgba(69,26,3,0.4)',
+          aspectRatio: '5/4', width: '100%',
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.08, pointerEvents: 'none',
+            fontFamily: 'monospace', fontSize: '52px', fontWeight: 700, color: '#18181b',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            IMCS
+          </div>
+          <div style={{
+            fontSize: '64px', filter: 'drop-shadow(2px 2px 0 rgba(0,0,0,0.15))',
+            transition: 'transform 0.2s', transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+          }}>
+            🧠
+          </div>
+        </div>
+
+        {/* Bottom stats */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{
+              fontSize: '10px', padding: '2px 10px', borderRadius: '9999px',
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+              fontFamily: "'Comic Neue', cursive",
+              background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', color: '#451a03',
+              fontWeight: 900, border: '2px solid #78350f',
+            }}>
+              🧠 +{iq} IQ
+            </span>
+            <span style={{
+              fontSize: '10px', fontFamily: 'monospace', color: '#78350f', fontWeight: 800,
+              background: '#fcf8e3', padding: '1px 6px',
+              border: '1px dashed rgba(120,53,15,0.3)', borderRadius: '2px',
+            }}>
+              BOOST
+            </span>
+          </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.75)', borderRadius: '6px 3px 6px 3px / 3px 6px 3px 6px',
+            padding: '6px 8px', marginTop: '6px',
+          }}>
+            <p style={{
+              fontSize: '10px', fontWeight: 500, color: '#451a03',
+              fontFamily: "'Comic Neue', cursive", letterSpacing: '-0.025em',
+              lineHeight: 1.3, fontStyle: 'italic',
+            }}>
+              &quot;+{iq} branepowr kredited 2 ur savant!&quot;
+            </p>
+            <div style={{
+              marginTop: '4px', borderTop: '1px solid rgba(69,26,3,0.15)', paddingTop: '4px',
+              fontSize: '9px', fontFamily: 'monospace', color: 'rgba(69,26,3,0.7)',
+              lineHeight: 1.3,
+            }}>
+              <span style={{ fontWeight: 700, color: '#451a03' }}>TRIVIA:</span> moar IQ = smartr savant. klaim it on ur profil.
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 // ============================================================
 // MAIN PAGE
 // ============================================================
 export default function RipPage() {
   const router = useRouter()
-  const [traitPool, setTraitPool] = useState<PackTrait[]>([])
+  const { isConnected } = useAccount()
+  const { packBalance, refetchBalance, seasonOpen, saleOpen, rip, reset: resetRip, phase, error, lifetimeRips, priceWei } = usePackRip()
   const [loading, setLoading] = useState(true)
   const [soundMuted, setSoundMuted] = useState(false)
+
+  // real rip outputs: trait cards (won), booster IQ amounts, dud slot count
+  const [boostersRevealed, setBoostersRevealed] = useState<number[]>([])
+  const [dudCount, setDudCount] = useState(0)
+  const [showBuyModal, setShowBuyModal] = useState(false)
 
   const [packState, setPackState] = useState<PackState>({
     isRipped: false,
@@ -851,83 +1008,43 @@ export default function RipPage() {
     cardsRevealed: [],
   })
 
-  useEffect(() => {
-    fetch('/api/traits/new')
-      .then(r => r.json())
-      .then(data => {
-        const traits = (data.traits || []).map((t: { id: string; name: string; layer: number; layerName: string; filename: string; sub?: string; variants?: string[] }) => {
-          let imageUrl: string
-          if (t.sub && t.variants && t.variants.length > 0) {
-            const variant = t.variants[0]
-            imageUrl = `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&sub=${encodeURIComponent(t.sub)}&file=${encodeURIComponent(variant + '.png')}&new=1`
-          } else {
-            imageUrl = `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&file=${encodeURIComponent(t.filename)}&new=1`
-          }
-          return {
-            id: t.id,
-            name: t.name,
-            layerName: t.layerName,
-            layer: t.layer,
-            imageUrl,
-            rarity: rarityFromSupply(t.name),
-            isNew: true,
-          } as PackTrait
-        })
-        setTraitPool(traits)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+  useEffect(() => { setLoading(false) }, [])
 
-  const getRandomTraits = useCallback((count: number): PackTrait[] => {
-    if (traitPool.length === 0) return []
-    const picked: PackTrait[] = []
-    const remaining = [...traitPool]
-    for (let i = 0; i < Math.min(count, remaining.length); i++) {
-      const totalWeight = remaining.reduce((sum, t) => sum + getSupply(t.name), 0)
-      let r = Math.random() * totalWeight
-      let idx = 0
-      for (let j = 0; j < remaining.length; j++) {
-        r -= getSupply(remaining[j].name)
-        if (r <= 0) { idx = j; break }
-      }
-      picked.push(remaining[idx])
-      remaining.splice(idx, 1)
-    }
-    return picked
-  }, [traitPool])
+  // on-chain dud is the only "prank" now -> no client-side gags
+  const nextGagOverride = useMemo<GagType | 'NONE' | 'RANDOM'>(() => 'NONE', [])
 
-  const nextGagOverride = useMemo<GagType | 'NONE' | 'RANDOM'>(() => 'RANDOM', [])
-
-  const handlePackRip = () => {
-    const nextRipCount = packState.ripCount + 1
-    let selectedGag: GagType | null = null
-
-    if (nextGagOverride === 'RANDOM' && nextRipCount === 1) {
-      const allGags: GagType[] = ['GRAVITY_FALL', 'MONSTER_STEAL', 'RUBBER_STRETCH', 'GLITCH_REVERSE']
-      selectedGag = allGags[Math.floor(Math.random() * allGags.length)]
-    }
-
-    const freshTraits = getRandomTraits(3)
-
-    setPackState({
+  // drag-rip handle fires this: send openPack, wait for VRF, reveal real cards
+  const handlePackRip = async () => {
+    if (phase === 'opening' || phase === 'approving' || phase === 'waiting') return
+    setBoostersRevealed([])
+    setDudCount(0)
+    setPackState(prev => ({
       isRipped: true,
-      ripCount: nextRipCount,
-      currentGag: selectedGag,
-      activeGagState: selectedGag ? 'triggered' : 'completed',
-      cardsRevealed: freshTraits,
-    })
-
-    if (selectedGag === 'GRAVITY_FALL') {
-      SFX.playSlideWhistle(false)
-    } else if (selectedGag === 'MONSTER_STEAL') {
-      setTimeout(() => SFX.playCheekyMonster(), 700)
-    } else if (!selectedGag) {
+      ripCount: prev.ripCount + 1,
+      currentGag: null,
+      activeGagState: 'completed',
+      cardsRevealed: [],
+    }))
+    try {
+      const slots: RipSlot[] = await rip()
+      const traitCards = slots.filter(s => s.kind === 'trait').map(s => packTraitFromId((s as { traitId: number }).traitId))
+      const boosters = slots.filter(s => s.kind === 'booster').map(s => (s as { iq: number }).iq)
+      const duds = slots.filter(s => s.kind === 'dud').length
+      setPackState(prev => ({ ...prev, cardsRevealed: traitCards }))
+      setBoostersRevealed(boosters)
+      setDudCount(duds)
       SFX.playChime()
+      if (duds > 0) setTimeout(() => SFX.playCheekyMonster(), 400)
+    } catch {
+      // hook sets phase='error' + error message; reveal section shows it
+      SFX.playBoing()
     }
   }
 
   const handleResetPack = () => {
+    resetRip()
+    setBoostersRevealed([])
+    setDudCount(0)
     setPackState(prev => ({
       ...prev,
       isRipped: false,
@@ -938,29 +1055,12 @@ export default function RipPage() {
     SFX.playBoing()
   }
 
-  const handleSkipGag = () => {
-    const freshTraits = packState.cardsRevealed.length > 0 ? packState.cardsRevealed : getRandomTraits(3)
-    setPackState(prev => ({
-      ...prev,
-      currentGag: null,
-      activeGagState: 'completed',
-      cardsRevealed: freshTraits,
-    }))
-    SFX.playChime()
-  }
-
   const toggleSound = () => {
     const next = !soundMuted
     setSoundMuted(next)
     SFX.setMute(next)
     if (!next) SFX.playScribble()
   }
-
-  const gagBtnStyle = (bg: string, color: string) => ({
-    background: bg, color, border: '2px solid #78350f', padding: '4px 10px',
-    fontSize: '10px', fontWeight: 900 as const, borderRadius: '8px', cursor: 'pointer',
-    fontFamily: "'Comic Neue', cursive",
-  })
 
   if (loading) {
     return (
@@ -1028,7 +1128,19 @@ export default function RipPage() {
           background: 'rgba(255,251,235,0.9)', padding: '6px 16px', border: '2px solid #000',
           boxShadow: '2px 2px 0 #000',
         }}>
-          <span>PAKS RIPPD: <strong style={{ color: '#db2777', fontSize: '12px' }}>{packState.ripCount}</strong></span>
+          <span>PAKS U OWN: <strong style={{ color: '#16a34a', fontSize: '12px' }}>{packBalance ?? '...'}</strong></span>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <span>TOTUL PAKS RIPT: <strong style={{ color: '#db2777', fontSize: '12px' }}>{lifetimeRips ?? packState.ripCount}</strong></span>
+          {isConnected && (
+            <button onClick={saleOpen ? () => setShowBuyModal(true) : undefined} disabled={!saleOpen} style={{
+              marginLeft: '4px', fontFamily: "'Comic Neue', cursive", fontWeight: 900, fontSize: '10px',
+              textTransform: 'uppercase', color: '#000', background: saleOpen ? '#6ee7b7' : '#cbd5e1', border: '2px solid #000',
+              borderRadius: '8px', padding: '3px 10px', cursor: saleOpen ? 'pointer' : 'not-allowed',
+              boxShadow: '2px 2px 0 #000', pointerEvents: 'auto', opacity: saleOpen ? 1 : 0.6,
+            }}>
+              🛒 {saleOpen ? 'moar' : 'sold owt'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1040,119 +1152,113 @@ export default function RipPage() {
       }}>
         <AnimatePresence mode="wait">
           {!packState.isRipped ? (
-            <motion.div
-              key="idle-pack"
-              initial={{ opacity: 0, scale: 0.9, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ type: 'spring', damping: 15 }}
-              style={{ width: '100%', display: 'flex', justifyContent: 'center', pointerEvents: 'auto' }}
-            >
-              <BoosterPack
-                onRip={handlePackRip}
-                isStretchedGag={packState.currentGag === 'RUBBER_STRETCH' || (nextGagOverride === 'RANDOM' && packState.ripCount === 0)}
-                onGagSqueaked={() => SFX.playSlideWhistle(true)}
-              />
-            </motion.div>
+            !isConnected ? (
+              <motion.div key="connect" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', pointerEvents: 'auto', textAlign: 'center' }}>
+                <div style={{ fontSize: '52px' }}>🔌</div>
+                <p style={{ fontSize: '13px', fontWeight: 800, background: '#fef9c3', color: '#78350f', padding: '10px 18px', border: '3px solid #000', borderRadius: '12px', boxShadow: '3px 3px 0 #000', transform: 'rotate(-1deg)' }}>
+                  konekt ur wallit 2 c ur paks, dummie
+                </p>
+                <ConnectButton />
+              </motion.div>
+            ) : (packBalance ?? 0) === 0 ? (
+              <motion.div key="no-paks" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', pointerEvents: 'auto', textAlign: 'center', maxWidth: '360px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/assets/card-pack.png" alt="pak" style={{ width: '72px', height: '72px', objectFit: 'contain', imageRendering: 'pixelated', opacity: 0.5 }} />
+                <p style={{ fontSize: '14px', fontWeight: 900, background: '#fecdd3', color: '#881337', padding: '10px 18px', border: '3px solid #000', borderRadius: '12px', boxShadow: '3px 3px 0 #000', transform: 'rotate(-1deg)' }}>
+                  u dont hav any paks yet!!
+                </p>
+                {!seasonOpen && (
+                  <p style={{ fontSize: '11px', fontFamily: 'monospace', color: '#78350f', fontWeight: 700 }}>
+                    (seezun ovr - pool drayned. no mor rips til nxt drop.)
+                  </p>
+                )}
+                <button onClick={saleOpen ? () => setShowBuyModal(true) : undefined} disabled={!saleOpen} style={{
+                  fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                  background: saleOpen ? '#6ee7b7' : '#cbd5e1', border: '3px solid #000', padding: '12px 24px', borderRadius: '16px',
+                  cursor: saleOpen ? 'pointer' : 'not-allowed', boxShadow: '4px 4px 0 #000', fontSize: '14px',
+                  opacity: saleOpen ? 1 : 0.6,
+                }}>
+                  {saleOpen ? `🛒 GRUB A PAK (${formatEther(priceWei)} ETH)` : '🛒 sale klosd - kop on openc see'}
+                </button>
+                {PACK_OPENSEA_URL && (
+                  <a href={PACK_OPENSEA_URL} target="_blank" rel="noopener noreferrer" style={{
+                    fontSize: '11px', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700, textDecoration: 'underline',
+                  }}>
+                    or kop 1 on openc sea ⛵
+                  </a>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="idle-pack"
+                initial={{ opacity: 0, scale: 0.9, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ type: 'spring', damping: 15 }}
+                style={{ width: '100%', display: 'flex', justifyContent: 'center', pointerEvents: 'auto' }}
+              >
+                <BoosterPack
+                  onRip={handlePackRip}
+                  isStretchedGag={false}
+                  onGagSqueaked={() => SFX.playSlideWhistle(true)}
+                />
+              </motion.div>
+            )
           ) : (
             <motion.div
               key="ripped-results"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', pointerEvents: 'auto' }}
+              style={{ width: '100%', minHeight: '460px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', pointerEvents: 'auto' }}
             >
-              {/* GRAVITY FALL GAG */}
-              {packState.currentGag === 'GRAVITY_FALL' && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <motion.div
-                    style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', padding: '24px' }}
-                    animate={{ y: [0, 10, 480], rotate: [0, 8, 45], opacity: [1, 1, 0] }}
-                    transition={{ duration: 1.8, times: [0, 0.25, 1], ease: 'easeIn', delay: 0.5 }}
-                  >
-                    {packState.cardsRevealed.map((t, i) => <TraitCard key={t.id} trait={t} index={i} />)}
-                  </motion.div>
-                  <motion.div
-                    initial={{ scale: 0, rotate: -6 }}
-                    animate={{ scale: 1, rotate: -2 }}
-                    transition={{ type: 'spring', delay: 1.8 }}
-                    style={{
-                      background: '#ef4444', color: '#fff', fontFamily: 'monospace', padding: '16px',
-                      borderRadius: '12px', border: '3px solid #78350f', textAlign: 'center', maxWidth: '320px', marginTop: '16px',
-                    }}
-                  >
-                    <span style={{ fontSize: '20px' }}>🛑</span>
-                    <h4 style={{ fontWeight: 800, fontSize: '12px', textTransform: 'uppercase' }}>GRAVITEE SPIL!</h4>
-                    <p style={{ fontSize: '10.5px', marginTop: '4px', color: '#fee2e2' }}>cardz fell thru da desk flor!</p>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px' }}>
-                      <button onClick={handleSkipGag} style={gagBtnStyle('#fff', '#7f1d1d')}>PEEL BAKUP CARDZ</button>
-                      <button onClick={handleResetPack} style={gagBtnStyle('#facc15', '#78350f')}>TRI AGEN</button>
-                    </div>
-                  </motion.div>
-                </div>
-              )}
-
-              {/* MONSTER STEAL GAG */}
-              {packState.currentGag === 'MONSTER_STEAL' && (
-                <div style={{ position: 'relative', width: '100%', minHeight: '440px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center', position: 'relative', zIndex: 10 }}>
-                    {packState.cardsRevealed.slice(1).map((t, i) => <TraitCard key={t.id} trait={t} index={i} />)}
+              {/* WAITING ON VRF */}
+              {(phase === 'approving' || phase === 'opening' || phase === 'waiting') && (
+                <div style={{ position: 'relative', width: '100%', minHeight: '420px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  {/* dice dead-center of the stage; message floats below by an equal gap */}
+                  <div style={{ transform: 'translateY(-55px)' }}>
+                    <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }} style={{ fontSize: '56px' }}>🎲</motion.div>
                   </div>
-                  <motion.div
-                    style={{ position: 'absolute', left: 0, bottom: '40px', zIndex: 30, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none' }}
-                    animate={{ x: [-300, 180, 180, 950], y: [0, -10, -10, 50], rotate: [0, 8, -5, 12] }}
-                    transition={{ duration: 3.5, times: [0, 0.4, 0.7, 1], ease: 'easeInOut' }}
-                  >
-                    <svg viewBox="0 0 100 100" style={{ width: '96px', height: '96px', stroke: '#db2777', fill: '#fce7f3' }} strokeWidth={4}>
-                      <path d="M 20 50 Q 15 30 50 20 Q 85 10 80 50 Q 85 85 50 80 Q 20 85 20 50 Z" />
-                      <circle cx="35" cy="40" r="6" fill="#1e1b4b" />
-                      <circle cx="65" cy="42" r="8" fill="#1e1b4b" />
-                      <line x1="61" y1="42" x2="69" y2="42" stroke="white" strokeWidth={2} />
-                      <path d="M 30 65 Q 48 78 70 60" fill="none" strokeWidth={4} strokeLinecap="round" />
-                      <path d="M 78 55 Q 110 40 135 60 Q 110 70 78 60" fill="none" strokeWidth={5} />
-                    </svg>
-                    <div style={{ background: '#fffbeb', border: '2px solid #78350f', padding: '4px 8px', fontSize: '10px', fontWeight: 700, borderRadius: '6px', transform: 'rotate(-6deg)', color: '#db2777', marginTop: '4px' }}>
-                      &quot;YOINK! MYNE!&quot; 😈
-                    </div>
-                  </motion.div>
-                  <div style={{
-                    background: '#fffbeb', border: '3px solid #78350f', padding: '16px', borderRadius: '12px',
-                    maxWidth: '320px', marginTop: '24px', textAlign: 'center', transform: 'rotate(1deg)', zIndex: 10,
-                  }}>
-                    <span style={{ fontSize: '20px' }}>👾</span>
-                    <h4 style={{ fontWeight: 800, fontSize: '12px', textTransform: 'uppercase', color: '#db2777' }}>BLOBBY SNATCHED ONE!</h4>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
-                      <button onClick={handleSkipGag} style={gagBtnStyle('#10b981', '#fff')}>FLIP EM BAK</button>
-                      <button onClick={handleResetPack} style={gagBtnStyle('#facc15', '#78350f')}>TRI AGEN</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* GLITCH REVERSE GAG */}
-              {packState.currentGag === 'GLITCH_REVERSE' && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
-                    {packState.cardsRevealed.map((t, i) => <TraitCard key={t.id} trait={t} index={i} isGlitchReverse />)}
-                  </div>
-                  <div style={{
-                    background: 'rgba(255,251,235,0.9)', border: '3px solid #78350f', padding: '16px',
-                    borderRadius: '12px', textAlign: 'center', maxWidth: '320px',
-                  }}>
-                    <span style={{ fontSize: '20px' }}>👑</span>
-                    <h4 style={{ fontWeight: 900, fontSize: '12px', textTransform: 'uppercase' }}>PACKING TAPE GLUE FAIL</h4>
-                    <p style={{ fontSize: '10px', fontFamily: 'monospace', color: '#78350f', marginTop: '4px' }}>
-                      Click each card 6x to peel the tape!
+                  <div style={{ position: 'absolute', top: 'calc(50% + 90px)', left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
+                    <p style={{ fontSize: '13px', fontWeight: 800, background: '#fef9c3', color: '#78350f', padding: '10px 18px', border: '3px solid #000', borderRadius: '12px', boxShadow: '3px 3px 0 #000', transform: 'rotate(-1deg)', maxWidth: '320px' }}>
+                      {phase === 'approving' ? 'pleez aprov so i can opin ur pak...'
+                        : phase === 'opening' ? 'rippin da pak open...'
+                        : 'askin da blokchain godz wut u got... (few seks)'}
                     </p>
-                    <button onClick={handleSkipGag} style={{ ...gagBtnStyle('#2563eb', '#fff'), marginTop: '8px' }}>
-                      FORCE UNPEEL ALL
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {[0, 1, 2].map(i => (
+                        <motion.span key={i}
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
+                          style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#db2777', display: 'block' }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* CLEAN REVEAL */}
-              {!packState.currentGag && (
+              {/* ERROR */}
+              {phase === 'error' && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', textAlign: 'center', maxWidth: '340px' }}>
+                  <div style={{ fontSize: '48px' }}>😵</div>
+                  <p style={{ fontSize: '12px', fontFamily: 'monospace', fontWeight: 700, background: '#fecdd3', color: '#881337', padding: '10px 16px', border: '3px solid #000', borderRadius: '12px', wordBreak: 'break-word' }}>
+                    {error || 'sumthin broke'}
+                  </p>
+                  <button onClick={handleResetPack} style={{
+                    fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#78350f',
+                    background: '#facc15', border: '3px solid #78350f', padding: '10px 22px', borderRadius: '14px',
+                    cursor: 'pointer', boxShadow: '3px 3px 0 #78350f', fontSize: '13px',
+                  }}>
+                    TRI AGEN
+                  </button>
+                </div>
+              )}
+
+              {/* CLEAN REVEAL (real results) */}
+              {phase === 'revealed' && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
                   <div style={{ position: 'absolute', top: '40px', left: 0, right: 0, display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
                     <div style={{ display: 'flex', gap: '12px', fontSize: '24px', userSelect: 'none' }}>
@@ -1162,22 +1268,46 @@ export default function RipPage() {
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
                     {packState.cardsRevealed.map((t, i) => <TraitCard key={t.id} trait={t} index={i} />)}
+                    {boostersRevealed.map((iq, i) => (
+                      <BoosterCard key={`boost-${i}`} iq={iq} index={packState.cardsRevealed.length + i} />
+                    ))}
                   </div>
 
+                  {dudCount > 0 && (
+                    <div style={{
+                      background: '#ef4444', color: '#fff', fontFamily: 'monospace', padding: '12px 16px',
+                      borderRadius: '12px', border: '3px solid #78350f', textAlign: 'center', maxWidth: '340px', transform: 'rotate(-1deg)',
+                    }}>
+                      <span style={{ fontSize: '20px' }}>😈</span>
+                      <h4 style={{ fontWeight: 800, fontSize: '12px', textTransform: 'uppercase' }}>A SAVANT SNATCHD {dudCount > 1 ? `${dudCount} CARDZ` : 'A CARD'}!</h4>
+                      <p style={{ fontSize: '10px', marginTop: '4px', color: '#fee2e2' }}>u only got {packState.cardsRevealed.length + boostersRevealed.length}. dat one woz a prank. gg.</p>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
+                    {(packBalance ?? 0) > 0 ? (
+                      <button onClick={handleResetPack} style={{
+                        fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#78350f',
+                        background: '#fde68a', border: '3px solid #78350f', padding: '12px 28px', borderRadius: '16px',
+                        cursor: 'pointer', boxShadow: '4px 4px 0 #1e1b4b', fontSize: '14px',
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/assets/card-pack.png" alt="pak" style={{ width: '22px', height: '22px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                        RIP ANUTHER ({packBalance})
+                      </button>
+                    ) : (
+                      <button onClick={saleOpen ? () => setShowBuyModal(true) : undefined} disabled={!saleOpen} style={{
+                        fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                        background: saleOpen ? '#6ee7b7' : '#cbd5e1', border: '3px solid #000', padding: '12px 28px', borderRadius: '16px',
+                        cursor: saleOpen ? 'pointer' : 'not-allowed', boxShadow: '4px 4px 0 #000', fontSize: '14px',
+                        opacity: saleOpen ? 1 : 0.6,
+                      }}>
+                        {saleOpen ? '🛒 GRUB ANUTHUR PAK' : '🛒 SALE KLOSD'}
+                      </button>
+                    )}
                     <button
-                      onClick={handleResetPack}
-                      style={{
-                        fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900,
-                        color: '#78350f', background: '#6ee7b7', border: '3px solid #78350f',
-                        padding: '12px 28px', borderRadius: '16px', cursor: 'pointer',
-                        boxShadow: '4px 4px 0 #1e1b4b', fontSize: '14px',
-                      }}
-                    >
-                      🛒 GRAB ANUTHER PAK
-                    </button>
-                    <button
-                      onClick={() => router.push('/sitee/profil')}
+                      onClick={() => router.push('/sitee/profil?tab=invintorri')}
                       style={{
                         fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900,
                         color: '#000', background: '#00cc88', border: '3px solid #000',
@@ -1185,7 +1315,7 @@ export default function RipPage() {
                         boxShadow: '4px 4px 0 #000', fontSize: '14px',
                       }}
                     >
-                      ⚡ GO EKWIP UR TRAYTS!
+                      🎒 C MY INVINTORRI
                     </button>
                   </div>
 
@@ -1210,6 +1340,8 @@ export default function RipPage() {
       }}>
         IMCS NFT Krafting Stayshun v1.42
       </div>
+
+      <BuyPackModal open={showBuyModal} onClose={() => setShowBuyModal(false)} onBought={refetchBalance} />
     </div>
   )
 }

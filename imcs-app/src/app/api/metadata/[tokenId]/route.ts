@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
+import { boostPctFromAttributes } from '@/lib/trait-boosters'
 export const dynamic = 'force-dynamic'
 
 export async function GET(
@@ -32,10 +33,13 @@ export async function GET(
 
     const meta = metaResult.data
     const allocated = iqResult.data?.iq_points ?? 0
-    const totalIQ = getBaseIQ(tokenId) + allocated
     const savantName = iqResult.data?.savant_name || null
 
     const attributes = (meta.attributes as { trait_type: string; value: string }[] || [])
+
+    // Equipped booster traits grow IQ by their summed % of the total (base+allocated).
+    const boostPct = boostPctFromAttributes(attributes)
+    const totalIQ = Math.round((getBaseIQ(tokenId) + allocated) * (1 + boostPct / 100))
 
     attributes.push({
       trait_type: 'IQ',

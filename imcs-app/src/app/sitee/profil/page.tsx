@@ -5,8 +5,28 @@ import { useRouter } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
 import { useReadContract, useSignMessage } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
+import {
+  PACK_EQUIPMENT_ADDRESS, PACK_EQUIPMENT_ABI, PACK_TOKEN_ID, PACK_CHAIN, PACK_OPENSEA_URL,
+  PACK_ADDRESS, SAVANT_PACK_ABI,
+} from '@/config/pack'
+import type { TraitInfo } from '@/lib/trait-data'
 import ConnectWallet from '@/components/ConnectWallet'
+import BuyPackModal from '@/components/BuyPackModal'
 import { motion, AnimatePresence } from 'framer-motion'
+
+type InvTrait = { traitId: number; balance: number; trait: TraitInfo }
+
+function traitImageUrl(t: TraitInfo): string {
+  if (t.isNew && t.newPath) {
+    const parts = t.newPath.split('/')
+    const layer = parts[0]
+    if (parts.length === 3) {
+      return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&sub=${encodeURIComponent(parts[1])}&file=${encodeURIComponent(parts[2])}`
+    }
+    return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&file=${encodeURIComponent(parts[1])}`
+  }
+  return `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&file=${encodeURIComponent(t.filename)}`
+}
 
 type Token = {
   tokenId: string
@@ -253,7 +273,9 @@ export default function ProfilePage() {
   const [namingError, setNamingError] = useState<string | null>(null)
   const [namingSuccess, setNamingSuccess] = useState(false)
 
-  const [activeTab, setActiveTab] = useState<'profil' | 'eern-iq'>('profil')
+  const [activeTab, setActiveTab] = useState<'profil' | 'invintorri' | 'eern-iq'>('profil')
+  const [invTraits, setInvTraits] = useState<InvTrait[] | null>(null)
+  const [invLoading, setInvLoading] = useState(false)
   const [tasks, setTasks] = useState<Array<{
     id: string; name: string; description: string; iq_reward: number
     icon: string; action_label: string; action_type: string
@@ -281,6 +303,23 @@ export default function ProfilePage() {
     chainId: MINT_CHAIN.id,
     query: { enabled: !!address },
   })
+
+  const { data: packBalanceRaw, refetch: refetchPackBalance } = useReadContract({
+    address: PACK_EQUIPMENT_ADDRESS,
+    abi: PACK_EQUIPMENT_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address, PACK_TOKEN_ID] : undefined,
+    chainId: PACK_CHAIN.id,
+    query: { enabled: !!address },
+  })
+  const packBalance = packBalanceRaw !== undefined ? Number(packBalanceRaw) : undefined
+  const [showBuyPaks, setShowBuyPaks] = useState(false)
+
+  const { data: saleOpenRaw } = useReadContract({
+    address: PACK_ADDRESS, abi: SAVANT_PACK_ABI, functionName: 'saleOpen',
+    chainId: PACK_CHAIN.id,
+  })
+  const saleOpen = saleOpenRaw === undefined ? false : Boolean(saleOpenRaw)
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     if (!address) { setLoading(false); return }
@@ -371,6 +410,7 @@ export default function ProfilePage() {
       setShowAllocator(false)
       setTasks([])
       setActiveTab('profil')
+      setInvTraits(null)
       setDiscordUsername(null)
       setClaimingTask(null)
       setLoading(false)
@@ -382,11 +422,59 @@ export default function ProfilePage() {
     if (params.get('tab') === 'eern-iq') {
       setActiveTab('eern-iq')
     }
+    if (params.get('tab') === 'invintorri') {
+      setActiveTab('invintorri')
+    }
     if (params.get('x_linked') === 'true') {
       setXLinkSuccess(true)
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
+
+  useEffect(() => {
+    if (activeTab !== 'invintorri' || !address) return
+    let cancelled = false
+    const cacheKey = `savant_inv_${address}`
+
+    // hydrate from cache first so the list never flashes empty on a flaky refetch
+    let hasCache = false
+    try {
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        const { data, ts } = JSON.parse(cached)
+        if (Array.isArray(data)) {
+          setInvTraits(data)
+          hasCache = true
+          if (Date.now() - ts < 120_000) return // fresh enough, skip refetch
+        }
+      }
+    } catch { /* ignore */ }
+
+    if (!hasCache) setInvLoading(true)
+    fetch(`/api/traits/inventory?wallet=${address}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled || !d) return // failed fetch -> keep cached/last-good, don't wipe
+        const inv = (d.inventory as InvTrait[]).filter(i => i.balance > 0)
+        setInvTraits(inv)
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ data: inv, ts: Date.now() })) } catch { /* full */ }
+      })
+      .catch(() => { /* keep cached/last-good */ })
+      .finally(() => { if (!cancelled) setInvLoading(false) })
+    return () => { cancelled = true }
+  }, [activeTab, address])
+
+  // IQ changes from packs/tasks elsewhere; the profil cache is 120s stale, so
+  // pull a fresh balance whenever the eern-iq tab opens (before allocating).
+  useEffect(() => {
+    if (activeTab !== 'eern-iq' || !address) return
+    let cancelled = false
+    fetch(`/api/iq/balance?wallet=${address}`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled && d) setIqBalance(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [activeTab, address])
 
   const totalAllocating = Object.values(allocations).reduce((s, v) => s + (v || 0), 0)
   const canAllocate = totalAllocating > 0 && totalAllocating <= (iqBalance?.available || 0)
@@ -566,22 +654,23 @@ export default function ProfilePage() {
           marginBottom: '20px',
           position: 'relative',
         }}>
-          {/* Pack ripper link */}
-          <div
-            onClick={() => router.push('/sitee/rip')}
+          {/* Grab paks */}
+          <button
+            onClick={saleOpen ? () => setShowBuyPaks(true) : undefined}
+            disabled={!saleOpen}
             style={{
-              position: 'absolute', top: '12px', right: '12px', cursor: 'pointer',
-              background: '#fff', border: '2px solid #000', borderRadius: '8px',
-              padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px',
-              boxShadow: '3px 3px 0 #000', transition: 'transform 0.1s',
-              fontFamily: "'Comic Neue', cursive", fontSize: '11px', fontWeight: 700,
+              position: 'absolute', top: '12px', right: '12px', cursor: saleOpen ? 'pointer' : 'not-allowed',
+              background: saleOpen ? '#6ee7b7' : '#cbd5e1', border: '2px solid #000', borderRadius: '8px',
+              padding: '5px 12px', display: 'flex', alignItems: 'center', gap: '6px',
+              boxShadow: '3px 3px 0 #000', transition: 'transform 0.1s', opacity: saleOpen ? 1 : 0.6,
+              fontFamily: "'Comic Neue', cursive", fontSize: '11px', fontWeight: 800, color: '#000',
             }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.05) rotate(-2deg)')}
+            onMouseEnter={e => { if (saleOpen) e.currentTarget.style.transform = 'scale(1.05) rotate(-2deg)' }}
             onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
           >
-            <span style={{ fontSize: '16px' }}>📦</span>
-            rip a pak 4 trayts
-          </div>
+            <span style={{ fontSize: '14px' }}>🛒</span>
+            {saleOpen ? 'grub paks' : 'sale klosd'}
+          </button>
           {/* Username / Name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
             <h2 style={{
@@ -627,27 +716,42 @@ export default function ProfilePage() {
           boxShadow: '4px 4px 0 #000',
           overflow: 'hidden',
         }}>
-          {(['profil', 'eern-iq'] as const).map(tab => (
+          {(['profil', 'invintorri', 'eern-iq'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
                 flex: 1,
                 fontFamily: "'Comic Neue', cursive",
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: 'bold',
-                padding: '12px 16px',
+                padding: '12px 8px',
                 background: activeTab === tab
-                  ? (tab === 'eern-iq' ? 'linear-gradient(135deg, #ff6b9d, #ffd700)' : '#000')
+                  ? (tab === 'eern-iq' ? 'linear-gradient(135deg, #ff6b9d, #ffd700)'
+                    : tab === 'invintorri' ? 'linear-gradient(135deg, #00ff87, #60efff)' : '#000')
                   : '#fff',
-                color: activeTab === tab ? (tab === 'eern-iq' ? '#000' : '#0f0') : '#333',
+                color: activeTab === tab ? (tab === 'profil' ? '#0f0' : '#000') : '#333',
                 border: 'none',
-                borderRight: tab === 'profil' ? '2px solid #000' : 'none',
+                borderRight: tab !== 'eern-iq' ? '2px solid #000' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
+                position: 'relative',
               }}
             >
-              {tab === 'profil' ? 'profil' : 'eern iq'}
+              {tab === 'profil' ? 'profil' : tab === 'invintorri' ? 'invintorri' : 'eern iq'}
+              {tab === 'invintorri' && (packBalance ?? 0) > 0 && (
+                <span style={{
+                  position: 'absolute', top: '3px', right: '3px',
+                  minWidth: '20px', height: '20px', padding: '0 5px',
+                  background: '#ef4444', color: '#fff',
+                  border: '2px solid #000', borderRadius: '9999px',
+                  fontFamily: 'monospace', fontSize: '11px', fontWeight: 900,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '1px 1px 0 #000', lineHeight: 1,
+                }}>
+                  {packBalance}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -1028,7 +1132,96 @@ export default function ProfilePage() {
           </div>
         )}
 
-        </>) : (
+        </>) : activeTab === 'invintorri' ? (
+          /* Invintorri Tab */
+          <div>
+            {/* Unopened paks */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+              background: 'linear-gradient(135deg, #fde68a, #fbbf24)', border: '3px solid #000',
+              boxShadow: '4px 4px 0 #000', padding: '16px 20px', marginBottom: '20px', flexWrap: 'wrap',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/assets/card-pack.png" alt="pak" style={{ width: '56px', height: '56px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                <div>
+                  <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', fontWeight: 'bold', color: '#000' }}>
+                    {packBalance ?? '...'} sealed pak{packBalance === 1 ? '' : 's'}
+                  </div>
+                  <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '13px', color: '#78350f' }}>
+                    unrippd. rip em 2 c wut u got.
+                  </div>
+                </div>
+              </div>
+              {(packBalance ?? 0) > 0 ? (
+                <button onClick={() => router.push('/sitee/rip')} style={{
+                  fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                  background: '#6ee7b7', border: '3px solid #000', padding: '12px 20px', borderRadius: '14px',
+                  cursor: 'pointer', boxShadow: '3px 3px 0 #000', fontSize: '14px',
+                }}>
+                  🎟️ rip paks
+                </button>
+              ) : PACK_OPENSEA_URL ? (
+                <a href={PACK_OPENSEA_URL} target="_blank" rel="noopener noreferrer" style={{
+                  fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                  background: '#fff', border: '3px solid #000', padding: '12px 20px', borderRadius: '14px',
+                  cursor: 'pointer', boxShadow: '3px 3px 0 #000', fontSize: '13px', textDecoration: 'none',
+                }}>
+                  ⛵ kop paks
+                </a>
+              ) : null}
+            </div>
+
+            {/* Opened traits */}
+            <h3 style={{
+              fontFamily: "'Comic Neue', cursive", fontSize: '20px', marginBottom: '12px',
+              textShadow: '1px 1px 0 #ff69b4',
+            }}>
+              ur trayts ({invTraits?.reduce((s, i) => s + i.balance, 0) ?? 0})
+            </h3>
+
+            {invLoading ? (
+              <div style={{ fontFamily: "'Comic Neue', cursive", textAlign: 'center', padding: '40px 20px' }}>
+                lodin ur trayts...
+              </div>
+            ) : !invTraits || invTraits.length === 0 ? (
+              <div style={{
+                fontFamily: "'Comic Neue', cursive", textAlign: 'center', padding: '40px 20px',
+                border: '3px dashed #000', background: '#fff',
+              }}>
+                <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎨</div>
+                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>no trayts yet!</div>
+                <div style={{ fontSize: '13px', color: '#555', marginTop: '4px' }}>rip sum paks 2 ern trayts, dummie</div>
+              </div>
+            ) : (
+              <div style={{
+                display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px',
+              }}>
+                {invTraits.map(({ traitId, balance, trait }) => (
+                  <div key={traitId} style={{
+                    border: '3px solid #000', boxShadow: '4px 4px 0 #000', background: '#fff',
+                    overflow: 'hidden', transform: `rotate(${(traitId % 5 - 2) * 0.8}deg)`,
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={traitImageUrl(trait)}
+                      alt={trait.name}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', display: 'block', background: '#f3f3f3' }}
+                    />
+                    <div style={{
+                      padding: '6px 8px', fontFamily: "'Comic Neue', cursive", fontSize: '12px',
+                      fontWeight: 'bold', display: 'flex', justifyContent: 'space-between',
+                      background: '#000', color: '#0f0', whiteSpace: 'nowrap', overflow: 'hidden',
+                    }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{trait.name}</span>
+                      {balance > 1 && <span style={{ flexShrink: 0, marginLeft: '4px' }}>x{balance}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
           /* Eern IQ Tab */
           <div>
             <h3 style={{
@@ -1583,6 +1776,8 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <BuyPackModal open={showBuyPaks} onClose={() => setShowBuyPaks(false)} onBought={() => refetchPackBalance()} />
     </div>
   )
 }

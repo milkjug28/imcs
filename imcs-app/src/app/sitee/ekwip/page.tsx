@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
+import { useTraitEquip, type SlotChange } from '@/hooks/useTraitEquip'
 
 const LAYER_NAMES = ["bg's", 'bods', 'cloths', 'speshul', 'ayezz', 'moufs', 'facessories', 'hatss', 'extruhs', 'textuh']
 const LAYER_ORDER = [0, 1, 2, 3, 8, 6, 5, 4, 7, 9]
@@ -23,6 +24,8 @@ type TraitInfo = {
   filename: string
   rarity: number
   hidden: boolean
+  isNew?: boolean
+  newPath?: string
 }
 
 type EquipmentSlot = {
@@ -37,15 +40,10 @@ type EquipmentData = {
   equipment: EquipmentSlot[]
 }
 
-type NewTraitData = {
-  id: string
-  name: string
-  layer: number
-  layerName: string
-  filename: string
-  isNew: true
-  sub?: string
-  variants?: string[]
+type InventoryItem = {
+  traitId: number
+  balance: number
+  trait: TraitInfo
 }
 
 type DisplayTrait = {
@@ -53,19 +51,19 @@ type DisplayTrait = {
   name: string
   traitId: number | null
   imageUrl: string
-  isNew: boolean
   isEquipped: boolean
 }
 
 function traitImageUrl(trait: TraitInfo): string {
-  return `/api/traits/image?layer=${encodeURIComponent(trait.layerName)}&file=${encodeURIComponent(trait.filename)}`
-}
-
-function newTraitImageUrl(t: NewTraitData, bodVariant?: string): string {
-  if (t.sub && bodVariant) {
-    return `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&sub=${encodeURIComponent(t.sub)}&file=${encodeURIComponent(bodVariant + '.png')}&new=1`
+  if (trait.isNew && trait.newPath) {
+    const parts = trait.newPath.split('/')
+    const layer = parts[0]
+    if (parts.length === 3) {
+      return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&sub=${encodeURIComponent(parts[1])}&file=${encodeURIComponent(parts[2])}`
+    }
+    return `/api/traits/image?new=1&layer=${encodeURIComponent(layer)}&file=${encodeURIComponent(parts[1])}`
   }
-  return `/api/traits/image?layer=${encodeURIComponent(t.layerName)}&file=${encodeURIComponent(t.filename)}&new=1`
+  return `/api/traits/image?layer=${encodeURIComponent(trait.layerName)}&file=${encodeURIComponent(trait.filename)}`
 }
 
 export default function EkwipPageWrapper() {
@@ -80,11 +78,12 @@ function EkwipPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { address } = useWallet()
+  const { submitChanges } = useTraitEquip()
   const tokenId = parseInt(searchParams.get('tokenId') || '')
 
   const [equipped, setEquipped] = useState<EquipmentData | null>(null)
   const [allTraits, setAllTraits] = useState<Record<number, TraitInfo>>({})
-  const [newTraits, setNewTraits] = useState<NewTraitData[]>([])
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
   const [pendingChanges, setPendingChanges] = useState<Record<number, number>>({})
   const [pendingImages, setPendingImages] = useState<Record<number, string>>({})
   const [activeSlot, setActiveSlot] = useState<number>(1)
@@ -92,6 +91,7 @@ function EkwipPage() {
   const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState<string | null>(null)
   const [successImage, setSuccessImage] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -105,30 +105,32 @@ function EkwipPage() {
     Promise.all([
       fetch(`/api/traits/equipped?tokenId=${tokenId}`).then(r => r.json()),
       fetch('/api/traits/all').then(r => r.json()),
-      fetch('/api/traits/new').then(r => r.json()),
     ])
-      .then(([equipData, traitsData, newData]) => {
+      .then(([equipData, traitsData]) => {
         if (equipData.error) {
           setError(equipData.error)
           return
         }
         setEquipped(equipData)
         setAllTraits(traitsData.traits || {})
-        setNewTraits(newData.traits || [])
       })
       .catch(() => setError('failed to load trait data'))
       .finally(() => setLoading(false))
   }, [tokenId])
 
-  const bodVariant = useMemo(() => {
-    if (!equipped) return 'derk'
-    const bodTrait = equipped.equipment[1]?.trait
-    if (!bodTrait) return 'derk'
-    const name = bodTrait.name.toLowerCase()
-    if (name.includes('ayeliun') || name.includes('alien')) return 'ayeliun'
-    if (name.includes('lyte') || name.includes('lite')) return 'lyte'
-    return 'derk'
-  }, [equipped])
+  // Load the wallet's unequipped trait 1155s (Base). Only these + equipped are shown.
+  useEffect(() => {
+    if (!address) {
+      setInventory([])
+      return
+    }
+    let cancelled = false
+    fetch(`/api/traits/inventory?wallet=${address}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled && !d.error) setInventory(d.inventory || []) })
+      .catch(() => { if (!cancelled) setInventory([]) })
+    return () => { cancelled = true }
+  }, [address])
 
   const previewSlots = useMemo(() =>
     equipped ? equipped.equipment.map((s, i) =>
@@ -212,26 +214,44 @@ function EkwipPage() {
     }
   }
 
-  const handleEquipNew = (slotIndex: number, imageUrl: string) => {
-    setPendingChanges({ ...pendingChanges, [slotIndex]: -1 })
-    setPendingImages({ ...pendingImages, [slotIndex]: imageUrl })
-  }
-
   const handleReset = () => {
     setPendingChanges({})
     setPendingImages({})
+    setConfirmError(null)
   }
 
-  const handleConfirm = () => {
-    setConfirming(true)
-    const canvas = canvasRef.current
-    if (canvas) {
-      setSuccessImage(canvas.toDataURL('image/png'))
+  const handleConfirm = async () => {
+    setConfirmError(null)
+
+    // Phase 7 (card packs) not live: new traits have no on-chain traitId yet.
+    const changes: SlotChange[] = []
+    for (const [slotStr, traitId] of Object.entries(pendingChanges)) {
+      if (traitId === -1) {
+        setConfirmError('new trayts not ekwipabul yet (cumming soon)')
+        return
+      }
+      changes.push({ slot: Number(slotStr), newTraitId: traitId })
     }
-    setTimeout(() => {
-      setConfirming(false)
+    if (changes.length === 0) return
+    if (!address) {
+      setConfirmError('connekt ur wallet first dummie')
+      return
+    }
+
+    const canvas = canvasRef.current
+    const snapshot = canvas ? canvas.toDataURL('image/png') : null
+
+    setConfirming(true)
+    try {
+      await submitChanges(tokenId, changes)
+      setSuccessImage(snapshot)
       setShowSuccess(true)
-    }, 1200)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'sumthin brok'
+      setConfirmError(/user rejected|denied/i.test(msg) ? 'u kanseld da tranzakshun' : msg)
+    } finally {
+      setConfirming(false)
+    }
   }
 
   const handleCloseSuccess = () => {
@@ -239,6 +259,12 @@ function EkwipPage() {
     setSuccessImage(null)
     setPendingChanges({})
     setPendingImages({})
+    setConfirmError(null)
+    // Reload on-chain equipment so UI reflects new state.
+    fetch(`/api/traits/equipped?tokenId=${tokenId}`)
+      .then(r => r.json())
+      .then(d => { if (!d.error) setEquipped(d) })
+      .catch(() => {})
   }
 
   const hasChanges = Object.keys(pendingChanges).length > 0
@@ -254,7 +280,6 @@ function EkwipPage() {
         name: t.name,
         traitId: t.traitId,
         imageUrl: traitImageUrl(t),
-        isNew: false,
         isEquipped: true,
       }]
     }
@@ -264,35 +289,37 @@ function EkwipPage() {
       : (equipped.equipment[activeSlot]?.traitId ?? 0)
 
     const items: DisplayTrait[] = []
+    const seen = new Set<number>()
 
+    // currently equipped trait for this slot (escrowed in the manager)
     const ownTrait = equipped.equipment[activeSlot]?.trait
     if (ownTrait) {
+      seen.add(ownTrait.traitId)
       items.push({
         key: `own_${ownTrait.traitId}`,
         name: ownTrait.name,
         traitId: ownTrait.traitId,
         imageUrl: traitImageUrl(ownTrait),
-        isNew: false,
         isEquipped: ownTrait.traitId === currentTraitId,
       })
     }
 
-    const layerNewTraits = newTraits.filter(t => t.layer === activeSlot)
-    const activeImageOverride = pendingImages[activeSlot]
-    for (const nt of layerNewTraits) {
-      const url = nt.sub ? newTraitImageUrl(nt, bodVariant) : newTraitImageUrl(nt)
+    // unequipped trait 1155s the wallet actually holds, for this slot's layer
+    for (const item of inventory) {
+      if (item.trait.layer !== activeSlot) continue
+      if (seen.has(item.traitId)) continue
+      seen.add(item.traitId)
       items.push({
-        key: nt.id,
-        name: nt.name,
-        traitId: null,
-        imageUrl: url,
-        isNew: true,
-        isEquipped: activeImageOverride === url,
+        key: `inv_${item.traitId}`,
+        name: item.trait.name,
+        traitId: item.traitId,
+        imageUrl: traitImageUrl(item.trait),
+        isEquipped: item.traitId === currentTraitId,
       })
     }
 
     return items
-  }, [equipped, activeSlot, pendingChanges, pendingImages, newTraits, bodVariant, allTraits])
+  }, [equipped, activeSlot, pendingChanges, inventory])
 
   const traitImageCache = useRef<Map<string, HTMLImageElement>>(new Map())
 
@@ -331,9 +358,7 @@ function EkwipPage() {
     e.preventDefault()
     try {
       const data = JSON.parse(e.dataTransfer.getData('text/plain'))
-      if (data.type === 'new') {
-        handleEquipNew(data.slot, data.imageUrl)
-      } else if (data.type === 'existing') {
+      if (data.type === 'existing') {
         const traitId = data.traitId
         if (!allTraits[traitId]) return
         handleEquip(allTraits[traitId].layer, traitId)
@@ -462,6 +487,17 @@ function EkwipPage() {
               </>
             )}
           </div>
+
+          {confirmError && (
+            <div style={{
+              marginTop: '6px', padding: '6px 10px',
+              background: '#ffdddd', border: '2px solid #cc0000',
+              borderRadius: '6px', color: '#990000',
+              fontSize: '12px', fontWeight: 700, textAlign: 'center',
+            }}>
+              {confirmError}
+            </div>
+          )}
         </div>
 
         {/* Right: Tab bar + trait grid */}
@@ -530,9 +566,7 @@ function EkwipPage() {
                     onDragStart={(e) => handleDragStart(e, dt)}
                     onClick={() => {
                       if (LOCKED_SLOTS.has(activeSlot)) return
-                      if (dt.isNew) {
-                        handleEquipNew(activeSlot, dt.imageUrl)
-                      } else if (dt.traitId === null) {
+                      if (dt.traitId === null) {
                         return
                       } else if (dt.isEquipped && !REQUIRED_SLOTS.has(activeSlot)) {
                         handleUnequip(activeSlot)
@@ -540,13 +574,13 @@ function EkwipPage() {
                         handleEquip(activeSlot, dt.traitId)
                       }
                     }}
-                    title={dt.name + (dt.isNew ? ' (new!)' : '')}
+                    title={dt.name}
                     style={{
                       width: '60px', height: '60px',
                       cursor: LOCKED_SLOTS.has(activeSlot) ? 'default' : 'grab',
                       borderRadius: '5px',
-                      border: dt.isEquipped ? '2px solid #00cc88' : dt.isNew ? '2px solid #ff69b4' : '1px solid rgba(0,0,0,0.1)',
-                      boxShadow: dt.isEquipped ? '0 0 6px rgba(0,204,136,0.4)' : dt.isNew ? '0 0 4px rgba(255,105,180,0.3)' : 'none',
+                      border: dt.isEquipped ? '2px solid #00cc88' : '1px solid rgba(0,0,0,0.1)',
+                      boxShadow: dt.isEquipped ? '0 0 6px rgba(0,204,136,0.4)' : 'none',
                       overflow: 'hidden',
                       transition: 'box-shadow 0.2s, border 0.2s',
                       position: 'relative',
@@ -558,16 +592,6 @@ function EkwipPage() {
                       alt={dt.name}
                       style={{ width: '100%', height: '100%', display: 'block' }}
                     />
-                    {dt.isNew && (
-                      <div style={{
-                        position: 'absolute', top: '1px', right: '1px',
-                        background: '#ff69b4', color: '#fff',
-                        fontSize: '6px', fontWeight: 700, padding: '1px 3px',
-                        borderRadius: '2px', lineHeight: '8px',
-                      }}>
-                        NEW
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>

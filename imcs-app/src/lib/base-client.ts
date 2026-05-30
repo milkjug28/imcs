@@ -1,10 +1,15 @@
 import { createPublicClient, http } from 'viem'
-import { base } from 'viem/chains'
+import { base, baseSepolia } from 'viem/chains'
 
-function getBaseClient() {
+// TRAIT_CHAIN_ENV=sepolia selects Base Sepolia for testnet wiring; default mainnet.
+const USE_SEPOLIA = process.env.TRAIT_CHAIN_ENV === 'sepolia'
+export const TRAIT_CHAIN = USE_SEPOLIA ? baseSepolia : base
+const ALCHEMY_SUBDOMAIN = USE_SEPOLIA ? 'base-sepolia' : 'base-mainnet'
+
+export function getBaseClient() {
   return createPublicClient({
-    chain: base,
-    transport: http(`https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY!}`, { timeout: 10_000 }),
+    chain: TRAIT_CHAIN,
+    transport: http(`https://${ALCHEMY_SUBDOMAIN}.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY!}`, { timeout: 10_000 }),
   })
 }
 
@@ -68,6 +73,16 @@ export async function getEquipped(tokenId: number): Promise<number[]> {
   return [...(result as readonly bigint[])].map(Number)
 }
 
+export async function getTokenCombo(tokenId: number): Promise<`0x${string}`> {
+  const combo = await getBaseClient().readContract({
+    address: EQUIP_MANAGER_ADDRESS,
+    abi: EQUIP_MANAGER_ABI,
+    functionName: 'tokenToCombo',
+    args: [BigInt(tokenId)],
+  })
+  return combo as `0x${string}`
+}
+
 export async function isComboTaken(comboHash: `0x${string}`, excludeTokenId?: number): Promise<boolean> {
   const taken = await getBaseClient().readContract({
     address: EQUIP_MANAGER_ADDRESS,
@@ -81,23 +96,41 @@ export async function isComboTaken(comboHash: `0x${string}`, excludeTokenId?: nu
   return true
 }
 
-export async function getInventory(wallet: `0x${string}`, traitIds: number[]): Promise<Map<number, number>> {
-  if (traitIds.length === 0) return new Map()
+const INV_CHUNK = 40 // keep each balanceOfBatch eth_call small (free-tier reliable)
 
-  const accounts = traitIds.map(() => wallet)
-  const ids = traitIds.map(id => BigInt(id))
-
-  const balances = await getBaseClient().readContract({
+// one balanceOfBatch chunk with a single retry
+async function balancesForChunk(wallet: `0x${string}`, ids: number[]): Promise<bigint[]> {
+  const accounts = ids.map(() => wallet)
+  const bigIds = ids.map(id => BigInt(id))
+  const call = () => getBaseClient().readContract({
     address: EQUIPMENT_ADDRESS,
     abi: EQUIPMENT_ABI,
     functionName: 'balanceOfBatch',
-    args: [accounts, ids],
-  })
+    args: [accounts, bigIds],
+  }) as Promise<readonly bigint[]>
+  try {
+    return [...(await call())]
+  } catch {
+    await new Promise(r => setTimeout(r, 350))
+    return [...(await call())] // throws if the retry also fails -> caller keeps last-good data
+  }
+}
+
+// Chunked so a 187-id batch doesn't 1-shot a heavy eth_call that intermittently
+// returns partial/empty on free tier (was wiping the user's whole inventory).
+export async function getInventory(wallet: `0x${string}`, traitIds: number[]): Promise<Map<number, number>> {
+  if (traitIds.length === 0) return new Map()
+
+  const chunks: number[][] = []
+  for (let i = 0; i < traitIds.length; i += INV_CHUNK) chunks.push(traitIds.slice(i, i + INV_CHUNK))
 
   const result = new Map<number, number>()
-  for (let i = 0; i < traitIds.length; i++) {
-    const bal = Number((balances as bigint[])[i])
-    if (bal > 0) result.set(traitIds[i], bal)
+  for (const chunk of chunks) {
+    const balances = await balancesForChunk(wallet, chunk)
+    for (let i = 0; i < chunk.length; i++) {
+      const bal = Number(balances[i])
+      if (bal > 0) result.set(chunk[i], bal)
+    }
   }
   return result
 }

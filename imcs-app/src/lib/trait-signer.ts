@@ -1,6 +1,5 @@
 import { privateKeyToAccount } from 'viem/accounts'
-import { base } from 'viem/chains'
-import { EQUIP_MANAGER_ADDRESS } from './base-client'
+import { EQUIP_MANAGER_ADDRESS, TRAIT_CHAIN } from './base-client'
 
 let _account: ReturnType<typeof privateKeyToAccount> | null = null
 function getAccount() {
@@ -14,7 +13,7 @@ function getDomain() {
   return {
     name: 'SavantEquipManager' as const,
     version: '1' as const,
-    chainId: base.id,
+    chainId: TRAIT_CHAIN.id,
     verifyingContract: EQUIP_MANAGER_ADDRESS,
   }
 }

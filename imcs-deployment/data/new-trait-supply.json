@@ -1,0 +1,263 @@
+{
+  "generatedAt": "2026-05-29T21:13:08.703Z",
+  "supplyUpdatedAt": "2026-05-29T22:00:00.000Z",
+  "supplyNote": "Season-1 card-pack supply bumped to enlarge the rip pool. Extruh group totals (ban hammur 276 / explooror staaf 132 / spuun 404) split across body variants proportional to original ratios.",
+  "bodyCounts": {
+    "derk": 1798,
+    "lyte": 1777,
+    "ayeliun": 197
+  },
+  "mintBatch": {
+    "traitIds": [
+      27,
+      28,
+      2034,
+      2035,
+      2036,
+      2037,
+      2038,
+      2039,
+      2040,
+      4015,
+      4016,
+      4017,
+      5014,
+      5015,
+      5016,
+      5017,
+      7040,
+      7041,
+      8015,
+      8016,
+      8017,
+      8018,
+      8019,
+      8020,
+      8021,
+      8022,
+      8023
+    ],
+    "amounts": [
+      50,
+      69,
+      28,
+      444,
+      44,
+      152,
+      132,
+      174,
+      48,
+      276,
+      170,
+      250,
+      308,
+      121,
+      444,
+      220,
+      240,
+      408,
+      128,
+      132,
+      16,
+      60,
+      64,
+      8,
+      192,
+      192,
+      20
+    ]
+  },
+  "traits": [
+    {
+      "traitId": 27,
+      "name": "peekah suhprize",
+      "layerName": "bg's",
+      "newPath": "bg's/peekah suhprize.png",
+      "supply": 50
+    },
+    {
+      "traitId": 28,
+      "name": "wp2808001",
+      "layerName": "bg's",
+      "newPath": "bg's/wp2808001.png",
+      "supply": 69
+    },
+    {
+      "traitId": 2034,
+      "name": "blasstoyce",
+      "layerName": "cloths",
+      "newPath": "cloths/blasstoyce.png",
+      "supply": 28
+    },
+    {
+      "traitId": 2035,
+      "name": "ched",
+      "layerName": "cloths",
+      "newPath": "cloths/ched.png",
+      "supply": 444
+    },
+    {
+      "traitId": 2036,
+      "name": "hoodid",
+      "layerName": "cloths",
+      "newPath": "cloths/hoodid.png",
+      "supply": 44
+    },
+    {
+      "traitId": 2037,
+      "name": "majishun",
+      "layerName": "cloths",
+      "newPath": "cloths/majishun.png",
+      "supply": 152
+    },
+    {
+      "traitId": 2038,
+      "name": "monies sewt",
+      "layerName": "cloths",
+      "newPath": "cloths/monies sewt.png",
+      "supply": 132
+    },
+    {
+      "traitId": 2039,
+      "name": "rohb ov meemz",
+      "layerName": "cloths",
+      "newPath": "cloths/rohb ov meemz.png",
+      "supply": 174
+    },
+    {
+      "traitId": 2040,
+      "name": "saaluhmandurr",
+      "layerName": "cloths",
+      "newPath": "cloths/saaluhmandurr.png",
+      "supply": 48
+    },
+    {
+      "traitId": 4015,
+      "name": "crii baybee",
+      "layerName": "ayezz",
+      "newPath": "ayezz/crii baybee.png",
+      "supply": 276
+    },
+    {
+      "traitId": 4016,
+      "name": "deemon",
+      "layerName": "ayezz",
+      "newPath": "ayezz/deemon.png",
+      "supply": 170
+    },
+    {
+      "traitId": 4017,
+      "name": "susss",
+      "layerName": "ayezz",
+      "newPath": "ayezz/susss.png",
+      "supply": 250
+    },
+    {
+      "traitId": 5014,
+      "name": "beerd",
+      "layerName": "moufs",
+      "newPath": "moufs/beerd.png",
+      "supply": 308
+    },
+    {
+      "traitId": 5015,
+      "name": "raynboh deemon grell",
+      "layerName": "moufs",
+      "newPath": "moufs/raynboh deemon grell.png",
+      "supply": 121
+    },
+    {
+      "traitId": 5016,
+      "name": "smuurk",
+      "layerName": "moufs",
+      "newPath": "moufs/smuurk.png",
+      "supply": 444
+    },
+    {
+      "traitId": 5017,
+      "name": "umph",
+      "layerName": "moufs",
+      "newPath": "moufs/umph.png",
+      "supply": 220
+    },
+    {
+      "traitId": 7040,
+      "name": "doge",
+      "layerName": "hatss",
+      "newPath": "hatss/doge.png",
+      "supply": 240
+    },
+    {
+      "traitId": 7041,
+      "name": "nurow leenk",
+      "layerName": "hatss",
+      "newPath": "hatss/nurow leenk.png",
+      "supply": 408
+    },
+    {
+      "traitId": 8015,
+      "name": "ban hammur derk",
+      "layerName": "extruhs",
+      "newPath": "extruhs/ban hammur/derk.png",
+      "supply": 128
+    },
+    {
+      "traitId": 8016,
+      "name": "ban hammur lyte",
+      "layerName": "extruhs",
+      "newPath": "extruhs/ban hammur/lyte.png",
+      "supply": 132
+    },
+    {
+      "traitId": 8017,
+      "name": "ban hammur ayeliun",
+      "layerName": "extruhs",
+      "newPath": "extruhs/ban hammur/ayeliun.png",
+      "supply": 16
+    },
+    {
+      "traitId": 8018,
+      "name": "explooror staaf derk",
+      "layerName": "extruhs",
+      "newPath": "extruhs/explooror staaf/derk.png",
+      "supply": 60
+    },
+    {
+      "traitId": 8019,
+      "name": "explooror staaf lyte",
+      "layerName": "extruhs",
+      "newPath": "extruhs/explooror staaf/lyte.png",
+      "supply": 64
+    },
+    {
+      "traitId": 8020,
+      "name": "explooror staaf ayeliun",
+      "layerName": "extruhs",
+      "newPath": "extruhs/explooror staaf/ayeliun.png",
+      "supply": 8
+    },
+    {
+      "traitId": 8021,
+      "name": "spuun derk",
+      "layerName": "extruhs",
+      "newPath": "extruhs/spuun/derk.png",
+      "supply": 192
+    },
+    {
+      "traitId": 8022,
+      "name": "spuun lyte",
+      "layerName": "extruhs",
+      "newPath": "extruhs/spuun/lyte.png",
+      "supply": 192
+    },
+    {
+      "traitId": 8023,
+      "name": "spuun ayeliun",
+      "layerName": "extruhs",
+      "newPath": "extruhs/spuun/ayeliun.png",
+      "supply": 20
+    }
+  ],
+  "totalNewTypes": 27,
+  "totalNewInstances": 4390
+}

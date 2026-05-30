@@ -368,6 +368,32 @@
       "rarity": 2,
       "hidden": false
     },
+    "27": {
+      "traitId": 27,
+      "layer": 0,
+      "layerName": "bg's",
+      "slot": "BGS",
+      "index": 26,
+      "name": "peekah suhprize",
+      "filename": "peekah suhprize.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "bg's/peekah suhprize.png"
+    },
+    "28": {
+      "traitId": 28,
+      "layer": 0,
+      "layerName": "bg's",
+      "slot": "BGS",
+      "index": 27,
+      "name": "wp2808001",
+      "filename": "wp2808001.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "bg's/wp2808001.png"
+    },
     "1001": {
       "traitId": 1001,
       "layer": 1,
@@ -830,6 +856,97 @@
       "rarity": 4,
       "hidden": false
     },
+    "2034": {
+      "traitId": 2034,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 33,
+      "name": "blasstoyce",
+      "filename": "blasstoyce.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/blasstoyce.png"
+    },
+    "2035": {
+      "traitId": 2035,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 34,
+      "name": "ched",
+      "filename": "ched.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/ched.png"
+    },
+    "2036": {
+      "traitId": 2036,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 35,
+      "name": "hoodid",
+      "filename": "hoodid.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/hoodid.png"
+    },
+    "2037": {
+      "traitId": 2037,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 36,
+      "name": "majishun",
+      "filename": "majishun.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/majishun.png"
+    },
+    "2038": {
+      "traitId": 2038,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 37,
+      "name": "monies sewt",
+      "filename": "monies sewt.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/monies sewt.png"
+    },
+    "2039": {
+      "traitId": 2039,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 38,
+      "name": "rohb ov meemz",
+      "filename": "rohb ov meemz.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/rohb ov meemz.png"
+    },
+    "2040": {
+      "traitId": 2040,
+      "layer": 2,
+      "layerName": "cloths",
+      "slot": "CLOTHS",
+      "index": 39,
+      "name": "saaluhmandurr",
+      "filename": "saaluhmandurr.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "cloths/saaluhmandurr.png"
+    },
     "3001": {
       "traitId": 3001,
       "layer": 3,
@@ -1028,6 +1145,45 @@
       "rarity": 6,
       "hidden": false
     },
+    "4015": {
+      "traitId": 4015,
+      "layer": 4,
+      "layerName": "ayezz",
+      "slot": "AYEZZ",
+      "index": 14,
+      "name": "crii baybee",
+      "filename": "crii baybee.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "ayezz/crii baybee.png"
+    },
+    "4016": {
+      "traitId": 4016,
+      "layer": 4,
+      "layerName": "ayezz",
+      "slot": "AYEZZ",
+      "index": 15,
+      "name": "deemon",
+      "filename": "deemon.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "ayezz/deemon.png"
+    },
+    "4017": {
+      "traitId": 4017,
+      "layer": 4,
+      "layerName": "ayezz",
+      "slot": "AYEZZ",
+      "index": 16,
+      "name": "susss",
+      "filename": "susss.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "ayezz/susss.png"
+    },
     "5001": {
       "traitId": 5001,
       "layer": 5,
@@ -1170,6 +1326,58 @@
       "filename": "weht braycez.png",
       "rarity": 6,
       "hidden": false
+    },
+    "5014": {
+      "traitId": 5014,
+      "layer": 5,
+      "layerName": "moufs",
+      "slot": "MOUFS",
+      "index": 13,
+      "name": "beerd",
+      "filename": "beerd.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "moufs/beerd.png"
+    },
+    "5015": {
+      "traitId": 5015,
+      "layer": 5,
+      "layerName": "moufs",
+      "slot": "MOUFS",
+      "index": 14,
+      "name": "raynboh deemon grell",
+      "filename": "raynboh deemon grell.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "moufs/raynboh deemon grell.png"
+    },
+    "5016": {
+      "traitId": 5016,
+      "layer": 5,
+      "layerName": "moufs",
+      "slot": "MOUFS",
+      "index": 15,
+      "name": "smuurk",
+      "filename": "smuurk.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "moufs/smuurk.png"
+    },
+    "5017": {
+      "traitId": 5017,
+      "layer": 5,
+      "layerName": "moufs",
+      "slot": "MOUFS",
+      "index": 16,
+      "name": "umph",
+      "filename": "umph.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "moufs/umph.png"
     },
     "6001": {
       "traitId": 6001,
@@ -1688,6 +1896,32 @@
       "rarity": 1,
       "hidden": false
     },
+    "7040": {
+      "traitId": 7040,
+      "layer": 7,
+      "layerName": "hatss",
+      "slot": "HATSS",
+      "index": 39,
+      "name": "doge",
+      "filename": "doge.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "hatss/doge.png"
+    },
+    "7041": {
+      "traitId": 7041,
+      "layer": 7,
+      "layerName": "hatss",
+      "slot": "HATSS",
+      "index": 40,
+      "name": "nurow leenk",
+      "filename": "nurow leenk.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "hatss/nurow leenk.png"
+    },
     "8001": {
       "traitId": 8001,
       "layer": 8,
@@ -1841,6 +2075,123 @@
       "filename": "wahlit lyte.png",
       "rarity": 4,
       "hidden": false
+    },
+    "8015": {
+      "traitId": 8015,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 14,
+      "name": "ban hammur derk",
+      "filename": "derk.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/ban hammur/derk.png"
+    },
+    "8016": {
+      "traitId": 8016,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 15,
+      "name": "ban hammur lyte",
+      "filename": "lyte.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/ban hammur/lyte.png"
+    },
+    "8017": {
+      "traitId": 8017,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 16,
+      "name": "ban hammur ayeliun",
+      "filename": "ayeliun.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/ban hammur/ayeliun.png"
+    },
+    "8018": {
+      "traitId": 8018,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 17,
+      "name": "explooror staaf derk",
+      "filename": "derk.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/explooror staaf/derk.png"
+    },
+    "8019": {
+      "traitId": 8019,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 18,
+      "name": "explooror staaf lyte",
+      "filename": "lyte.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/explooror staaf/lyte.png"
+    },
+    "8020": {
+      "traitId": 8020,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 19,
+      "name": "explooror staaf ayeliun",
+      "filename": "ayeliun.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/explooror staaf/ayeliun.png"
+    },
+    "8021": {
+      "traitId": 8021,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 20,
+      "name": "spuun derk",
+      "filename": "derk.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/spuun/derk.png"
+    },
+    "8022": {
+      "traitId": 8022,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 21,
+      "name": "spuun lyte",
+      "filename": "lyte.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/spuun/lyte.png"
+    },
+    "8023": {
+      "traitId": 8023,
+      "layer": 8,
+      "layerName": "extruhs",
+      "slot": "EXTRUHS",
+      "index": 22,
+      "name": "spuun ayeliun",
+      "filename": "ayeliun.png",
+      "rarity": 0,
+      "hidden": false,
+      "isNew": true,
+      "newPath": "extruhs/spuun/ayeliun.png"
     },
     "9001": {
       "traitId": 9001,
@@ -2289,6 +2640,78 @@
       "requiredLayer": "extruhs",
       "requiredTrait": "nuting",
       "requiredTraitId": 8009
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "ban hammur derk",
+      "triggerTraitId": 8015,
+      "requiredLayer": "bods",
+      "requiredTrait": "derk",
+      "requiredTraitId": 1002
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "ban hammur lyte",
+      "triggerTraitId": 8016,
+      "requiredLayer": "bods",
+      "requiredTrait": "lyte",
+      "requiredTraitId": 1003
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "ban hammur ayeliun",
+      "triggerTraitId": 8017,
+      "requiredLayer": "bods",
+      "requiredTrait": "ayeliun",
+      "requiredTraitId": 1001
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "explooror staaf derk",
+      "triggerTraitId": 8018,
+      "requiredLayer": "bods",
+      "requiredTrait": "derk",
+      "requiredTraitId": 1002
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "explooror staaf lyte",
+      "triggerTraitId": 8019,
+      "requiredLayer": "bods",
+      "requiredTrait": "lyte",
+      "requiredTraitId": 1003
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "explooror staaf ayeliun",
+      "triggerTraitId": 8020,
+      "requiredLayer": "bods",
+      "requiredTrait": "ayeliun",
+      "requiredTraitId": 1001
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "spuun derk",
+      "triggerTraitId": 8021,
+      "requiredLayer": "bods",
+      "requiredTrait": "derk",
+      "requiredTraitId": 1002
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "spuun lyte",
+      "triggerTraitId": 8022,
+      "requiredLayer": "bods",
+      "requiredTrait": "lyte",
+      "requiredTraitId": 1003
+    },
+    {
+      "triggerLayer": "extruhs",
+      "triggerTrait": "spuun ayeliun",
+      "triggerTraitId": 8023,
+      "requiredLayer": "bods",
+      "requiredTrait": "ayeliun",
+      "requiredTraitId": 1001
     }
   ],
   "traitExclusions": [
