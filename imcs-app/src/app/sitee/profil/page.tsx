@@ -6,7 +6,7 @@ import { useWallet } from '@/hooks/useWallet'
 import { useReadContract, useSignMessage } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 import {
-  PACK_EQUIPMENT_ADDRESS, PACK_EQUIPMENT_ABI, PACK_TOKEN_ID, PACK_CHAIN, PACK_OPENSEA_URL,
+  PACK_EQUIPMENT_ADDRESS, PACK_EQUIPMENT_ABI, PACK_TOKEN_ID, PACK_CHAIN,
   PACK_ADDRESS, SAVANT_PACK_ABI,
 } from '@/config/pack'
 import type { TraitInfo } from '@/lib/trait-data'
@@ -1135,25 +1135,25 @@ export default function ProfilePage() {
         </>) : activeTab === 'invintorri' ? (
           /* Invintorri Tab */
           <div>
-            {/* Unopened paks */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-              background: 'linear-gradient(135deg, #fde68a, #fbbf24)', border: '3px solid #000',
-              boxShadow: '4px 4px 0 #000', padding: '16px 20px', marginBottom: '20px', flexWrap: 'wrap',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/card-pack.png" alt="pak" style={{ width: '56px', height: '56px', objectFit: 'contain', imageRendering: 'pixelated' }} />
-                <div>
-                  <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', fontWeight: 'bold', color: '#000' }}>
-                    {packBalance ?? '...'} sealed pak{packBalance === 1 ? '' : 's'}
-                  </div>
-                  <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '13px', color: '#78350f' }}>
-                    unrippd. rip em 2 c wut u got.
+            {/* Unopened paks - hidden when none to rip */}
+            {(packBalance ?? 0) > 0 && (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                background: 'linear-gradient(135deg, #fde68a, #fbbf24)', border: '3px solid #000',
+                boxShadow: '4px 4px 0 #000', padding: '16px 20px', marginBottom: '20px', flexWrap: 'wrap',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/assets/card-pack.png" alt="pak" style={{ width: '56px', height: '56px', objectFit: 'contain', imageRendering: 'pixelated' }} />
+                  <div>
+                    <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', fontWeight: 'bold', color: '#000' }}>
+                      {packBalance} sealed pak{packBalance === 1 ? '' : 's'}
+                    </div>
+                    <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '13px', color: '#78350f' }}>
+                      unrippd. rip em 2 c wut u got.
+                    </div>
                   </div>
                 </div>
-              </div>
-              {(packBalance ?? 0) > 0 ? (
                 <button onClick={() => router.push('/sitee/rip')} style={{
                   fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
                   background: '#6ee7b7', border: '3px solid #000', padding: '12px 20px', borderRadius: '14px',
@@ -1161,24 +1161,29 @@ export default function ProfilePage() {
                 }}>
                   🎟️ rip paks
                 </button>
-              ) : PACK_OPENSEA_URL ? (
-                <a href={PACK_OPENSEA_URL} target="_blank" rel="noopener noreferrer" style={{
-                  fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
-                  background: '#fff', border: '3px solid #000', padding: '12px 20px', borderRadius: '14px',
-                  cursor: 'pointer', boxShadow: '3px 3px 0 #000', fontSize: '13px', textDecoration: 'none',
-                }}>
-                  ⛵ kop paks
-                </a>
-              ) : null}
-            </div>
+              </div>
+            )}
 
             {/* Opened traits */}
-            <h3 style={{
-              fontFamily: "'Comic Neue', cursive", fontSize: '20px', marginBottom: '12px',
-              textShadow: '1px 1px 0 #ff69b4',
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: '12px', marginBottom: '12px', flexWrap: 'wrap',
             }}>
-              ur trayts ({invTraits?.reduce((s, i) => s + i.balance, 0) ?? 0})
-            </h3>
+              <h3 style={{
+                fontFamily: "'Comic Neue', cursive", fontSize: '20px', margin: 0,
+                textShadow: '1px 1px 0 #ff69b4',
+              }}>
+                ur trayts ({invTraits?.reduce((s, i) => s + i.balance, 0) ?? 0})
+              </h3>
+              <button onClick={() => router.push('/sitee/ekwip')} style={{
+                fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                background: 'linear-gradient(135deg, #00ff87, #60efff)', border: '3px solid #000',
+                padding: '10px 18px', borderRadius: '14px', cursor: 'pointer',
+                boxShadow: '3px 3px 0 #000', fontSize: '13px',
+              }}>
+                🪄 ekwip / unekwip
+              </button>
+            </div>
 
             {invLoading ? (
               <div style={{ fontFamily: "'Comic Neue', cursive", textAlign: 'center', padding: '40px 20px' }}>

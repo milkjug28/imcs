@@ -1338,14 +1338,6 @@ export default function RipPage() {
         </AnimatePresence>
       </div>
 
-      <div style={{
-        marginBottom: '8px', fontSize: '10px', fontFamily: 'monospace',
-        color: 'rgba(120,53,15,0.6)', fontWeight: 600, pointerEvents: 'none',
-        userSelect: 'none', zIndex: 10, textAlign: 'center',
-      }}>
-        IMCS NFT Krafting Stayshun v1.42
-      </div>
-
       <a
         href="https://opensea.io/collection/0x5ab1ff0118197ae118199ffe2a8fa6f8b8102ec3"
         target="_blank"
