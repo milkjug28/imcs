@@ -10,6 +10,8 @@ import {
   PACK_ADDRESS, SAVANT_PACK_ABI,
 } from '@/config/pack'
 import type { TraitInfo } from '@/lib/trait-data'
+import { useTraitBurn } from '@/hooks/useTraitBurn'
+import FlameOverlay from '@/components/FlameOverlay'
 import ConnectWallet from '@/components/ConnectWallet'
 import BuyPackModal from '@/components/BuyPackModal'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -276,6 +278,17 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profil' | 'invintorri' | 'eern-iq'>('profil')
   const [invTraits, setInvTraits] = useState<InvTrait[] | null>(null)
   const [invLoading, setInvLoading] = useState(false)
+
+  // burn-for-IQ state
+  const { burnTraits } = useTraitBurn()
+  const [burnMode, setBurnMode] = useState(false)
+  const [burnPicks, setBurnPicks] = useState<Record<number, number>>({})
+  const [burning, setBurning] = useState(false)
+  const [burnError, setBurnError] = useState<string | null>(null)
+  const [burnSuccess, setBurnSuccess] = useState<string | null>(null)
+  const [burnStatus, setBurnStatus] = useState<{ remaining: number; cap: number; iqPerBurn: number } | null>(null)
+  const [showFlames, setShowFlames] = useState(false)
+  const [showEkwipPicker, setShowEkwipPicker] = useState(false)
   const [tasks, setTasks] = useState<Array<{
     id: string; name: string; description: string; iq_reward: number
     icon: string; action_label: string; action_type: string
@@ -463,6 +476,105 @@ export default function ProfilePage() {
       .finally(() => { if (!cancelled) setInvLoading(false) })
     return () => { cancelled = true }
   }, [activeTab, address])
+
+  // weekly burn allowance for the burn-for-IQ flow
+  useEffect(() => {
+    if (activeTab !== 'invintorri' || !address) return
+    let cancelled = false
+    fetch(`/api/iq/burn/status?wallet=${address}`, { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (!cancelled && d) setBurnStatus({ remaining: d.remaining, cap: d.cap, iqPerBurn: d.iqPerBurn }) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [activeTab, address])
+
+  const burnPickedCount = Object.values(burnPicks).reduce((s, v) => s + (v || 0), 0)
+  const burnIQPreview = burnPickedCount * (burnStatus?.iqPerBurn ?? 5)
+  const burnRemaining = burnStatus?.remaining ?? 0
+  const burnOverCap = burnPickedCount > burnRemaining
+
+  function adjustBurnPick(traitId: number, delta: number, max: number) {
+    setBurnPicks(prev => {
+      const cur = prev[traitId] || 0
+      const next = Math.max(0, Math.min(max, cur + delta))
+      const copy = { ...prev }
+      if (next === 0) delete copy[traitId]
+      else copy[traitId] = next
+      return copy
+    })
+  }
+
+  function exitBurnMode() {
+    setBurnMode(false)
+    setBurnPicks({})
+    setBurnError(null)
+  }
+
+  // ekwip needs a chosen savant. 0 -> nothing, 1 -> straight in, many -> picker.
+  function startEkwip() {
+    const tokens = holderData?.tokens || []
+    if (tokens.length === 0) { router.push('/sitee/ekwip'); return }
+    if (tokens.length === 1) { router.push(`/sitee/ekwip?tokenId=${tokens[0].tokenId}`); return }
+    setShowEkwipPicker(true)
+  }
+
+  async function handleBurn() {
+    if (!address || burnPickedCount === 0 || burning) return
+    setBurning(true)
+    setBurnError(null)
+    setBurnSuccess(null)
+    // tracks when the flames went up so we can keep the loading screen on for a
+    // minimum beat even if everything resolves fast.
+    let flamesAt = 0
+    try {
+      const picks = Object.entries(burnPicks).map(([traitId, amount]) => ({ traitId: Number(traitId), amount }))
+      // flames raise the instant the wallet signature lands and stay up as a loading
+      // screen while the tx confirms, IQ credits, and the gallery refreshes underneath.
+      const result = await burnTraits(picks, () => { setShowFlames(true); flamesAt = Date.now() })
+      setBurnPicks({})
+      setBurnMode(false)
+
+      // refresh inventory, weekly allowance, and IQ balance WHILE the flames cover the page,
+      // so the burned trait is gone from the gallery before the overlay fades.
+      try { sessionStorage.removeItem(`savant_inv_${address}`) } catch { /* ignore */ }
+      const [invRes, statusRes, balRes] = await Promise.all([
+        fetch(`/api/traits/inventory?wallet=${address}`).catch(() => null),
+        fetch(`/api/iq/burn/status?wallet=${address}`, { cache: 'no-store' }).catch(() => null),
+        fetch(`/api/iq/balance?wallet=${address}`, { cache: 'no-store' }).catch(() => null),
+      ])
+      if (invRes?.ok) {
+        const d = await invRes.json()
+        const inv = (d.inventory as InvTrait[]).filter(i => i.balance > 0)
+        setInvTraits(inv)
+        try { sessionStorage.setItem(`savant_inv_${address}`, JSON.stringify({ data: inv, ts: Date.now() })) } catch { /* full */ }
+      }
+      if (statusRes?.ok) {
+        const d = await statusRes.json()
+        setBurnStatus({ remaining: d.remaining, cap: d.cap, iqPerBurn: d.iqPerBurn })
+      }
+      if (balRes?.ok) setIqBalance(await balRes.json())
+
+      if (result.alreadyClaimed) {
+        setBurnError('dis burn waz alredy claimd')
+      } else {
+        const capNote = result.capped ? ' (weekly cap hit, sum traits burnd but not credited)' : ''
+        setBurnSuccess(`burnd ${result.traitsBurned} trayt${result.traitsBurned === 1 ? '' : 's'} 4 +${result.credited} IQ!${capNote}`)
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'burn faild'
+      // user-rejected wallet prompts shouldn't read like a system error
+      setBurnError(/reject|denied|cancel/i.test(msg) ? 'u canceld da burn' : msg)
+    } finally {
+      setBurning(false)
+      // hold the inferno for a minimum beat, then fade. gallery is already updated.
+      if (flamesAt) {
+        const elapsed = Date.now() - flamesAt
+        const minHold = 1800
+        if (elapsed < minHold) await new Promise(r => setTimeout(r, minHold - elapsed))
+      }
+      setShowFlames(false)
+    }
+  }
 
   // IQ changes from packs/tasks elsewhere; the profil cache is 120s stale, so
   // pull a fresh balance whenever the eern-iq tab opens (before allocating).
@@ -775,10 +887,10 @@ export default function ProfilePage() {
             onClick={() => setShowAllocator(true)}
           >
             <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '20px', fontWeight: 'bold', color: '#000' }}>
-              u have {iqBalance.available} IQ points 2 allocate!
+              u hav {iqBalance.available} IQ poinz 2 allowkate!
             </div>
             <div style={{ fontFamily: "'Comic Neue', cursive", fontSize: '14px', color: '#333', marginTop: '4px' }}>
-              tap here 2 make ur savants smarter (permanent, no takebacks)
+              tap heer 2 mayk ur sabants smartur (permanant, no take-sees back-sees)
             </div>
           </motion.div>
         )}
@@ -1175,15 +1287,75 @@ export default function ProfilePage() {
               }}>
                 ur trayts ({invTraits?.reduce((s, i) => s + i.balance, 0) ?? 0})
               </h3>
-              <button onClick={() => router.push('/sitee/ekwip')} style={{
-                fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
-                background: 'linear-gradient(135deg, #00ff87, #60efff)', border: '3px solid #000',
-                padding: '10px 18px', borderRadius: '14px', cursor: 'pointer',
-                boxShadow: '3px 3px 0 #000', fontSize: '13px',
-              }}>
-                🪄 ekwip / unekwip
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {burnMode ? (
+                  <button onClick={exitBurnMode} disabled={burning} style={{
+                    fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                    background: '#e5e7eb', border: '3px solid #000', padding: '10px 18px', borderRadius: '14px',
+                    cursor: burning ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #000', fontSize: '13px',
+                  }}>
+                    ✕ kancel
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={startEkwip} style={{
+                      fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                      background: 'linear-gradient(135deg, #00ff87, #60efff)', border: '3px solid #000',
+                      padding: '10px 18px', borderRadius: '14px', cursor: 'pointer',
+                      boxShadow: '3px 3px 0 #000', fontSize: '13px',
+                    }}>
+                      🪄 ekwip / unekwip
+                    </button>
+                    {(invTraits?.length ?? 0) > 0 && (
+                      <button onClick={() => { setBurnSuccess(null); setBurnError(null); setBurnMode(true) }} style={{
+                        fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#fff',
+                        background: 'linear-gradient(135deg, #f97316, #dc2626)', border: '3px solid #000',
+                        padding: '10px 18px', borderRadius: '14px', cursor: 'pointer',
+                        boxShadow: '3px 3px 0 #000', fontSize: '13px',
+                      }}>
+                        🔥 burn 4 iq
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* burn success / error banners */}
+            {burnSuccess && !burnMode && (
+              <div style={{
+                fontFamily: "'Comic Neue', cursive", fontWeight: 'bold', fontSize: '15px', textAlign: 'center',
+                background: '#00ff87', border: '3px solid #000', boxShadow: '4px 4px 0 #000',
+                padding: '12px 16px', marginBottom: '16px',
+              }}>
+                🔥 {burnSuccess}
+              </div>
+            )}
+            {burnError && (
+              <div style={{
+                fontFamily: "'Comic Neue', cursive", fontWeight: 'bold', fontSize: '14px', textAlign: 'center',
+                background: '#fecaca', border: '3px solid #000', boxShadow: '4px 4px 0 #000',
+                padding: '12px 16px', marginBottom: '16px', color: '#7f1d1d',
+              }}>
+                {burnError}
+              </div>
+            )}
+
+            {/* burn-mode instructions + weekly allowance */}
+            {burnMode && (
+              <div style={{
+                fontFamily: "'Comic Neue', cursive", fontSize: '13px', background: '#fff7ed',
+                border: '3px solid #000', boxShadow: '4px 4px 0 #000', padding: '12px 16px', marginBottom: '16px',
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '15px', marginBottom: '4px' }}>
+                  🔥 pik trayts 2 burn 4 +{burnStatus?.iqPerBurn ?? 5} IQ each
+                </div>
+                <div style={{ color: '#78350f' }}>
+                  burnd trayts r GON 4ever. only unekwipd trayts can b burnd.
+                  u can burn {burnRemaining} mor dis week (cap {burnStatus?.cap ?? 50}/week, resets sundy).
+                </div>
+              </div>
+            )}
 
             {invLoading ? (
               <div style={{ fontFamily: "'Comic Neue', cursive", textAlign: 'center', padding: '40px 20px' }}>
@@ -1201,17 +1373,30 @@ export default function ProfilePage() {
             ) : (
               <div style={{
                 display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px',
+                paddingBottom: burnMode && burnPickedCount > 0 ? '110px' : 0,
               }}>
-                {invTraits.map(({ traitId, balance, trait }) => (
+                {invTraits.map(({ traitId, balance, trait }) => {
+                  const picked = burnPicks[traitId] || 0
+                  return (
                   <div key={traitId} style={{
-                    border: '3px solid #000', boxShadow: '4px 4px 0 #000', background: '#fff',
-                    overflow: 'hidden', transform: `rotate(${(traitId % 5 - 2) * 0.8}deg)`,
+                    border: picked > 0 ? '3px solid #dc2626' : '3px solid #000',
+                    boxShadow: picked > 0 ? '4px 4px 0 #dc2626' : '4px 4px 0 #000', background: '#fff',
+                    overflow: 'hidden', transform: `rotate(${(traitId % 5 - 2) * 0.8}deg)`, position: 'relative',
                   }}>
+                    {picked > 0 && (
+                      <div style={{
+                        position: 'absolute', top: '4px', right: '4px', zIndex: 2, background: '#dc2626', color: '#fff',
+                        fontFamily: "'Comic Neue', cursive", fontWeight: 900, fontSize: '13px',
+                        border: '2px solid #000', borderRadius: '999px', padding: '1px 8px',
+                      }}>
+                        🔥 {picked}
+                      </div>
+                    )}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={traitImageUrl(trait)}
                       alt={trait.name}
-                      style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', display: 'block', background: '#f3f3f3' }}
+                      style={{ width: '100%', aspectRatio: '1', objectFit: 'contain', display: 'block', background: '#f3f3f3', opacity: burnMode && picked === 0 ? 0.7 : 1 }}
                     />
                     <div style={{
                       padding: '6px 8px', fontFamily: "'Comic Neue', cursive", fontSize: '12px',
@@ -1221,10 +1406,64 @@ export default function ProfilePage() {
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{trait.name}</span>
                       {balance > 1 && <span style={{ flexShrink: 0, marginLeft: '4px' }}>x{balance}</span>}
                     </div>
+                    {burnMode && (
+                      <div style={{ display: 'flex', alignItems: 'stretch', borderTop: '2px solid #000' }}>
+                        <button onClick={() => adjustBurnPick(traitId, -1, balance)} disabled={picked === 0} style={{
+                          flex: 1, fontFamily: "'Comic Neue', cursive", fontWeight: 900, fontSize: '16px',
+                          background: picked === 0 ? '#f3f3f3' : '#fecaca', border: 'none', borderRight: '2px solid #000',
+                          cursor: picked === 0 ? 'not-allowed' : 'pointer', padding: '4px 0',
+                        }}>−</button>
+                        <div style={{
+                          flex: 1, textAlign: 'center', fontFamily: "'Comic Neue', cursive", fontWeight: 900,
+                          fontSize: '14px', alignSelf: 'center',
+                        }}>{picked}</div>
+                        <button onClick={() => adjustBurnPick(traitId, 1, balance)} disabled={picked >= balance} style={{
+                          flex: 1, fontFamily: "'Comic Neue', cursive", fontWeight: 900, fontSize: '16px',
+                          background: picked >= balance ? '#f3f3f3' : '#bbf7d0', border: 'none', borderLeft: '2px solid #000',
+                          cursor: picked >= balance ? 'not-allowed' : 'pointer', padding: '4px 0',
+                        }}>+</button>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
+
+            {/* floating confirm island in burn mode */}
+            <AnimatePresence>
+              {burnMode && burnPickedCount > 0 && (
+                <motion.div
+                  initial={{ y: 40, opacity: 0, x: '-50%' }}
+                  animate={{ y: 0, opacity: 1, x: '-50%' }}
+                  exit={{ y: 40, opacity: 0, x: '-50%' }}
+                  style={{
+                    position: 'fixed', bottom: '24px', left: '50%', zIndex: 50,
+                    background: 'linear-gradient(135deg, #f97316, #dc2626)', border: '3px solid #000',
+                    boxShadow: '5px 5px 0 #000', padding: '12px 16px', borderRadius: '18px',
+                    display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'nowrap',
+                    maxWidth: 'calc(100vw - 32px)',
+                  }}
+                >
+                  <div style={{ fontFamily: "'Comic Neue', cursive", color: '#fff', fontWeight: 'bold' }}>
+                    <div style={{ fontSize: '16px', whiteSpace: 'nowrap' }}>{burnPickedCount} trayt{burnPickedCount === 1 ? '' : 's'} → +{burnIQPreview} IQ</div>
+                    {burnOverCap && (
+                      <div style={{ fontSize: '11px', color: '#fde68a' }}>
+                        over cap! only {burnRemaining} credited
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={handleBurn} disabled={burning} style={{
+                    fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                    background: burning ? '#d1d5db' : '#fde047', border: '3px solid #000', padding: '12px 22px',
+                    borderRadius: '14px', cursor: burning ? 'not-allowed' : 'pointer', boxShadow: '3px 3px 0 #000',
+                    fontSize: '15px', whiteSpace: 'nowrap',
+                  }}>
+                    {burning ? 'burnin...' : '🔥 burn em'}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ) : (
           /* Eern IQ Tab */
@@ -1804,6 +2043,79 @@ export default function ProfilePage() {
                   close
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* full-screen video pyrotechnics on burn (elmo mode) */}
+      <AnimatePresence>
+        {showFlames && <FlameOverlay />}
+      </AnimatePresence>
+
+      {/* savant picker for ekwip flow */}
+      <AnimatePresence>
+        {showEkwipPicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowEkwipPicker(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#fff', border: '4px solid #000', boxShadow: '6px 6px 0 #000',
+                padding: '20px', maxWidth: '480px', width: '100%', maxHeight: '80vh', overflowY: 'auto',
+              }}
+            >
+              <h3 style={{
+                fontFamily: "'Comic Neue', cursive", fontSize: '22px', margin: '0 0 4px',
+                textShadow: '1px 1px 0 #00ff87',
+              }}>
+                pik a savant 2 ekwip
+              </h3>
+              <p style={{ fontFamily: "'Comic Neue', cursive", fontSize: '13px', color: '#666', margin: '0 0 16px' }}>
+                wich savant u wanna dress up?
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
+                {holderData?.tokens.map(token => (
+                  <motion.div
+                    key={token.tokenId}
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => router.push(`/sitee/ekwip?tokenId=${token.tokenId}`)}
+                    style={{
+                      border: '3px solid #000', boxShadow: '4px 4px 0 #000', background: '#fff',
+                      cursor: 'pointer', overflow: 'hidden',
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={token.image} alt={token.name} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }} />
+                    <div style={{
+                      padding: '6px 8px', fontFamily: "'Comic Neue', cursive", fontSize: '12px', fontWeight: 'bold',
+                      display: 'flex', justifyContent: 'space-between', background: '#000', color: '#0f0',
+                      whiteSpace: 'nowrap', overflow: 'hidden',
+                    }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{token.savantName || token.name}</span>
+                      <span style={{ flexShrink: 0, marginLeft: '4px' }}>IQ:{token.iq}</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              <button onClick={() => setShowEkwipPicker(false)} style={{
+                fontFamily: "'Comic Neue', cursive", textTransform: 'uppercase', fontWeight: 900, color: '#000',
+                background: '#e5e7eb', border: '3px solid #000', padding: '10px 18px', borderRadius: '14px',
+                cursor: 'pointer', boxShadow: '3px 3px 0 #000', fontSize: '13px', marginTop: '16px', width: '100%',
+              }}>
+                ✕ nvm
+              </button>
             </motion.div>
           </motion.div>
         )}

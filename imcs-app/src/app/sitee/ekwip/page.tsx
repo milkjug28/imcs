@@ -6,7 +6,8 @@ import { useWallet } from '@/hooks/useWallet'
 import { useTraitEquip, type SlotChange } from '@/hooks/useTraitEquip'
 
 const LAYER_NAMES = ["bg's", 'bods', 'cloths', 'speshul', 'ayezz', 'moufs', 'facessories', 'hatss', 'extruhs', 'textuh']
-const LAYER_ORDER = [0, 1, 2, 3, 8, 6, 5, 4, 7, 9]
+// canonical draw order (matches rerender.py + trait-renderer.ts): ayezz(4) under facessories(6) so glasses sit on top of eyes
+const LAYER_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 const REQUIRED_SLOTS = new Set([0, 1, 4])
 const LOCKED_SLOTS = new Set([1])
 
@@ -251,6 +252,11 @@ function EkwipPage() {
     setConfirming(true)
     try {
       await submitChanges(tokenId, changes)
+      // bust profil caches so the new composite + inventory show immediately on return
+      try {
+        sessionStorage.removeItem(`savant_profil_${address}`)
+        sessionStorage.removeItem(`savant_inv_${address}`)
+      } catch { /* ignore */ }
       setSuccessImage(snapshot)
       setShowSuccess(true)
     } catch (e) {

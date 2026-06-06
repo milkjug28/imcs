@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'wallet required' }, { status: 400 })
   }
 
-  const [balanceResult, snapshotResult, liveTrading, taskResult, packResult] = await Promise.all([
+  const [balanceResult, snapshotResult, liveTrading, taskResult, packResult, burnResult] = await Promise.all([
     supabase
       .from('wallet_iq_balances')
       .select('total_earned, total_allocated, available, last_snapshot_id, updated_at')
@@ -39,15 +39,20 @@ export async function GET(request: NextRequest) {
       .from('pack_rips')
       .select('iq_awarded')
       .eq('wallet_address', wallet),
+    supabase
+      .from('trait_burns')
+      .select('iq_awarded')
+      .eq('wallet_address', wallet),
   ])
 
   const balance = balanceResult.data
   const snapshot = snapshotResult.data
   const taskIQ = (taskResult.data || []).reduce((sum: number, t: { iq_awarded: number }) => sum + t.iq_awarded, 0)
   const packIQ = (packResult.data || []).reduce((sum: number, p: { iq_awarded: number }) => sum + p.iq_awarded, 0)
+  const burnIQ = (burnResult.data || []).reduce((sum: number, b: { iq_awarded: number }) => sum + b.iq_awarded, 0)
 
   if (!balance || !snapshot) {
-    const earned = taskIQ + packIQ
+    const earned = taskIQ + packIQ + burnIQ
     return NextResponse.json({
       wallet,
       total_earned: earned,
@@ -61,7 +66,7 @@ export async function GET(request: NextRequest) {
   // bonus, tasks, packs). Trading IQ can ADD to the pool when positive, but a sell penalty
   // can never drag total_earned below the stable base — it only burns the trading bonus.
   // This keeps `available` from stranding allocations when a holder later sells.
-  const stableBase = snapshot.leaderboard_iq + (snapshot.bonus_iq || 0) + taskIQ + packIQ
+  const stableBase = snapshot.leaderboard_iq + (snapshot.bonus_iq || 0) + taskIQ + packIQ + burnIQ
   const liveTotal = stableBase + liveTrading.tradingIQ
   const earned = Math.max(liveTotal, stableBase)
   // `available` is a Postgres generated column GREATEST(0, total_earned - total_allocated),

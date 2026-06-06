@@ -88,6 +88,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'db update failed' }, { status: 500 })
     }
 
+    // ask OpenSea to re-pull metadata so the new composite shows there too.
+    // fire-and-forget: our DB image already updated; OS lag shouldn't block the response.
+    const osKey = process.env.OPENSEA_API_KEY
+    if (osKey) {
+      const SAVANT_NFT = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
+      fetch(`https://api.opensea.io/api/v2/chain/ethereum/contract/${SAVANT_NFT}/nfts/${tokenId}/refresh`, {
+        method: 'POST', headers: { 'X-API-KEY': osKey, accept: 'application/json' },
+      }).catch(() => { /* non-fatal: OS will re-index eventually */ })
+    }
+
     return NextResponse.json({ ok: true, tokenId, image: imageUrl, slots, attributes })
   } catch (error) {
     console.error('sync error:', error)
