@@ -350,7 +350,7 @@ export default function ProfilePage() {
             setTasks(cachedData.tasks || [])
             if (cachedData.discord) setDiscordUsername(cachedData.discord)
             setLoading(false)
-            return
+            return true
           }
         }
       } catch { /* ignore */ }
@@ -359,8 +359,19 @@ export default function ProfilePage() {
     setLoading(true)
 
     const nc = { cache: 'no-store' as RequestCache }
+    // Holder feeds the savant-card IQ. Alchemy 502s / rate limits make it flaky;
+    // a silent miss here leaves stale IQ after an allocation. Retry once before
+    // giving up so the post-allocate refetch reliably reflects new IQ.
+    const fetchHolder = async (): Promise<Response | null> => {
+      for (let i = 0; i < 2; i++) {
+        const r = await fetch(`/api/holder?wallet=${address}`, nc).catch(() => null)
+        if (r?.ok) return r
+        if (i === 0) await new Promise(res => setTimeout(res, 1200))
+      }
+      return null
+    }
     const [holderRes, profileRes, iqRes, tasksRes] = await Promise.all([
-      fetch(`/api/holder?wallet=${address}`, nc).catch(() => null),
+      fetchHolder(),
       fetch(`/api/profile/${address}`, nc).catch(() => null),
       fetch(`/api/iq/balance?wallet=${address}`, nc).catch(() => null),
       fetch(`/api/iq/tasks?wallet=${address}`, nc).catch(() => null),
@@ -368,10 +379,12 @@ export default function ProfilePage() {
 
     const cacheData: Record<string, unknown> = {}
 
+    let holderOk = false
     if (holderRes?.ok) {
       const data = await holderRes.json()
       setHolderData(data)
       cacheData.holder = data
+      holderOk = true
     }
 
     if (profileRes?.ok) {
@@ -403,6 +416,7 @@ export default function ProfilePage() {
     } catch { /* full storage */ }
 
     setLoading(false)
+    return holderOk
   }, [address])
 
   useEffect(() => {
@@ -616,10 +630,14 @@ export default function ProfilePage() {
 
       const data = await res.json()
       if (data.ok) {
-        setAllocateSuccess(`allocated ${totalAllocating} IQ points!`)
         setAllocations({})
         setShowAllocator(false)
-        fetchData(true)
+        const refreshed = await fetchData(true)
+        setAllocateSuccess(
+          refreshed
+            ? `allocated ${totalAllocating} IQ points!`
+            : `allocated ${totalAllocating} IQ points! refresh da page to c new iq`
+        )
       } else {
         setAllocateError(data.error || 'allocation failed')
       }
