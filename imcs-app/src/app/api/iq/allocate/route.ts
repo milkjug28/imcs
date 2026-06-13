@@ -167,6 +167,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'balance update failed' }, { status: 500 })
   }
 
+  // Allocated IQ changes the live IQ trait in /api/metadata. Ask OpenSea to
+  // re-pull so the NFT trait updates there too (mirrors the equip/sync flow).
+  // fire-and-forget: our DB already updated; OS lag shouldn't block the response.
+  const osKey = process.env.OPENSEA_API_KEY
+  if (osKey) {
+    for (const id of tokenIds) {
+      fetch(`https://api.opensea.io/api/v2/chain/ethereum/contract/${SAVANT_TOKEN}/nfts/${id}/refresh`, {
+        method: 'POST', headers: { 'X-API-KEY': osKey, accept: 'application/json' },
+      }).catch(() => { /* non-fatal: OS will re-index eventually */ })
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     allocated: totalAllocating,
