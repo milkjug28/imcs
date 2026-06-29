@@ -10,6 +10,13 @@ import tokenTraitsData from '../../../../../../imcs-deployment/data/token-traits
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// Canonical public base for PERSISTED metadata image URLs. The DB is shared
+// across every environment (local + prod hit the same Supabase), so the stored
+// image must ALWAYS be the production domain regardless of where this sync runs.
+// NEVER derive this from request.nextUrl.origin — running sync from localhost
+// would otherwise write http://localhost:3001 image URLs into prod metadata.
+const PUBLIC_BASE = (process.env.METADATA_PUBLIC_BASE || 'https://www.imcs.world').replace(/\/$/, '')
+
 const BUCKET = 'savant-composites'
 const SLOT_DIR = ["bg's", 'bods', 'cloths', 'speshul', 'ayezz', 'moufs', 'facessories', 'hatss', 'extruhs', 'textuh']
 const tokenTraits = tokenTraitsData as Record<string, number[]>
@@ -75,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Store a pretty, domain-owned URL (proxy route 307s to the bucket object).
     // ?v= busts OpenSea / browser image cache on each change.
-    const imageUrl = `${request.nextUrl.origin}/api/traits/composite/${tokenId}.png?v=${Date.now()}`
+    const imageUrl = `${PUBLIC_BASE}/api/traits/composite/${tokenId}.png?v=${Date.now()}`
 
     const attributes = buildAttributes(slots)
 
