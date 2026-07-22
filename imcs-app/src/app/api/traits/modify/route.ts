@@ -86,7 +86,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'invalid signature' }, { status: 403 })
   }
 
-  const owns = await verifyOwnership(wallet, tokenId)
+  let owns: boolean
+  try {
+    owns = await verifyOwnership(wallet, tokenId)
+  } catch {
+    return NextResponse.json({ error: 'ownership check unavailable, try again later' }, { status: 502 })
+  }
   if (!owns) {
     return NextResponse.json({ error: 'u dont own dis savant' }, { status: 403 })
   }

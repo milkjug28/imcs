@@ -3,10 +3,10 @@ import { verifyMessage } from 'viem'
 import { supabase } from '@/lib/supabase'
 import { getBaseIQ } from '@/lib/iq'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
+import { verifyOwnership } from '@/lib/alchemy'
 
 export const dynamic = 'force-dynamic'
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 
 type Allocation = {
@@ -35,19 +35,6 @@ function buildExpectedMessage(wallet: string, allocations: Allocation[]): string
     '',
     `Wallet: ${wallet.toLowerCase()}`,
   ].join('\n')
-}
-
-async function verifyOwnership(wallet: string, tokenIds: number[]): Promise<boolean> {
-  const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTsForOwner?owner=${wallet}&contractAddresses[]=${SAVANT_TOKEN}&withMetadata=false&pageSize=100`
-  const res = await fetch(url, { cache: 'no-store' })
-  if (!res.ok) return false
-
-  const data = await res.json()
-  const ownedIds = new Set(
-    (data.ownedNfts || []).map((n: { tokenId: string }) => parseInt(n.tokenId))
-  )
-
-  return tokenIds.every(id => ownedIds.has(id))
 }
 
 export async function POST(request: NextRequest) {
@@ -103,7 +90,12 @@ export async function POST(request: NextRequest) {
   }
 
   const tokenIds = allocations.map(a => a.tokenId)
-  const ownsAll = await verifyOwnership(normalizedWallet, tokenIds)
+  let ownsAll: boolean
+  try {
+    ownsAll = await verifyOwnership(normalizedWallet, tokenIds)
+  } catch {
+    return NextResponse.json({ error: 'ownership check unavailable, try again later' }, { status: 502 })
+  }
   if (!ownsAll) {
     return NextResponse.json({ error: 'u dont own all those savants' }, { status: 403 })
   }

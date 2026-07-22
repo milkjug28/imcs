@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@/hooks/useWallet'
+import { useHolderData } from '@/hooks/useHolderData'
 import { useReadContract, useSignMessage } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 import {
@@ -256,8 +257,8 @@ function IQInfoPopup({ onClose }: { onClose: () => void }) {
 export default function ProfilePage() {
   const router = useRouter()
   const { address, isConnected, truncatedAddress } = useWallet()
+  const { holderData, refetch: refetchHolder } = useHolderData()
   const { signMessageAsync } = useSignMessage()
-  const [holderData, setHolderData] = useState<HolderData | null>(null)
   const [legacyProfile, setLegacyProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedToken, setSelectedToken] = useState<Token | null>(null)
@@ -344,7 +345,6 @@ export default function ProfilePage() {
         if (cached) {
           const { data: cachedData, ts } = JSON.parse(cached)
           if (Date.now() - ts < 120_000) {
-            setHolderData(cachedData.holder)
             setLegacyProfile(cachedData.legacy)
             setIqBalance(cachedData.iq)
             setTasks(cachedData.tasks || [])
@@ -359,19 +359,8 @@ export default function ProfilePage() {
     setLoading(true)
 
     const nc = { cache: 'no-store' as RequestCache }
-    // Holder feeds the savant-card IQ. Alchemy 502s / rate limits make it flaky;
-    // a silent miss here leaves stale IQ after an allocation. Retry once before
-    // giving up so the post-allocate refetch reliably reflects new IQ.
-    const fetchHolder = async (): Promise<Response | null> => {
-      for (let i = 0; i < 2; i++) {
-        const r = await fetch(`/api/holder?wallet=${address}`, nc).catch(() => null)
-        if (r?.ok) return r
-        if (i === 0) await new Promise(res => setTimeout(res, 1200))
-      }
-      return null
-    }
-    const [holderRes, profileRes, iqRes, tasksRes] = await Promise.all([
-      fetchHolder(),
+    const [holderResult, profileRes, iqRes, tasksRes] = await Promise.all([
+      refetchHolder(forceRefresh),
       fetch(`/api/profile/${address}`, nc).catch(() => null),
       fetch(`/api/iq/balance?wallet=${address}`, nc).catch(() => null),
       fetch(`/api/iq/tasks?wallet=${address}`, nc).catch(() => null),
@@ -379,21 +368,13 @@ export default function ProfilePage() {
 
     const cacheData: Record<string, unknown> = {}
 
-    let holderOk = false
-    if (holderRes?.ok) {
-      const data = await holderRes.json()
-      setHolderData(data)
-      cacheData.holder = data
-      holderOk = true
-    }
+    const holderOk = holderResult !== null
 
     if (profileRes?.ok) {
       const data = await profileRes.json()
       setLegacyProfile(data)
       cacheData.legacy = data
     }
-
-
 
     if (iqRes?.ok) {
       const data = await iqRes.json()
@@ -417,7 +398,7 @@ export default function ProfilePage() {
 
     setLoading(false)
     return holderOk
-  }, [address])
+  }, [address, refetchHolder])
 
   useEffect(() => {
     if (isConnected && address && !localStorage.getItem('hide-iq-info')) {
@@ -429,7 +410,6 @@ export default function ProfilePage() {
     if (isConnected && address) {
       fetchData()
     } else {
-      setHolderData(null)
       setLegacyProfile(null)
       setSelectedToken(null)
       setIqBalance(null)
@@ -677,12 +657,7 @@ export default function ProfilePage() {
         setSelectedToken({ ...selectedToken, savantName: trimmed })
         setSavantNameInput('')
         setNamingSuccess(true)
-        if (holderData) {
-          const updated = holderData.tokens.map(t =>
-            t.tokenId === selectedToken.tokenId ? { ...t, savantName: trimmed } : t
-          )
-          setHolderData({ ...holderData, tokens: updated })
-        }
+        refetchHolder(true)
       } else {
         setNamingError(data.error || 'failed to set name')
       }

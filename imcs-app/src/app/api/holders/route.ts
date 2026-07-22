@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
+const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY || ''
 const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 
 type OwnerEntry = {
@@ -12,6 +12,7 @@ type OwnerEntry = {
 
 let cachedData: { holders: { wallet: string; count: number }[]; fetchedAt: number } | null = null
 const CACHE_TTL = 300_000 // 5 min
+const STALE_TTL = 3_600_000 // 60 min stale-while-error
 
 export async function GET() {
   try {
@@ -25,6 +26,11 @@ export async function GET() {
     const res = await fetch(url, { cache: 'no-store' })
 
     if (!res.ok) {
+      if (cachedData && Date.now() - cachedData.fetchedAt < STALE_TTL) {
+        return NextResponse.json(cachedData.holders, {
+          headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
+        })
+      }
       return NextResponse.json({ error: 'alchemy error' }, { status: 502 })
     }
 
@@ -45,6 +51,11 @@ export async function GET() {
       headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' },
     })
   } catch {
+    if (cachedData && Date.now() - cachedData.fetchedAt < STALE_TTL) {
+      return NextResponse.json(cachedData.holders, {
+        headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' },
+      })
+    }
     return NextResponse.json({ error: 'failed to fetch holders' }, { status: 500 })
   }
 }

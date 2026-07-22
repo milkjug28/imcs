@@ -4,20 +4,11 @@ import { isAddress, getAddress, recoverMessageAddress } from 'viem'
 import { getDiscordUser, assignTierRoles, getTiersForCount } from '@/lib/discord'
 import { supabase } from '@/lib/supabase'
 import { rateLimit, getRequestIP } from '@/lib/rate-limit'
+import { getHoldingCount } from '@/lib/alchemy'
 
 export const dynamic = 'force-dynamic'
 
-const ALCHEMY_KEY = process.env.ALCHEMY_API_KEY!
-const SAVANT_TOKEN = '0x95fa6fc553F5bE3160b191b0133236367A835C63'
 const GUILD_ID = process.env.DISCORD_GUILD_ID!
-
-async function getHoldings(wallet: string): Promise<number> {
-  const url = `https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_KEY}/getNFTsForOwner?owner=${wallet}&contractAddresses[]=${SAVANT_TOKEN}&withMetadata=false&pageSize=100`
-  const res = await fetch(url, { cache: 'no-store' })
-  if (!res.ok) throw new Error('alchemy error')
-  const data = await res.json()
-  return data.totalCount ?? (data.ownedNfts?.length ?? 0)
-}
 
 async function getTotalHoldings(discordUserId: string): Promise<{ total: number; wallets: { address: string; count: number }[] }> {
   const { data: wallets } = await supabase
@@ -86,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const checksummed = getAddress(wallet)
-    const walletCount = await getHoldings(checksummed)
+    const { count: walletCount } = await getHoldingCount(checksummed)
 
     // Check if wallet is already linked to a different discord user
     const { data: existingLink } = await supabase

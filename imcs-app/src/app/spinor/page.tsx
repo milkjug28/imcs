@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, FormEvent } from 'react'
+import { useState, useRef, useEffect, FormEvent } from 'react'
 import { useWallet } from '@/hooks/useWallet'
+import { useHolderData } from '@/hooks/useHolderData'
 import { useReadContract } from 'wagmi'
 import { SAVANT_TOKEN_ADDRESS, SAVANT_TOKEN_ABI, MINT_CHAIN } from '@/config/contracts'
 import ConnectWallet from '@/components/ConnectWallet'
@@ -56,10 +57,9 @@ function playWinnerSound() {
 
 export default function SpinorPage() {
   const { address, isConnected } = useWallet()
-  const [holderData, setHolderData] = useState<{ balance: number } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { holderData } = useHolderData()
 
-  const { data: balanceRaw } = useReadContract({
+  const { data: balanceRaw, isLoading: balanceLoading } = useReadContract({
     address: SAVANT_TOKEN_ADDRESS,
     abi: SAVANT_TOKEN_ABI,
     functionName: 'balanceOf',
@@ -68,19 +68,10 @@ export default function SpinorPage() {
     query: { enabled: !!address },
   })
 
-  const fetchHolder = useCallback(async () => {
-    if (!address) { setLoading(false); return }
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/holder?wallet=${address}`, { cache: 'no-store' })
-      if (res.ok) setHolderData(await res.json())
-    } catch {}
-    setLoading(false)
-  }, [address])
-
-  useEffect(() => { fetchHolder() }, [fetchHolder])
-
+  // On-chain read first; holder context (already fetched app-wide) as fallback
+  // so a public-RPC hiccup doesn't show a real holder the not-holder state.
   const bal = balanceRaw !== undefined ? Number(balanceRaw) : (holderData?.balance ?? null)
+  const loading = !!address && balanceLoading && bal === null
   const isHolder = bal !== null && bal > 0
 
   const [names, setNames] = useState<string[]>([])

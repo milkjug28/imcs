@@ -25,7 +25,14 @@ const config = getDefaultConfig({
 })
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient())
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 120_000,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }))
 
   return (
     <WagmiProvider config={config}>
